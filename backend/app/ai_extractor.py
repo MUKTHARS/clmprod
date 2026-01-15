@@ -28,145 +28,42 @@ class AIExtractor:
         self.client = self._create_openai_client()
         
         # Enhanced prompt for comprehensive extraction
-        self.extraction_prompt = """Analyze the following grant contract text and extract ALL relevant information comprehensively.
-        Provide detailed extraction in the JSON format below. Be thorough and extract as much information as possible.
+        # Enhanced prompt for comprehensive extraction with focus on tables
+        
+        self.extraction_prompt = """ANALYZE THIS GRANT CONTRACT THOROUGHLY AND EXTRACT ALL INFORMATION.
+    
+        IMPORTANT: FOCUS ON EXTRACTING TABULAR DATA FROM FINANCIAL TABLES, PAYMENT SCHEDULES, AND BUDGETS.
 
-        IMPORTANT INSTRUCTIONS:
-        1. Extract ALL dates mentioned (signature dates, effective dates, start dates, end dates, milestone dates)
-        2. Extract ALL monetary amounts (total amounts, installments, milestones, reimbursements)
-        3. Extract ALL parties involved (full names, addresses, contact information)
-        4. Extract ALL key clauses and terms
-        5. If information is not found, use null
-        6. For amounts, always include currency if specified
-        7. For dates, try to format as YYYY-MM-DD when possible
+        SPECIFIC INSTRUCTIONS:
+        1. EXTRACT ALL DATES IN ANY FORMAT - convert to YYYY-MM-DD format
+        2. EXTRACT ALL MONETARY AMOUNTS - look for currency symbols
+        3. PAY SPECIAL ATTENTION TO TABLES - extract every row and column
+        4. For tables with installments: extract installment number, due date, amount, description
+        5. For budget tables: extract each budget category and amount
 
         Return ONLY valid JSON in this exact format:
-        {{
-          "metadata": {{
-            "document_type": "string",
-            "extraction_confidence": "number between 0 and 1",
-            "pages_extracted_from": "number or null",
-            "extraction_timestamp": "current timestamp in ISO format"
-          }},
-          
-          "parties": {{
-            "grantor": {{
-              "organization_name": "string or null",
-              "address": "string or null",
-              "contact_person": "string or null",
-              "email": "string or null",
-              "phone": "string or null"
-            }},
-            "grantee": {{
-              "organization_name": "string or null",
-              "address": "string or null",
-              "contact_person": "string or null",
-              "email": "string or null",
-              "phone": "string or null"
-            }},
-            "other_parties": [
-              {{
-                "role": "string",
-                "name": "string",
-                "details": "string"
-              }}
-            ]
-          }},
-          
-          "contract_details": {{
-            "contract_number": "string or null",
-            "grant_name": "string or null",
-            "grant_reference": "string or null",
-            "agreement_type": "string or null",
-            "effective_date": "string or null",
-            "signature_date": "string or null",
-            "start_date": "string or null",
-            "end_date": "string or null",
-            "duration": "string or null",
-            "purpose": "string or null",
-            "objectives": ["array of strings"],
-            "scope_of_work": "string or null",
-            "geographic_scope": "string or null"
-          }},
-          
-          "financial_details": {{
-            "total_grant_amount": "number or null",
-            "currency": "string (default: USD)",
-            "payment_schedule": {{
-              "schedule_type": "string (lump_sum, installments, milestones, reimbursements)",
-              "installments": [
-                {{
-                  "installment_number": "number",
-                  "amount": "number",
-                  "due_date": "string",
-                  "trigger_condition": "string"
-                }}
-              ],
-              "milestones": [
-                {{
-                  "milestone_name": "string",
-                  "amount": "number",
-                  "due_date": "string",
-                  "deliverable": "string"
-                }}
-              ]
-            }},
-            "budget_breakdown": {{
-              "personnel": "number or null",
-              "equipment": "number or null",
-              "travel": "number or null",
-              "materials": "number or null",
-              "indirect_costs": "number or null",
-              "other": "number or null"
-            }},
-            "financial_reporting_requirements": "string or null"
-          }},
-          
-          "deliverables": {{
-            "items": [
-              {{
-                "deliverable_name": "string",
-                "description": "string",
-                "due_date": "string",
-                "status": "pending"
-              }}
-            ],
-            "reporting_requirements": {{
-              "frequency": "string",
-              "report_types": ["array of strings"],
-              "due_dates": ["array of strings"]
-            }}
-          }},
-          
-          "terms_conditions": {{
-            "intellectual_property": "string or null",
-            "confidentiality": "string or null",
-            "liability": "string or null",
-            "termination_clauses": "string or null",
-            "renewal_options": "string or null",
-            "dispute_resolution": "string or null",
-            "governing_law": "string or null",
-            "force_majeure": "string or null",
-            "key_obligations": ["array of strings"],
-            "restrictions": ["array of strings"]
-          }},
-          
-          "compliance": {{
-            "audit_requirements": "string or null",
-            "record_keeping": "string or null",
-            "regulatory_compliance": "string or null",
-            "ethics_requirements": "string or null"
-          }},
-          
-          "summary": {{
-            "executive_summary": "string",
-            "key_dates_summary": "string",
-            "financial_summary": "string",
-            "risk_assessment": "string"
-          }}
-        }}
+        {{"metadata": {{"document_type": "string", "extraction_confidence": "number", "pages_extracted_from": "number", "extraction_timestamp": "string"}},
+        "parties": {{"grantor": {{"organization_name": "string", "address": "string", "contact_person": "string", "email": "string", "phone": "string"}},
+        "grantee": {{"organization_name": "string", "address": "string", "contact_person": "string", "email": "string", "phone": "string"}},
+        "other_parties": [{{"role": "string", "name": "string", "details": "string"}}]}},
+        "contract_details": {{"contract_number": "string", "grant_name": "string", "grant_reference": "string", "agreement_type": "string", "effective_date": "string", "signature_date": "string", "start_date": "string", "end_date": "string", "duration": "string", "purpose": "string", "objectives": ["array"], "scope_of_work": "string", "geographic_scope": "string"}},
+        "financial_details": {{"total_grant_amount": "number", "currency": "string", "additional_currencies": ["array"],
+        "payment_schedule": {{"schedule_type": "string", "installments": [{{"installment_number": "number", "amount": "number", "due_date": "string", "trigger_condition": "string", "description": "string", "currency": "string"}}], "milestones": [{{"milestone_name": "string", "amount": "number", "due_date": "string", "deliverable": "string", "description": "string"}}], "reimbursements": [{{"category": "string", "amount": "number", "conditions": "string"}}]}},
+        "budget_breakdown": {{"personnel": "number", "equipment": "number", "travel": "string", "materials": "number", "indirect_costs": "number", "other": "number", "contingency": "number", "overhead": "number", "subcontractors": "number"}},
+        "additional_budget_items": [{{"category": "string", "amount": "number", "description": "string"}}],
+        "financial_reporting_requirements": "string",
+        "financial_tables_summary": "string",
+        "total_installments_amount": "number",
+        "total_milestones_amount": "number",
+        "payment_terms": "string"}},
+        "deliverables": {{"items": [{{"deliverable_name": "string", "description": "string", "due_date": "string", "status": "string", "milestone_linked": "string"}}],
+        "reporting_requirements": {{"frequency": "string", "report_types": ["array"], "due_dates": ["array"]}}}},
+        "terms_conditions": {{"intellectual_property": "string", "confidentiality": "string", "liability": "string", "termination_clauses": "string", "renewal_options": "string", "dispute_resolution": "string", "governing_law": "string", "force_majeure": "string", "key_obligations": ["array"], "restrictions": ["array"]}},
+        "compliance": {{"audit_requirements": "string", "record_keeping": "string", "regulatory_compliance": "string", "ethics_requirements": "string"}},
+        "summary": {{"executive_summary": "string", "key_dates_summary": "string", "financial_summary": "string", "risk_assessment": "string", "total_contract_value": "string", "payment_timeline_summary": "string"}},
+        "extended_data": {{"all_dates_found": [{{"date": "string", "context": "string", "type": "string"}}], "all_amounts_found": [{{"amount": "number", "currency": "string", "context": "string", "type": "string"}}], "table_data_extracted": [{{"table_type": "string", "data": "string"}}]}}}}
 
-        Contract text:
+        Contract text (including all tables):
         {text}"""
     
     def _clean_environment(self):
@@ -192,12 +89,21 @@ class AIExtractor:
             return openai.OpenAI()
     
     def extract_contract_data(self, text: str) -> Dict[str, Any]:
-        """Extract comprehensive structured data from contract text"""
+        """Extract comprehensive structured data from contract text with focus on tables"""
         try:
             # Check API key
             if not self.api_key or self.api_key == "your-openai-api-key-here":
                 print("ERROR: Please set OPENAI_API_KEY in .env file")
                 return self._get_empty_result()
+            
+            # Pre-process text to highlight tables
+            # Look for table markers in the text
+            table_markers = ["=== TABLES ===", "Table", "Schedule", "Payment", "Budget", "Milestone"]
+            has_tables = any(marker in text for marker in table_markers)
+            
+            # Add context about tables if found
+            if has_tables:
+                print("Detected tables in text, extracting with special attention...")
             
             # Use gpt-4o-mini for comprehensive extraction
             response = self.client.chat.completions.create(
@@ -205,16 +111,21 @@ class AIExtractor:
                 messages=[
                     {
                         "role": "system", 
-                        "content": "You are a highly experienced contract analyst. Extract comprehensive information from grant contracts with maximum detail. Be thorough and extract every piece of information you can find."
+                        "content": """You are a highly experienced contract analyst specializing in financial contract analysis.
+                        Your task is to extract EVERY piece of financial information, dates, and amounts from contracts.
+                        PAY SPECIAL ATTENTION TO TABLES - extract all rows, columns, and data from any tables you find.
+                        For financial data: extract ALL amounts with their currencies.
+                        For dates: extract ALL dates in any format and convert to YYYY-MM-DD when possible.
+                        Be extremely thorough with numerical data and dates."""
                     },
                     {
                         "role": "user", 
-                        "content": self.extraction_prompt.format(text=text[:12000])  # Slightly reduced for reliability
+                        "content": self.extraction_prompt.format(text=text[:15000])  # Increased limit for table data
                     }
                 ],
-                temperature=0.2,
+                temperature=0.1,  # Lower temperature for more consistent extraction
                 response_format={"type": "json_object"},
-                max_tokens=4000  # Increased for comprehensive response
+                max_tokens=6000  # Increased for comprehensive table extraction
             )
             
             result = json.loads(response.choices[0].message.content)
@@ -223,6 +134,9 @@ class AIExtractor:
             import datetime
             if "metadata" in result and "extraction_timestamp" not in result["metadata"]:
                 result["metadata"]["extraction_timestamp"] = datetime.datetime.now().isoformat()
+            
+            # Validate and clean the extracted data
+            result = self._validate_extracted_data(result)
             
             return result
             
@@ -239,6 +153,7 @@ class AIExtractor:
                     fixed_json = re.sub(r',\s*}', '}', fixed_json)
                     fixed_json = re.sub(r',\s*]', ']', fixed_json)
                     result = json.loads(fixed_json)
+                    result = self._validate_extracted_data(result)
                     return result
             except:
                 pass
@@ -248,7 +163,45 @@ class AIExtractor:
             import traceback
             traceback.print_exc()
             return self._get_empty_result()
-    
+
+    def _validate_extracted_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate and clean extracted data"""
+        # Ensure financial amounts are numbers
+        if "financial_details" in data:
+            # Convert total_grant_amount to number if it's a string
+            if isinstance(data["financial_details"].get("total_grant_amount"), str):
+                try:
+                    # Remove currency symbols and commas
+                    amount_str = data["financial_details"]["total_grant_amount"]
+                    amount_str = re.sub(r'[^\d.]', '', amount_str)
+                    data["financial_details"]["total_grant_amount"] = float(amount_str)
+                except:
+                    data["financial_details"]["total_grant_amount"] = None
+            
+            # Process installments and milestones
+            payment_schedule = data["financial_details"].get("payment_schedule", {})
+            
+            for installment in payment_schedule.get("installments", []):
+                if isinstance(installment.get("amount"), str):
+                    try:
+                        amount_str = installment["amount"]
+                        amount_str = re.sub(r'[^\d.]', '', amount_str)
+                        installment["amount"] = float(amount_str)
+                    except:
+                        installment["amount"] = None
+            
+            for milestone in payment_schedule.get("milestones", []):
+                if isinstance(milestone.get("amount"), str):
+                    try:
+                        amount_str = milestone["amount"]
+                        amount_str = re.sub(r'[^\d.]', '', amount_str)
+                        milestone["amount"] = float(amount_str)
+                    except:
+                        milestone["amount"] = None
+        
+        return data
+
+
     def get_embedding(self, text: str) -> list:
         """Get vector embedding for text - used for ChromaDB"""
         try:
@@ -310,10 +263,12 @@ class AIExtractor:
             "financial_details": {
                 "total_grant_amount": None,
                 "currency": "USD",
+                "additional_currencies": [],
                 "payment_schedule": {
                     "schedule_type": None,
                     "installments": [],
-                    "milestones": []
+                    "milestones": [],
+                    "reimbursements": []
                 },
                 "budget_breakdown": {
                     "personnel": None,
@@ -321,9 +276,17 @@ class AIExtractor:
                     "travel": None,
                     "materials": None,
                     "indirect_costs": None,
-                    "other": None
+                    "other": None,
+                    "contingency": None,
+                    "overhead": None,
+                    "subcontractors": None
                 },
-                "financial_reporting_requirements": None
+                "additional_budget_items": [],
+                "financial_reporting_requirements": None,
+                "financial_tables_summary": None,
+                "total_installments_amount": None,
+                "total_milestones_amount": None,
+                "payment_terms": None
             },
             "deliverables": {
                 "items": [],
@@ -355,6 +318,13 @@ class AIExtractor:
                 "executive_summary": "No summary available",
                 "key_dates_summary": "No date information extracted",
                 "financial_summary": "No financial information extracted",
-                "risk_assessment": "No risk assessment available"
+                "risk_assessment": "No risk assessment available",
+                "total_contract_value": "No total value extracted",
+                "payment_timeline_summary": "No payment timeline extracted"
+            },
+            "extended_data": {
+                "all_dates_found": [],
+                "all_amounts_found": [],
+                "table_data_extracted": []
             }
         }
