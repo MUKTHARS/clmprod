@@ -1,7 +1,4 @@
--- Enable pgvector extension
-CREATE EXTENSION IF NOT EXISTS vector;
-
--- Create grant_contracts table (will be created by SQLAlchemy, but adding for reference)
+-- Create grant_contracts table without vector
 CREATE TABLE IF NOT EXISTS grant_contracts (
     id SERIAL PRIMARY KEY,
     filename VARCHAR NOT NULL,
@@ -20,7 +17,6 @@ CREATE TABLE IF NOT EXISTS grant_contracts (
     raw_text TEXT,
     summary TEXT,
     extracted_data JSONB,
-    embedding VECTOR(1536),
     file_size INTEGER,
     page_count INTEGER
 );
@@ -41,8 +37,7 @@ CREATE INDEX IF NOT EXISTS idx_grant_contracts_filename ON grant_contracts(filen
 CREATE INDEX IF NOT EXISTS idx_grant_contracts_grantor ON grant_contracts(grantor);
 CREATE INDEX IF NOT EXISTS idx_grant_contracts_grantee ON grant_contracts(grantee);
 CREATE INDEX IF NOT EXISTS idx_grant_contracts_uploaded_at ON grant_contracts(uploaded_at);
-CREATE INDEX IF NOT EXISTS idx_grant_contracts_embedding ON grant_contracts USING ivfflat (embedding vector_cosine_ops);
 CREATE INDEX IF NOT EXISTS idx_extraction_logs_contract_id ON extraction_logs(contract_id);
 
-
-ALTER TABLE contracts ADD COLUMN chroma_id VARCHAR(255);
+-- Optional: add chroma_id column to a table if it exists
+-- ALTER TABLE contracts ADD COLUMN chroma_id VARCHAR(255);
