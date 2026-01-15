@@ -21,7 +21,7 @@ function ContractsListPage() {
   const fetchContracts = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:8000/contracts/');
+      const response = await fetch('/api/contracts/');
       const data = await response.json();
       setContracts(data);
       setFilteredContracts(data);
