@@ -32,6 +32,32 @@ class AIExtractor:
         
         self.extraction_prompt = """ANALYZE THIS GRANT CONTRACT THOROUGHLY AND EXTRACT ALL INFORMATION.
     
+        CRITICAL INSTRUCTIONS FOR MISSING FIELDS:
+        1. FOR TERMS & CONDITIONS: Extract ALL legal clauses including:
+           - Intellectual Property rights and ownership
+           - Confidentiality obligations and NDAs
+           - Liability and indemnification clauses
+           - Termination conditions and procedures
+           - Dispute resolution methods (arbitration, mediation, etc.)
+           - Governing law and jurisdiction
+           - Force majeure provisions
+           - Any restrictions or limitations
+
+        2. FOR COMPLIANCE: Extract ALL compliance requirements:
+           - Audit rights and procedures
+           - Record keeping requirements
+           - Regulatory compliance obligations
+           - Ethics and code of conduct requirements
+
+        3. FOR CONTRACT NAME: If "grant_name" is not explicitly stated, look for:
+           - Document titles at the beginning
+           - "This Agreement" followed by a description
+           - Project names or initiative names
+           - Funding program names
+
+        4. ALWAYS include these sections even if partially empty. Use "Not specified" for missing information.
+
+
         IMPORTANT: FOCUS ON EXTRACTING TABULAR DATA FROM FINANCIAL TABLES, PAYMENT SCHEDULES, AND BUDGETS.
 
         SPECIFIC INSTRUCTIONS:
@@ -137,7 +163,7 @@ class AIExtractor:
             
             # Validate and clean the extracted data
             result = self._validate_extracted_data(result)
-            
+            result = self._post_process_extracted_data(result, text[:5000])
             return result
             
         except json.JSONDecodeError as e:
@@ -164,8 +190,81 @@ class AIExtractor:
             traceback.print_exc()
             return self._get_empty_result()
 
+    # def _validate_extracted_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    #     """Validate and clean extracted data"""
+    #     # Ensure financial amounts are numbers
+    #     if "financial_details" in data:
+    #         # Convert total_grant_amount to number if it's a string
+    #         if isinstance(data["financial_details"].get("total_grant_amount"), str):
+    #             try:
+    #                 # Remove currency symbols and commas
+    #                 amount_str = data["financial_details"]["total_grant_amount"]
+    #                 amount_str = re.sub(r'[^\d.]', '', amount_str)
+    #                 data["financial_details"]["total_grant_amount"] = float(amount_str)
+    #             except:
+    #                 data["financial_details"]["total_grant_amount"] = None
+            
+    #         # Process installments and milestones
+    #         payment_schedule = data["financial_details"].get("payment_schedule", {})
+            
+    #         for installment in payment_schedule.get("installments", []):
+    #             if isinstance(installment.get("amount"), str):
+    #                 try:
+    #                     amount_str = installment["amount"]
+    #                     amount_str = re.sub(r'[^\d.]', '', amount_str)
+    #                     installment["amount"] = float(amount_str)
+    #                 except:
+    #                     installment["amount"] = None
+            
+    #         for milestone in payment_schedule.get("milestones", []):
+    #             if isinstance(milestone.get("amount"), str):
+    #                 try:
+    #                     amount_str = milestone["amount"]
+    #                     amount_str = re.sub(r'[^\d.]', '', amount_str)
+    #                     milestone["amount"] = float(amount_str)
+    #                 except:
+    #                     milestone["amount"] = None
+        
+    #     return data
+
+
+    def _post_process_extracted_data(self, data: Dict[str, Any], original_text: str) -> Dict[str, Any]:
+        """Post-process extracted data to fill missing fields"""
+        import re
+        
+        # If contract name is missing, try to extract from text
+        if not data.get("contract_details", {}).get("grant_name"):
+            # Look for common contract name patterns
+            patterns = [
+                r'GRANT\s+AGREEMENT\s+(?:FOR|RELATING TO|REGARDING)\s+(.+?)(?:\n|;)',
+                r'CONTRACT\s+(?:NO\.|NUMBER)[:\s]*[A-Z0-9-]+\s+(?:FOR|RELATING TO)\s+(.+?)(?:\n|;)',
+                r'AGREEMENT\s+(?:BETWEEN|AMONG).+?AND.+?FOR\s+(.+?)(?:\n|;)',
+                r'PROJECT\s+NAME[:\s]+(.+?)(?:\n|;)',
+                r'TITLE[:\s]+(.+?)(?:\n|;)'
+            ]
+            
+            for pattern in patterns:
+                match = re.search(pattern, original_text[:2000], re.IGNORECASE)
+                if match:
+                    data["contract_details"]["grant_name"] = match.group(1).strip()
+                    break
+        
+        # Ensure terms_conditions section exists
+        if "terms_conditions" not in data:
+            data["terms_conditions"] = self._get_empty_result()["terms_conditions"]
+        
+        # Ensure compliance section exists
+        if "compliance" not in data:
+            data["compliance"] = self._get_empty_result()["compliance"]
+        
+        return data
+
+
+
     def _validate_extracted_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Validate and clean extracted data"""
+        import re
+        
         # Ensure financial amounts are numbers
         if "financial_details" in data:
             # Convert total_grant_amount to number if it's a string
@@ -199,8 +298,39 @@ class AIExtractor:
                     except:
                         milestone["amount"] = None
         
+        # ADD THIS: Validate terms_conditions and compliance sections
+        if "terms_conditions" in data:
+            terms = data["terms_conditions"]
+            # Ensure all fields exist with at least empty strings
+            required_terms_fields = [
+                "intellectual_property", "confidentiality", "liability", 
+                "termination_clauses", "renewal_options", "dispute_resolution", 
+                "governing_law", "force_majeure", "key_obligations", "restrictions"
+            ]
+            for field in required_terms_fields:
+                if field not in terms or terms[field] is None:
+                    terms[field] = "" if field.endswith("s") else []
+        
+        if "compliance" in data:
+            compliance = data["compliance"]
+            # Ensure all fields exist with at least empty strings
+            required_compliance_fields = [
+                "audit_requirements", "record_keeping", 
+                "regulatory_compliance", "ethics_requirements"
+            ]
+            for field in required_compliance_fields:
+                if field not in compliance or compliance[field] is None:
+                    compliance[field] = ""
+        
+        
+        if "contract_details" in data:
+            contract_details = data["contract_details"]
+            if not contract_details.get("grant_name") and not contract_details.get("contract_number"):
+                # Try to find contract name in text if not extracted
+                # Look for common patterns in the original text
+                contract_details["extraction_notes"] = "Contract name not explicitly found in standard fields"
+        
         return data
-
 
     def get_embedding(self, text: str) -> list:
         """Get vector embedding for text - used for ChromaDB"""
