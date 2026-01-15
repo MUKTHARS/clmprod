@@ -408,15 +408,17 @@ button:disabled {
   font-size: 3rem;
   margin-bottom: var(--spacing-lg);
   color: var(--primary-color);
+  display: inline-block;
 }
 
 .upload-description {
   color: var(--text-secondary);
   margin-bottom: var(--spacing-xl);
   font-size: 1rem;
+  line-height: 1.6;
 }
 
-/* Upload Dropzone */
+/* Upload Dropzone - FIXED */
 .upload-dropzone {
   border: 2px dashed var(--border-color);
   border-radius: var(--radius-lg);
@@ -425,6 +427,11 @@ button:disabled {
   transition: all 0.2s ease;
   margin-bottom: var(--spacing-lg);
   background: var(--bg-secondary);
+  position: relative;
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .upload-dropzone:hover {
@@ -432,25 +439,44 @@ button:disabled {
   background: var(--bg-tertiary);
 }
 
+.upload-dropzone.drag-active {
+  border-color: var(--primary-color);
+  background: rgba(37, 99, 235, 0.05);
+  border-width: 3px;
+}
+
 .dropzone-content {
   color: var(--text-secondary);
+  width: 100%;
+  pointer-events: none;
+  user-select: none;
 }
 
 .dropzone-icon {
   font-size: 2.5rem;
   margin-bottom: var(--spacing-md);
   color: var(--text-light);
+  display: inline-block;
+}
+
+.dropzone-text {
+  font-size: 1rem;
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-xs);
+  font-weight: 500;
 }
 
 .dropzone-subtext {
   font-size: 0.875rem;
   color: var(--text-light);
   margin-top: var(--spacing-xs);
+  display: block;
 }
 
-/* File Preview */
+/* File Preview - FIXED */
 .file-preview {
   margin-bottom: var(--spacing-lg);
+  text-align: left;
 }
 
 .file-info {
@@ -466,6 +492,7 @@ button:disabled {
 .file-icon {
   font-size: 1.25rem;
   color: var(--primary-color);
+  flex-shrink: 0;
 }
 
 .file-details {
@@ -473,10 +500,15 @@ button:disabled {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-xs);
+  min-width: 0;
 }
 
 .file-details strong {
   color: var(--text-primary);
+  font-size: 0.875rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .file-details span {
@@ -492,6 +524,8 @@ button:disabled {
   font-size: 1.25rem;
   padding: 0.25rem;
   border-radius: var(--radius-sm);
+  transition: all 0.2s ease;
+  flex-shrink: 0;
 }
 
 .btn-remove:hover {
@@ -499,9 +533,10 @@ button:disabled {
   color: var(--error-color);
 }
 
-/* Progress Bar */
+/* Progress Bar - FIXED */
 .progress-container {
   margin: var(--spacing-lg) 0;
+  text-align: left;
 }
 
 .progress-bar {
@@ -510,6 +545,7 @@ button:disabled {
   border-radius: 2px;
   overflow: hidden;
   margin-bottom: var(--spacing-xs);
+  width: 100%;
 }
 
 .progress-fill {
@@ -522,9 +558,11 @@ button:disabled {
 .progress-text {
   font-size: 0.875rem;
   color: var(--text-secondary);
+  display: block;
+  margin-top: var(--spacing-xs);
 }
 
-/* Upload Button */
+/* Upload Button - FIXED */
 .btn-upload {
   width: 100%;
   padding: var(--spacing-md);
@@ -535,23 +573,31 @@ button:disabled {
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
+  font-size: 0.875rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
 }
 
 .btn-upload:hover:not(:disabled) {
   background: var(--primary-dark);
+  transform: translateY(-1px);
 }
 
 .btn-upload:disabled {
   background: var(--border-color);
   cursor: not-allowed;
+  transform: none;
 }
 
-/* Upload Status */
+/* Upload Status - FIXED */
 .upload-status {
   margin-top: var(--spacing-md);
   padding: var(--spacing-md);
   border-radius: var(--radius-md);
   font-size: 0.875rem;
+  text-align: left;
 }
 
 .upload-status.success {
@@ -566,7 +612,7 @@ button:disabled {
   border: 1px solid #fecaca;
 }
 
-/* Features Grid */
+/* Features Grid - FIXED */
 .upload-features {
   margin-top: var(--spacing-2xl);
   border-top: 1px solid var(--border-color);
@@ -589,12 +635,14 @@ button:disabled {
 .feature {
   display: flex;
   gap: var(--spacing-md);
+  align-items: flex-start;
 }
 
 .feature-icon {
   font-size: 1.25rem;
   color: var(--primary-color);
   flex-shrink: 0;
+  margin-top: 0.125rem;
 }
 
 .feature div {
@@ -605,12 +653,22 @@ button:disabled {
   display: block;
   margin-bottom: var(--spacing-xs);
   color: var(--text-primary);
+  font-size: 0.875rem;
 }
 
 .feature p {
   color: var(--text-secondary);
   font-size: 0.875rem;
   margin: 0;
+  line-height: 1.5;
+}
+
+/* File Input - FIXED */
+.file-input {
+  display: none;
+  opacity: 0;
+  position: absolute;
+  pointer-events: none;
 }
 
 /* ====== CONTRACTS LIST PAGE ====== */
@@ -1215,6 +1273,7 @@ tbody tr:hover {
   
   .upload-dropzone {
     padding: var(--spacing-lg);
+    min-height: 150px;
   }
 }
 
@@ -1232,6 +1291,14 @@ tbody tr:hover {
   .contracts-table {
     display: block;
     overflow-x: auto;
+  }
+  
+  .upload-card {
+    padding: var(--spacing-md);
+  }
+  
+  .upload-dropzone {
+    padding: var(--spacing-md);
   }
 }
 
@@ -1268,8 +1335,4 @@ tbody tr:hover {
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   margin: var(--spacing-md) 0;
-}
-
-.file-input {
-  display: none;
 }

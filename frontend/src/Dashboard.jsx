@@ -111,7 +111,7 @@ function Dashboard({ contracts, loading, refreshContracts }) {
       {/* KPI Cards */}
       <div className="kpi-grid">
         <div className="kpi-card">
-          <div className="kpi-icon">📋</div>
+          {/* <div className="kpi-icon">📋</div> */}
           <div className="kpi-content">
             <h3>{stats.totalGrants}</h3>
             <p>Total Grants</p>
@@ -119,7 +119,7 @@ function Dashboard({ contracts, loading, refreshContracts }) {
         </div>
         
         <div className="kpi-card">
-          <div className="kpi-icon">💰</div>
+          {/* <div className="kpi-icon">💰</div> */}
           <div className="kpi-content">
             <h3>{formatCurrency(stats.totalAmount)}</h3>
             <p>Total Contract Value</p>
@@ -127,7 +127,7 @@ function Dashboard({ contracts, loading, refreshContracts }) {
         </div>
         
         <div className="kpi-card">
-          <div className="kpi-icon">📈</div>
+          {/* <div className="kpi-icon">📈</div> */}
           <div className="kpi-content">
             <h3>{formatCurrency(stats.fundsReceived)}</h3>
             <p>Funds Received</p>
@@ -135,7 +135,7 @@ function Dashboard({ contracts, loading, refreshContracts }) {
         </div>
         
         <div className="kpi-card">
-          <div className="kpi-icon">📊</div>
+          {/* <div className="kpi-icon">📊</div> */}
           <div className="kpi-content">
             <h3>{formatCurrency(stats.fundsRemaining)}</h3>
             <p>Funds Remaining</p>
@@ -143,7 +143,7 @@ function Dashboard({ contracts, loading, refreshContracts }) {
         </div>
         
         <div className="kpi-card">
-          <div className="kpi-icon">✅</div>
+          {/* <div className="kpi-icon">✅</div> */}
           <div className="kpi-content">
             <h3>{stats.activeContracts}</h3>
             <p>Active Contracts</p>
@@ -151,7 +151,7 @@ function Dashboard({ contracts, loading, refreshContracts }) {
         </div>
         
         <div className="kpi-card">
-          <div className="kpi-icon">⏰</div>
+          {/* <div className="kpi-icon">⏰</div> */}
           <div className="kpi-content">
             <h3>{stats.upcomingDeadlines}</h3>
             <p>Upcoming Deadlines</p>

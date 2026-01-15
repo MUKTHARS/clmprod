@@ -71,6 +71,29 @@ function UploadPage({ setLoading, onUploadComplete }) {
     }
   };
 
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      const droppedFile = files[0];
+      if (droppedFile.type === 'application/pdf') {
+        setFile(droppedFile);
+        setUploadStatus('');
+        setUploadProgress(0);
+      } else {
+        setUploadStatus('Please select a valid PDF file');
+        setFile(null);
+      }
+    }
+  };
+
   return (
     <div className="upload-page">
       <div className="page-header">
@@ -96,11 +119,17 @@ function UploadPage({ setLoading, onUploadComplete }) {
               onChange={handleFileChange}
               className="file-input"
             />
-            <label htmlFor="pdf-upload" className="upload-dropzone">
+            <label 
+              htmlFor="pdf-upload" 
+              className="upload-dropzone"
+              onDragOver={handleDragOver}
+              onDrop={handleDrop}
+            >
               <div className="dropzone-content">
                 <div className="dropzone-icon">📤</div>
                 <p>Drag & drop your PDF file here</p>
                 <p className="dropzone-subtext">or click to browse</p>
+                <p className="file-types">Only PDF files are supported</p>
               </div>
             </label>
             
@@ -133,7 +162,12 @@ function UploadPage({ setLoading, onUploadComplete }) {
                     style={{ width: `${uploadProgress}%` }}
                   ></div>
                 </div>
-                <span className="progress-text">{Math.round(uploadProgress)}%</span>
+                <div className="progress-info">
+                  <span className="progress-text">{Math.round(uploadProgress)}% Complete</span>
+                  <span className="progress-status">
+                    {uploadProgress < 100 ? 'Processing...' : 'Completed'}
+                  </span>
+                </div>
               </div>
             )}
             
@@ -142,7 +176,14 @@ function UploadPage({ setLoading, onUploadComplete }) {
               className="btn-upload"
               disabled={!file || uploadProgress > 0}
             >
-              {uploadProgress > 0 ? 'Processing...' : 'Upload & Analyze'}
+              {uploadProgress > 0 ? (
+                <>
+                  <span className="processing-spinner"></span>
+                  Processing...
+                </>
+              ) : (
+                'Upload & Analyze'
+              )}
             </button>
             
             {uploadStatus && (
@@ -157,28 +198,28 @@ function UploadPage({ setLoading, onUploadComplete }) {
             <div className="features-grid">
               <div className="feature">
                 <span className="feature-icon">💰</span>
-                <div>
+                <div className="feature-content">
                   <strong>Financial Data</strong>
                   <p>Total amounts, payment schedules, budgets</p>
                 </div>
               </div>
               <div className="feature">
                 <span className="feature-icon">📅</span>
-                <div>
+                <div className="feature-content">
                   <strong>Key Dates</strong>
                   <p>Start/end dates, milestones, deadlines</p>
                 </div>
               </div>
               <div className="feature">
                 <span className="feature-icon">👥</span>
-                <div>
+                <div className="feature-content">
                   <strong>Parties Information</strong>
                   <p>Grantor, grantee, contact details</p>
                 </div>
               </div>
               <div className="feature">
                 <span className="feature-icon">📑</span>
-                <div>
+                <div className="feature-content">
                   <strong>Terms & Conditions</strong>
                   <p>Clauses, compliance, deliverables</p>
                 </div>
