@@ -54,8 +54,6 @@ from app.ai_extractor import AIExtractor
 from app.vector_store import vector_store
 from app.config import settings
 
-
-
 # Create tables
 models.Base.metadata.create_all(bind=engine)
 setup_database()
@@ -97,17 +95,32 @@ async def upload_contract(
         extraction_result = pdf_processor.extract_text(contents)
         cleaned_text = pdf_processor.clean_text(extraction_result["text"])
         
-        # Extract data using AI
-        extracted_data = ai_extractor.extract_contract_data(cleaned_text)
+        # Extract comprehensive data using AI
+        comprehensive_data = ai_extractor.extract_contract_data(cleaned_text)
         
         # Get embedding
         embedding = ai_extractor.get_embedding(cleaned_text)
         
+        # Extract basic fields for backward compatibility
+        basic_data = {
+            "contract_number": comprehensive_data.get("contract_details", {}).get("contract_number"),
+            "grant_name": comprehensive_data.get("contract_details", {}).get("grant_name"),
+            "grantor": comprehensive_data.get("parties", {}).get("grantor", {}).get("organization_name"),
+            "grantee": comprehensive_data.get("parties", {}).get("grantee", {}).get("organization_name"),
+            "total_amount": comprehensive_data.get("financial_details", {}).get("total_grant_amount"),
+            "start_date": comprehensive_data.get("contract_details", {}).get("start_date"),
+            "end_date": comprehensive_data.get("contract_details", {}).get("end_date"),
+            "purpose": comprehensive_data.get("contract_details", {}).get("purpose"),
+            "payment_schedule": comprehensive_data.get("financial_details", {}).get("payment_schedule"),
+            "terms_conditions": comprehensive_data.get("terms_conditions", {})
+        }
+        
         # Create contract record in PostgreSQL
         db_contract = models.Contract(
             filename=file.filename,
-            full_text=cleaned_text[:5000],  # Store first 5k chars
-            **extracted_data
+            full_text=cleaned_text[:5000],
+            comprehensive_data=comprehensive_data,  # Store comprehensive data
+            **basic_data
         )
         
         db.add(db_contract)
@@ -118,9 +131,9 @@ async def upload_contract(
         if embedding and len(embedding) > 0:
             metadata = {
                 "filename": file.filename,
-                "contract_number": extracted_data.get("contract_number"),
-                "grant_name": extracted_data.get("grant_name"),
-                "total_amount": str(extracted_data.get("total_amount")),
+                "contract_number": basic_data.get("contract_number"),
+                "grant_name": basic_data.get("grant_name"),
+                "total_amount": str(basic_data.get("total_amount")),
             }
             
             chroma_id = vector_store.store_embedding(
@@ -156,6 +169,33 @@ def get_contract(contract_id: int, db: Session = Depends(get_db)):
     if not contract:
         raise HTTPException(status_code=404, detail="Contract not found")
     return contract
+
+# ADD THIS NEW ENDPOINT
+@app.get("/contracts/{contract_id}/comprehensive")
+def get_comprehensive_data(contract_id: int, db: Session = Depends(get_db)):
+    """Get comprehensive data for a contract"""
+    contract = db.query(models.Contract).filter(models.Contract.id == contract_id).first()
+    if not contract:
+        raise HTTPException(status_code=404, detail="Contract not found")
+    
+    if not contract.comprehensive_data:
+        raise HTTPException(status_code=404, detail="Comprehensive data not found")
+    
+    return {
+        "contract_id": contract.id,
+        "filename": contract.filename,
+        "comprehensive_data": contract.comprehensive_data,
+        "basic_data": {
+            "contract_number": contract.contract_number,
+            "grant_name": contract.grant_name,
+            "grantor": contract.grantor,
+            "grantee": contract.grantee,
+            "total_amount": contract.total_amount,
+            "start_date": contract.start_date,
+            "end_date": contract.end_date,
+            "purpose": contract.purpose
+        }
+    }
 
 @app.get("/contracts/{contract_id}/similar")
 def get_similar_contracts(contract_id: int, n_results: int = 5, db: Session = Depends(get_db)):

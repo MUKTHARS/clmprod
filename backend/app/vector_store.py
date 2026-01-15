@@ -22,6 +22,21 @@ class ChromaVectorStore:
                 metadata={"hnsw:space": "cosine"}
             )
     
+    def _clean_metadata(self, metadata: Dict[str, Any]) -> Dict[str, Any]:
+        """Clean metadata by removing None values and converting to strings"""
+        cleaned = {}
+        for key, value in metadata.items():
+            if value is None:
+                # Convert None to empty string or skip
+                cleaned[key] = ""
+            elif isinstance(value, (int, float, bool, str)):
+                # These types are directly supported
+                cleaned[key] = value
+            else:
+                # Convert other types to string
+                cleaned[key] = str(value)
+        return cleaned
+    
     def store_embedding(
         self, 
         contract_id: int,
@@ -37,6 +52,9 @@ class ChromaVectorStore:
         metadata["contract_id"] = str(contract_id)
         metadata["id"] = str(contract_id)
         
+        # Clean metadata to remove None values
+        cleaned_metadata = self._clean_metadata(metadata)
+        
         # Generate unique ID
         doc_id = f"contract_{contract_id}"
         
@@ -44,7 +62,7 @@ class ChromaVectorStore:
         self.collection.add(
             ids=[doc_id],
             embeddings=[embedding],
-            metadatas=[metadata],
+            metadatas=[cleaned_metadata],
             documents=[text[:1000]]  # Store first 1000 chars as document
         )
         

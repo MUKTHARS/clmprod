@@ -8,6 +8,7 @@ function App() {
   const [contracts, setContracts] = useState([])
   const [selectedContract, setSelectedContract] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [selectedContractData, setSelectedContractData] = useState(null)
 
   const fetchContracts = async () => {
     try {
@@ -16,9 +17,37 @@ function App() {
       setContracts(data)
       if (data.length > 0 && !selectedContract) {
         setSelectedContract(data[0])
+        fetchComprehensiveData(data[0].id)
       }
     } catch (error) {
       console.error('Error fetching contracts:', error)
+    }
+  }
+
+  const fetchComprehensiveData = async (contractId) => {
+    try {
+      const response = await fetch(`http://localhost:8000/contracts/${contractId}/comprehensive`)
+      const data = await response.json()
+      setSelectedContractData(data)
+    } catch (error) {
+      console.error('Error fetching comprehensive data:', error)
+      // Fallback to basic contract data
+      const contract = contracts.find(c => c.id === contractId)
+      setSelectedContractData({
+        contract_id: contractId,
+        filename: contract.filename,
+        comprehensive_data: contract.comprehensive_data || {},
+        basic_data: {
+          contract_number: contract.contract_number,
+          grant_name: contract.grant_name,
+          grantor: contract.grantor,
+          grantee: contract.grantee,
+          total_amount: contract.total_amount,
+          start_date: contract.start_date,
+          end_date: contract.end_date,
+          purpose: contract.purpose
+        }
+      })
     }
   }
 
@@ -26,9 +55,15 @@ function App() {
     fetchContracts()
   }, [])
 
-  const handleUploadComplete = (newContract) => {
+  const handleUploadComplete = async (newContract) => {
     setContracts([newContract, ...contracts])
     setSelectedContract(newContract)
+    await fetchComprehensiveData(newContract.id)
+  }
+
+  const handleSelectContract = async (contract) => {
+    setSelectedContract(contract)
+    await fetchComprehensiveData(contract.id)
   }
 
   return (
@@ -50,8 +85,8 @@ function App() {
         </div>
 
         <div className="right-panel">
-          {selectedContract ? (
-            <ExtractedData contract={selectedContract} />
+          {selectedContractData ? (
+            <ExtractedData contractData={selectedContractData} />
           ) : (
             <div className="no-data">
               <h3>No contract selected</h3>
@@ -65,7 +100,7 @@ function App() {
         <h2>All Contracts</h2>
         <DataTable 
           contracts={contracts} 
-          onSelectContract={setSelectedContract}
+          onSelectContract={handleSelectContract}
           selectedId={selectedContract?.id}
         />
       </div>

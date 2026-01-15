@@ -10,7 +10,7 @@ class Contract(Base):
     filename = Column(String, nullable=False)
     uploaded_at = Column(DateTime(timezone=True), server_default=func.now())
     
-    # Extracted data
+    # Basic extracted data (for backward compatibility)
     contract_number = Column(String, nullable=True)
     grant_name = Column(String, nullable=True)
     grantor = Column(String, nullable=True)
@@ -22,14 +22,17 @@ class Contract(Base):
     payment_schedule = Column(JSONB, nullable=True)
     terms_conditions = Column(JSONB, nullable=True)
     
-    # Raw text (No embedding column - stored separately in ChromaDB)
+    # Comprehensive data (new)
+    comprehensive_data = Column(JSONB, nullable=True)
+    
+    # Raw text
     full_text = Column(Text, nullable=True)
     
     # Metadata
     status = Column(String, default="processed")
     processing_time = Column(Float, nullable=True)
     
-    # ChromaDB reference (optional)
+    # ChromaDB reference
     chroma_id = Column(String, nullable=True)
 
 class ExtractionLog(Base):
