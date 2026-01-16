@@ -1,6 +1,7 @@
 # PROXY FIX - Must be at the VERY TOP
 import os
 import sys
+
 from app import models, schemas
 from fastapi.middleware.cors import CORSMiddleware
 # Remove all proxy environment variables
@@ -98,7 +99,7 @@ async def upload_contract(
         
         # Extract comprehensive data using AI
         comprehensive_data = ai_extractor.extract_contract_data(cleaned_text)
-        
+        reference_ids = comprehensive_data.get("reference_ids", {})
         # Get embedding
         embedding = ai_extractor.get_embedding(cleaned_text)
         
@@ -127,6 +128,10 @@ async def upload_contract(
             filename=file.filename,
             full_text=cleaned_text[:5000] if cleaned_text else "",
             comprehensive_data=comprehensive_data,
+            investment_id=reference_ids.get("investment_id"),
+            project_id=reference_ids.get("project_id"),
+            grant_id=reference_ids.get("grant_id"),
+            extracted_reference_ids=reference_ids.get("extracted_reference_ids", []),
             contract_number=basic_data["contract_number"],
             grant_name=basic_data["grant_name"],
             grantor=basic_data["grantor"],

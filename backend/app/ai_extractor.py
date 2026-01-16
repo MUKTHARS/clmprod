@@ -432,7 +432,9 @@ class AIExtractor:
                 - SIGNATURES: extract names, titles, and dates from signature blocks
 
                 Be extremely thorough with ALL sections, not just financial data.
-                Be extremely thorough with numerical data and dates."""
+                Be extremely thorough with numerical data and dates.
+                
+                IMPORTANT: Return your response as a JSON object only."""
                     },
                     {
                         "role": "user", 
@@ -446,13 +448,17 @@ class AIExtractor:
             
             result = json.loads(response.choices[0].message.content)
             
+            reference_ids = self.extract_reference_ids(text, result.get("contract_details", {}))
+        
+            result["reference_ids"] = reference_ids
+
             # Add timestamp if not present
             import datetime
             if "metadata" in result and "extraction_timestamp" not in result["metadata"]:
                 result["metadata"]["extraction_timestamp"] = datetime.datetime.now().isoformat()
             
-            # Validate and clean the extracted data
-            result = self._validate_extracted_data(result)
+            # Validate and clean the extracted data - PASS THE ORIGINAL TEXT
+            result = self._validate_extracted_data(result, text[:5000]) 
             result = self._post_process_extracted_data(result, text[:5000])
             return result
             
@@ -469,7 +475,7 @@ class AIExtractor:
                     fixed_json = re.sub(r',\s*}', '}', fixed_json)
                     fixed_json = re.sub(r',\s*]', ']', fixed_json)
                     result = json.loads(fixed_json)
-                    result = self._validate_extracted_data(result)
+                    result = self._validate_extracted_data(result, text[:5000])  # <-- ADD TEXT PARAMETER HERE
                     return result
             except:
                 pass
@@ -480,43 +486,206 @@ class AIExtractor:
             traceback.print_exc()
             return self._get_empty_result()
 
-    # def _validate_extracted_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
-    #     """Validate and clean extracted data"""
-    #     # Ensure financial amounts are numbers
-    #     if "financial_details" in data:
-    #         # Convert total_grant_amount to number if it's a string
-    #         if isinstance(data["financial_details"].get("total_grant_amount"), str):
-    #             try:
-    #                 # Remove currency symbols and commas
-    #                 amount_str = data["financial_details"]["total_grant_amount"]
-    #                 amount_str = re.sub(r'[^\d.]', '', amount_str)
-    #                 data["financial_details"]["total_grant_amount"] = float(amount_str)
-    #             except:
-    #                 data["financial_details"]["total_grant_amount"] = None
+    # def extract_contract_data(self, text: str) -> Dict[str, Any]:
+    #     """Extract comprehensive structured data from contract text with focus on tables"""
+    #     try:
+    #         # Check API key
+    #         if not self.api_key or self.api_key == "your-openai-api-key-here":
+    #             print("ERROR: Please set OPENAI_API_KEY in .env file")
+    #             return self._get_empty_result()
             
-    #         # Process installments and milestones
-    #         payment_schedule = data["financial_details"].get("payment_schedule", {})
+    #         # Pre-process text to highlight tables
+    #         # Look for table markers in the text
+    #         table_markers = ["=== TABLES ===", "Table", "Schedule", "Payment", "Budget", "Milestone"]
+    #         has_tables = any(marker in text for marker in table_markers)
             
-    #         for installment in payment_schedule.get("installments", []):
-    #             if isinstance(installment.get("amount"), str):
-    #                 try:
-    #                     amount_str = installment["amount"]
-    #                     amount_str = re.sub(r'[^\d.]', '', amount_str)
-    #                     installment["amount"] = float(amount_str)
-    #                 except:
-    #                     installment["amount"] = None
+    #         # Add context about tables if found
+    #         if has_tables:
+    #             print("Detected tables in text, extracting with special attention...")
             
-    #         for milestone in payment_schedule.get("milestones", []):
-    #             if isinstance(milestone.get("amount"), str):
-    #                 try:
-    #                     amount_str = milestone["amount"]
-    #                     amount_str = re.sub(r'[^\d.]', '', amount_str)
-    #                     milestone["amount"] = float(amount_str)
-    #                 except:
-    #                     milestone["amount"] = None
-        
-    #     return data
+    #         # Use gpt-4o-mini for comprehensive extraction
+    #         response = self.client.chat.completions.create(
+    #             model="gpt-4o-mini",
+    #             messages=[
+    #                 {
+    #                     "role": "system",
+    #                     "content": """You are a contract analysis expert with special expertise in document structure recognition AND financial contract analysis.
 
+    #             ULTRA-IMPORTANT FOR CONTRACT NAMES:
+    #             1. Scan the VERY BEGINNING of the document for logo text (often all caps)
+    #             2. Look for document titles BEFORE the "BETWEEN" clause
+    #             3. Extract text from header lines and formatted sections
+    #             4. Find the project name in phrases like "for the [Project Name]" after party names
+    #             5. If you see centered, bold, or all-caps text at the top, it's likely the contract name
+
+    #             DOCUMENT STRUCTURE AWARENESS:
+    #             - Recognize that logos often contain the project/program name
+    #             - Headers typically contain the document title
+    #             - The first substantive paragraph often names the project
+    #             - Signature blocks may repeat the contract name
+
+    #             CONTRACT NAME EXTRACTION RULES:
+    #             1. ALWAYS extract a contract name
+    #             2. Prefer descriptive names over generic ones
+    #             3. Look for names in quotes or after colons
+    #             4. If multiple candidates, choose the most specific one
+    #             5. Document where you found the name for validation
+
+    #             CRITICAL: DO NOT MISS THESE FIELDS:
+    #             1. Risk Management clauses
+    #             2. Scope of Work (detailed description)
+    #             3. Grant Reference numbers
+    #             4. Reporting Requirements (frequency, types, due dates)
+    #             5. Confidentiality provisions
+    #             6. Renewal Options
+    #             7. Dispute Resolution mechanisms
+    #             8. Governing Law
+    #             9. Force Majeure clauses
+    #             10. Signature Dates and Signatories
+    #             11. Project Objectives
+
+    #             PAY SPECIAL ATTENTION TO:
+    #             - TABLES: extract all rows, columns, and data from any tables you find
+    #             - FINANCIAL DATA: extract ALL amounts with their currencies
+    #             - DATES: extract ALL dates in any format and convert to YYYY-MM-DD when possible
+    #             - SIGNATURES: extract names, titles, and dates from signature blocks
+
+    #             Be extremely thorough with ALL sections, not just financial data.
+    #             Be extremely thorough with numerical data and dates."""
+    #                 },
+    #                 {
+    #                     "role": "user", 
+    #                     "content": self.extraction_prompt.format(text=text[:15000])  # Increased limit for table data
+    #                 }
+    #             ],
+    #             temperature=0.1,  # Lower temperature for more consistent extraction
+    #             response_format={"type": "json_object"},
+    #             max_tokens=6000  # Increased for comprehensive table extraction
+    #         )
+            
+    #         result = json.loads(response.choices[0].message.content)
+            
+    #         reference_ids = self.extract_reference_ids(text, result.get("contract_details", {}))
+        
+    #         result["reference_ids"] = reference_ids
+
+    #         # Add timestamp if not present
+    #         import datetime
+    #         if "metadata" in result and "extraction_timestamp" not in result["metadata"]:
+    #             result["metadata"]["extraction_timestamp"] = datetime.datetime.now().isoformat()
+            
+    #         # Validate and clean the extracted data
+    #         result = self._validate_extracted_data(result)
+    #         result = self._post_process_extracted_data(result, text[:5000])
+    #         return result
+            
+    #     except json.JSONDecodeError as e:
+    #         print(f"JSON Decode Error: {e}")
+    #         # Try to extract and fix JSON
+    #         try:
+    #             import re
+    #             json_match = re.search(r'\{.*\}', response.choices[0].message.content, re.DOTALL)
+    #             if json_match:
+    #                 fixed_json = json_match.group()
+    #                 # Clean common JSON issues
+    #                 fixed_json = fixed_json.replace('\n', ' ').replace('\r', ' ')
+    #                 fixed_json = re.sub(r',\s*}', '}', fixed_json)
+    #                 fixed_json = re.sub(r',\s*]', ']', fixed_json)
+    #                 result = json.loads(fixed_json)
+    #                 result = self._validate_extracted_data(result)
+    #                 return result
+    #         except:
+    #             pass
+    #         return self._get_empty_result()
+    #     except Exception as e:
+    #         print(f"Extraction error: {e}")
+    #         import traceback
+    #         traceback.print_exc()
+    #         return self._get_empty_result()
+
+
+    def extract_reference_ids(self, text: str, contract_details: Dict[str, Any]) -> Dict[str, Any]:
+        """Extract investment, project, and grant IDs from contract text"""
+        import re
+        
+        extracted_ids = {
+            "investment_id": None,
+            "project_id": None,
+            "grant_id": None,
+            "extracted_reference_ids": []
+        }
+        
+        # Common patterns for reference IDs
+        patterns = {
+            "investment_id": [
+                r'Investment\s*(?:ID|Number|No\.?)[:\s]*([A-Z0-9\-/#]+)',
+                r'INV-\d+',
+                r'INV[:\s]*([A-Z0-9\-]+)',
+                r'\bINVESTMENT[:\s]+([A-Z0-9\-/#]+)'
+            ],
+            "project_id": [
+                r'Project\s*(?:ID|Number|No\.?|Code)[:\s]*([A-Z0-9\-/#]+)',
+                r'PRJ-\d+',
+                r'PRJ[:\s]*([A-Z0-9\-]+)',
+                r'\bPROJECT[:\s]+([A-Z0-9\-/#]+)',
+                r'P-\d+'
+            ],
+            "grant_id": [
+                r'Grant\s*(?:ID|Number|No\.?|Reference)[:\s]*([A-Z0-9\-/#]+)',
+                r'GR-\d+',
+                r'GRANT[:\s]+([A-Z0-9\-/#]+)',
+                r'G-\d+',
+                r'GRNT-\d+'
+            ]
+        }
+        
+        # Combine contract details text with extracted text for better searching
+        search_text = text.lower()
+        
+        # Also search in contract_details if available
+        if contract_details:
+            search_text += " " + json.dumps(contract_details).lower()
+        
+        for id_type, id_patterns in patterns.items():
+            for pattern in id_patterns:
+                match = re.search(pattern, text, re.IGNORECASE)
+                if match:
+                    extracted_value = match.group(1) if len(match.groups()) > 0 else match.group(0)
+                    if extracted_value:
+                        extracted_ids[id_type] = extracted_value.strip()
+                        extracted_ids["extracted_reference_ids"].append({
+                            "type": id_type,
+                            "value": extracted_value.strip(),
+                            "pattern": pattern
+                        })
+                        break  # Use first match for each type
+        
+        # Fallback: Check if contract_number looks like an ID
+        if not extracted_ids["investment_id"] and contract_details.get("contract_number"):
+            contract_num = contract_details["contract_number"]
+            if any(term in contract_num.upper() for term in ['INV', 'INVESTMENT']):
+                extracted_ids["investment_id"] = contract_num
+                extracted_ids["extracted_reference_ids"].append({
+                    "type": "investment_id",
+                    "value": contract_num,
+                    "source": "contract_number"
+                })
+            elif any(term in contract_num.upper() for term in ['PRJ', 'PROJECT', 'P-']):
+                extracted_ids["project_id"] = contract_num
+                extracted_ids["extracted_reference_ids"].append({
+                    "type": "project_id",
+                    "value": contract_num,
+                    "source": "contract_number"
+                })
+            elif any(term in contract_num.upper() for term in ['GR', 'GRANT', 'G-']):
+                extracted_ids["grant_id"] = contract_num
+                extracted_ids["extracted_reference_ids"].append({
+                    "type": "grant_id",
+                    "value": contract_num,
+                    "source": "contract_number"
+                })
+        
+        return extracted_ids
 
     def _post_process_extracted_data(self, data: Dict[str, Any], original_text: str) -> Dict[str, Any]:
         """Post-process extracted data to fill missing fields"""
@@ -551,7 +720,7 @@ class AIExtractor:
 
 
 
-    def _validate_extracted_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    def _validate_extracted_data(self, data: Dict[str, Any], original_text: str = "") -> Dict[str, Any]:
         """Validate and clean extracted data"""
         import re
         
@@ -692,9 +861,12 @@ class AIExtractor:
         # Insert this in your prompt construction:
         self.extraction_prompt = f"""ANALYZE THIS GRANT CONTRACT THOROUGHLY AND EXTRACT ALL INFORMATION.
         
+        Return ONLY valid JSON in this exact format:
+
+        IMPORTANT: Respond with JSON format only.
+
         {logo_header_instructions}
         
-        [Rest of your existing prompt...]
         """
         
         # 4. ENHANCE THE VALIDATION FOR CONTRACT NAME

@@ -222,10 +222,31 @@ function ContractDetailsPage() {
 
       <div className="contract-header-card">
         <div className="contract-basic-info">
-          <div className="contract-title">
-            <h2>{contractData.filename}</h2>
-            <span className="contract-id">ID: #{contractData.contract_id}</span>
-          </div>
+         <div className="contract-title">
+  <h2>{parties.grantor?.organization_name || contractData.filename}</h2>
+  <div className="contract-ids">
+    {/* Display the most relevant ID */}
+    {contractData.investment_id && (
+      <span className="contract-id-badge investment-id">
+        INV: {contractData.investment_id}
+      </span>
+    )}
+    {contractData.project_id && (
+      <span className="contract-id-badge project-id">
+        PRJ: {contractData.project_id}
+      </span>
+    )}
+    {contractData.grant_id && (
+      <span className="contract-id-badge grant-id">
+        GRANT: {contractData.grant_id}
+      </span>
+    )}
+    {/* Fallback to database ID if no reference IDs found */}
+    {!contractData.investment_id && !contractData.project_id && !contractData.grant_id && (
+      <span className="contract-id">DB ID: #{contractData.contract_id}</span>
+    )}
+  </div>
+</div>
           
           <div className="contract-stats">
             <div className="stat">
