@@ -32,6 +32,23 @@ class AIExtractor:
         
         self.extraction_prompt = """ANALYZE THIS GRANT CONTRACT THOROUGHLY AND EXTRACT ALL INFORMATION.
     
+        LOGO AND HEADER EXTRACTION GUIDANCE:
+        1. CONTRACT TITLE OFTEN APPEARS IN:
+           - The first all-caps line before "BETWEEN"
+           - Centered text at the top of the document
+           - Text that appears to be in a logo area
+           - Bold or larger font text at the beginning
+
+        2. SPECIFIC PATTERNS TO LOOK FOR:
+           - "AGREEMENT BETWEEN [Party A] AND [Party B] FOR [Project Name]"
+           - "THIS GRANT AGREEMENT (the 'Agreement') is made for [Project Name]"
+           - Logo text followed by project description
+           - Header: "[PROJECT NAME] GRANT AGREEMENT"
+
+        3. IF YOU SEE FORMATTED TEXT AT THE BEGINNING, EXTRACT IT AS CONTRACT NAME
+
+        4. NEVER SKIP THE CONTRACT NAME - if uncertain, use the most descriptive line from first 10 lines
+
         CRITICAL - EXTRACT THESE SPECIFIC FIELDS THAT ARE OFTEN MISSED:
 
         1. RISK MANAGEMENT: Extract ALL risk-related clauses including:
@@ -372,32 +389,50 @@ class AIExtractor:
                 model="gpt-4o-mini",
                 messages=[
                     {
-                        "role": "system", 
-                        "content": """You are a highly experienced contract analyst specializing in financial contract analysis.
-                        Your task is to extract EVERY piece of financial information, dates, and amounts from contracts.
+                        "role": "system",
+                        "content": """You are a contract analysis expert with special expertise in document structure recognition AND financial contract analysis.
 
-                        CRITICAL: DO NOT MISS THESE FIELDS:
-                        1. Risk Management clauses
-                        2. Scope of Work (detailed description)
-                        3. Grant Reference numbers
-                        4. Reporting Requirements (frequency, types, due dates)
-                        5. Confidentiality provisions
-                        6. Renewal Options
-                        7. Dispute Resolution mechanisms
-                        8. Governing Law
-                        9. Force Majeure clauses
-                        10. Signature Dates and Signatories
-                        11. Project Objectives
-                        
-                        For dates: extract ALL dates in any format and convert to YYYY-MM-DD when possible.
-                        For amounts: extract ALL amounts with their currencies.
-                        For signatures: extract names, titles, and dates from signature blocks.
+                ULTRA-IMPORTANT FOR CONTRACT NAMES:
+                1. Scan the VERY BEGINNING of the document for logo text (often all caps)
+                2. Look for document titles BEFORE the "BETWEEN" clause
+                3. Extract text from header lines and formatted sections
+                4. Find the project name in phrases like "for the [Project Name]" after party names
+                5. If you see centered, bold, or all-caps text at the top, it's likely the contract name
 
-                        PAY SPECIAL ATTENTION TO TABLES - extract all rows, columns, and data from any tables you find.
-                        For financial data: extract ALL amounts with their currencies.
-                        For dates: extract ALL dates in any format and convert to YYYY-MM-DD when possible.
-                        Be extremely thorough with ALL sections, not just financial data.
-                        Be extremely thorough with numerical data and dates."""
+                DOCUMENT STRUCTURE AWARENESS:
+                - Recognize that logos often contain the project/program name
+                - Headers typically contain the document title
+                - The first substantive paragraph often names the project
+                - Signature blocks may repeat the contract name
+
+                CONTRACT NAME EXTRACTION RULES:
+                1. ALWAYS extract a contract name
+                2. Prefer descriptive names over generic ones
+                3. Look for names in quotes or after colons
+                4. If multiple candidates, choose the most specific one
+                5. Document where you found the name for validation
+
+                CRITICAL: DO NOT MISS THESE FIELDS:
+                1. Risk Management clauses
+                2. Scope of Work (detailed description)
+                3. Grant Reference numbers
+                4. Reporting Requirements (frequency, types, due dates)
+                5. Confidentiality provisions
+                6. Renewal Options
+                7. Dispute Resolution mechanisms
+                8. Governing Law
+                9. Force Majeure clauses
+                10. Signature Dates and Signatories
+                11. Project Objectives
+
+                PAY SPECIAL ATTENTION TO:
+                - TABLES: extract all rows, columns, and data from any tables you find
+                - FINANCIAL DATA: extract ALL amounts with their currencies
+                - DATES: extract ALL dates in any format and convert to YYYY-MM-DD when possible
+                - SIGNATURES: extract names, titles, and dates from signature blocks
+
+                Be extremely thorough with ALL sections, not just financial data.
+                Be extremely thorough with numerical data and dates."""
                     },
                     {
                         "role": "user", 
@@ -520,6 +555,188 @@ class AIExtractor:
         """Validate and clean extracted data"""
         import re
         
+            # 1. ENHANCED CONTRACT NAME EXTRACTION
+        if not data.get("contract_details", {}).get("grant_name"):
+            contract_details = data.setdefault("contract_details", {})
+            
+            # Strategy 1: Look for document titles BEFORE "BETWEEN" or "AGREEMENT BETWEEN"
+            patterns_pre_between = [
+                # Pattern: Title before "BETWEEN"
+                r'^(.*?)\s*(?:GRANT\s+)?(?:AGREEMENT|CONTRACT|MEMORANDUM OF UNDERSTANDING)\s*(?:NO\.?[:\s]*[A-Z0-9-]+)?\s*(?:BETWEEN|AMONG)\s+',
+                # Pattern: "THIS" followed by agreement type and name
+                r'THIS\s+(?:GRANT\s+)?(?:AGREEMENT|CONTRACT|MEMORANDUM)\s+(?:IS\s+MADE\s+)?(?:FOR|ENTITLED|TITLED)[:\s]+["\']?(.+?)["\']?(?:\s+BY\s+AND\s+BETWEEN|\s+BETWEEN|\.|$)',
+                # Pattern: Logo text detection (often all caps)
+                r'\n([A-Z][A-Z\s&,\-\'\(\)]{10,60})\n\s*(?:Logo|L O G O|\\/\\s*logo\\s*\\/\\s*)?\n',
+                # Pattern: Header lines (often centered or bold)
+                r'\n\s*([A-Z][A-Za-z0-9\s&,\-:\(\)]{10,80})\n\s*[-=~*_]{10,}\n',
+            ]
+            
+            # Check first 500 characters (where titles usually are)
+            first_section = original_text[:500]
+            for pattern in patterns_pre_between:
+                match = re.search(pattern, first_section, re.IGNORECASE | re.DOTALL)
+                if match:
+                    potential_name = match.group(1).strip()
+                    # Clean the extracted name
+                    if len(potential_name) > 5 and len(potential_name) < 100:
+                        # Remove common prefixes/suffixes
+                        clean_name = re.sub(r'^(?:THE\s+|A\s+|AN\s+|THIS\s+)', '', potential_name, flags=re.IGNORECASE)
+                        clean_name = re.sub(r'\s+(?:AGREEMENT|CONTRACT|GRANT|PROJECT|PROGRAM)$', '', clean_name, flags=re.IGNORECASE)
+                        if clean_name and not re.search(r'^\d+$', clean_name):  # Not just numbers
+                            contract_details["grant_name"] = clean_name
+                            contract_details["name_extraction_method"] = "pre_between_pattern"
+                            break
+            
+            # Strategy 2: Look for "Project:" or "Title:" markers
+            if not contract_details.get("grant_name"):
+                marker_patterns = [
+                    r'(?:Project\s*Name|Title|Grant\s*Title)[:\s]+["\']?(.+?)["\']?(?:\n|\.|;)',
+                    r'RE:\s*["\']?(.+?)["\']?(?:\n|\.|;)',
+                    r'SUBJECT:\s*["\']?(.+?)["\']?(?:\n|\.|;)',
+                    r'^[A-Z\s]{10,50}\n(?:for|regarding)\s+["\']?(.+?)["\']?(?:\n|\.|$)',
+                ]
+                
+                for pattern in marker_patterns:
+                    match = re.search(pattern, first_section, re.IGNORECASE)
+                    if match:
+                        potential_name = match.group(1).strip()
+                        if 5 < len(potential_name) < 100:
+                            contract_details["grant_name"] = potential_name
+                            contract_details["name_extraction_method"] = "marker_pattern"
+                            break
+            
+            # Strategy 3: Extract from between parties (common format)
+            if not contract_details.get("grant_name"):
+                between_pattern = r'(?:BETWEEN|AMONG)\s+(.+?)\s+(?:AND|&)\s+(.+?)(?:\s+for\s+["\']?(.+?)["\']?|\s+relating\s+to\s+["\']?(.+?)["\']?|\s+regarding\s+["\']?(.+?)["\']?|\s+concerning\s+["\']?(.+?)["\']?)'
+                match = re.search(between_pattern, first_section, re.IGNORECASE)
+                if match:
+                    for i in range(3, 7):  # Check groups 3-6 (the "for X" parts)
+                        if match.group(i):
+                            potential_name = match.group(i).strip()
+                            if 5 < len(potential_name) < 100:
+                                contract_details["grant_name"] = potential_name
+                                contract_details["name_extraction_method"] = "between_parties_pattern"
+                                break
+            
+            # Strategy 4: Look for funding program names
+            if not contract_details.get("grant_name"):
+                program_patterns = [
+                    r'(?:under|pursuant to|as part of)\s+(?:the\s+)?["\']?(.+?Program|.+?Initiative|.+?Project|.+?Grant)["\']?',
+                    r'funded\s+(?:by|under)\s+(?:the\s+)?["\']?(.+?)["\']?(?:\s+Program|\s+Initiative)?',
+                    r'(?:Program|Initiative|Project)[:\s]+["\']?(.+?)["\']?(?:\n|\.|;)',
+                ]
+                
+                for pattern in program_patterns:
+                    match = re.search(pattern, original_text[:1500], re.IGNORECASE)
+                    if match:
+                        potential_name = match.group(1).strip()
+                        if 5 < len(potential_name) < 100:
+                            contract_details["grant_name"] = potential_name
+                            contract_details["name_extraction_method"] = "program_pattern"
+                            break
+            
+            # Strategy 5: Smart fallback - Use the most descriptive line from first paragraph
+            if not contract_details.get("grant_name"):
+                # Get the first paragraph (before first double newline)
+                first_para_match = re.search(r'^(.+?)(?:\n\s*\n|$)', original_text[:1000], re.DOTALL)
+                if first_para_match:
+                    first_para = first_para_match.group(1)
+                    # Find the most meaningful line (not too short, not too long, contains keywords)
+                    lines = [line.strip() for line in first_para.split('\n') if line.strip()]
+                    for line in lines:
+                        if (30 < len(line) < 200 and 
+                            not re.search(r'^\d', line) and  # Doesn't start with number
+                            not re.search(r'page|confidential|proprietary', line, re.IGNORECASE) and
+                            re.search(r'\b(?:grant|project|initiative|program|agreement|contract)\b', line, re.IGNORECASE)):
+                            contract_details["grant_name"] = line
+                            contract_details["name_extraction_method"] = "first_paragraph_fallback"
+                            break
+            
+            # Final fallback: Use first meaningful line
+            if not contract_details.get("grant_name"):
+                lines = [line.strip() for line in original_text[:300].split('\n') if line.strip()]
+                for line in lines:
+                    if (10 < len(line) < 150 and 
+                        not re.search(r'^\s*$', line) and
+                        not re.search(r'^\d', line) and
+                        not re.search(r'^(?:to|and|the|of|in|for|by|with|from|at|on|as|is|was|be|are|were|have|has|had|do|does|did|will|would|should|could|can|may|might|must)$', line, re.IGNORECASE)):
+                        contract_details["grant_name"] = line
+                        contract_details["name_extraction_method"] = "first_line_fallback"
+                        break
+        
+        # 2. ENHANCE THE PROMPT FURTHER IN THE SYSTEM MESSAGE
+        # Update the system message in extract_contract_data method to include:
+        system_message_content = """You are a highly experienced contract analyst specializing in financial and legal contract analysis.
+        
+        CRITICAL FOR CONTRACT NAMES: Look for contract names in these specific locations:
+        1. LOGO TEXT - often all caps text near the beginning
+        2. HEADER LINES - centered or bold text before "BETWEEN"
+        3. "THIS AGREEMENT" followed by "for" or "entitled"
+        4. Text between the parties names (e.g., "between X and Y for [Project Name]")
+        5. "Project:" or "Title:" markers
+        6. Funding program names mentioned in first paragraph
+        
+        If contract name is not obvious, extract the most descriptive line from the first paragraph.
+        NEVER leave contract name empty."""
+        
+        # 3. ADD LOGO/HEADER DETECTION TO THE PROMPT
+        # Add this to your extraction_prompt:
+        logo_header_instructions = """
+        SPECIAL ATTENTION TO LOGOS AND HEADERS:
+        - Extract text from what appears to be logo areas (all caps, centered, special formatting)
+        - Look for header lines before the "BETWEEN" clause
+        - Document titles often appear as the first non-empty line or after company logos
+        - If you see formatted text (all caps, bold, centered), it's likely the contract name
+        """
+        
+        # Insert this in your prompt construction:
+        self.extraction_prompt = f"""ANALYZE THIS GRANT CONTRACT THOROUGHLY AND EXTRACT ALL INFORMATION.
+        
+        {logo_header_instructions}
+        
+        [Rest of your existing prompt...]
+        """
+        
+        # 4. ENHANCE THE VALIDATION FOR CONTRACT NAME
+        # Ensure contract name is meaningful
+        if "contract_details" in data and data["contract_details"].get("grant_name"):
+            name = data["contract_details"]["grant_name"]
+            # Clean up the name
+            name = re.sub(r'\s+', ' ', name).strip()
+            # Remove common prefixes
+            name = re.sub(r'^(?:MEMORANDUM OF UNDERSTANDING|GRANT AGREEMENT|CONTRACT|AGREEMENT)\s*[:-]?\s*', '', name, flags=re.IGNORECASE)
+            # Remove quotes
+            name = re.sub(r'^["\']|["\']$', '', name)
+            
+            # If name is still valid, keep it
+            if 3 <= len(name) <= 200:
+                data["contract_details"]["grant_name"] = name
+            else:
+                # Name is too short or too long, try to find better one
+                data["contract_details"]["grant_name"] = None
+        
+        # 5. ADD METADATA ABOUT NAME EXTRACTION
+        if "contract_details" in data:
+            contract_details = data["contract_details"]
+            if "name_extraction_method" not in contract_details:
+                contract_details["name_extraction_method"] = "AI_extraction" if contract_details.get("grant_name") else "not_found"
+            
+            # Add confidence score for name extraction
+            if "grant_name" in contract_details:
+                # Calculate confidence based on extraction method
+                confidence_map = {
+                    "pre_between_pattern": 0.9,
+                    "marker_pattern": 0.8,
+                    "between_parties_pattern": 0.7,
+                    "program_pattern": 0.6,
+                    "first_paragraph_fallback": 0.5,
+                    "first_line_fallback": 0.4,
+                    "AI_extraction": 0.85
+                }
+                method = contract_details.get("name_extraction_method", "AI_extraction")
+                contract_details["name_extraction_confidence"] = confidence_map.get(method, 0.5)
+
+
         # Ensure financial amounts are numbers
         if "financial_details" in data:
             # Convert total_grant_amount to number if it's a string
