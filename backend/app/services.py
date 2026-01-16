@@ -110,7 +110,7 @@ class PDFExtractor:
         
         try:
             response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",  # Using gpt-3.5-turbo for cost efficiency
+                model="gpt-4o-mini",  # Using gpt-3.5-turbo for cost efficiency
                 messages=[
                     {"role": "system", "content": "You are a contract analysis expert. Extract structured data from contracts."},
                     {"role": "user", "content": prompt}
@@ -195,7 +195,7 @@ class PDFExtractor:
         """Generate a concise summary of the contract"""
         try:
             response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
+                model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": "You are a contract summarizer."},
                     {"role": "user", "content": f"Summarize the following grant contract in 1-2 sentences. Focus on: who is giving the grant to whom, for what purpose, and the total amount.\n\nContract text: {text[:3000]}"}
