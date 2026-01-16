@@ -271,7 +271,7 @@ function ComprehensiveView({ contractData }) {
     <div className="comprehensive-view">
       <div className="view-header">
         <h2>Comprehensive Contract Analysis</h2>
-        <div className="file-info">
+        {/* <div className="file-info">
           <span className="filename">{filename}</span>
           <span className="contract-id">ID: {contract_id}</span>
           {data.metadata?.extraction_confidence && (
@@ -279,7 +279,7 @@ function ComprehensiveView({ contractData }) {
               Confidence: {(data.metadata.extraction_confidence * 100).toFixed(1)}%
             </span>
           )}
-        </div>
+        </div> */}
       </div>
 
       <div className="extraction-content">
