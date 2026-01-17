@@ -48,9 +48,9 @@ function App() {
   return (
     <Router>
       <div className="app-container">
-        <Sidebar isMobileOpen={isMobileMenuOpen} onClose={handleMobileMenuClose} />
+        <Sidebar />
         <div className="main-content">
-          <TopBar onMenuToggle={toggleMobileMenu} />
+          <TopBar />
           <div className="content-area">
             <Routes>
               <Route path="/" element={<Navigate to="/dashboard" />} />

@@ -99,9 +99,9 @@ function UploadPage({ setLoading, onUploadComplete }) {
     <div className="upload-page">
       <div className="page-header">
         <h1>Upload Contract</h1>
-        <button className="btn-secondary" onClick={() => navigate('/dashboard')}>
+        {/* <button className="btn-secondary" onClick={() => navigate('/dashboard')}>
           ← Back to Dashboard
-        </button>
+        </button> */}
       </div>
 
       <div className="upload-container">

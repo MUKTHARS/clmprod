@@ -121,9 +121,9 @@ function ContractsListPage() {
     <div className="contracts-list-page">
       <div className="page-header">
         <div className="header-left">
-          <button className="btn-back" onClick={() => navigate('/dashboard')}>
+          {/* <button className="btn-back" onClick={() => navigate('/dashboard')}>
             ← Back to Dashboard
-          </button>
+          </button> */}
           <h1>All Contracts</h1>
           <span className="contracts-count">{filteredContracts.length} contracts</span>
         </div>

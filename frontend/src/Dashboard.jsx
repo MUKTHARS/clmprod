@@ -136,14 +136,6 @@ function Dashboard({ contracts, loading, refreshContracts }) {
         </div>
         
         <div className="kpi-card">
-          {/* <div className="kpi-icon">📊</div> */}
-          <div className="kpi-content">
-            <h3>{formatCurrency(stats.fundsRemaining)}</h3>
-            <p>Funds Remaining</p>
-          </div>
-        </div>
-        
-        <div className="kpi-card">
           {/* <div className="kpi-icon">✅</div> */}
           <div className="kpi-content">
             <h3>{stats.activeContracts}</h3>

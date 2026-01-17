@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import './TopBar.css';
 
-const TopBar = ({ onMenuToggle }) => {
+const TopBar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [showNotifications, setShowNotifications] = useState(false);
@@ -23,16 +23,8 @@ const TopBar = ({ onMenuToggle }) => {
   return (
     <header className="topbar">
       <div className="topbar-left">
-          <button className="mobile-menu-btn" onClick={onMenuToggle}>
-          <span className="menu-icon">☰</span>
-        </button>
-        <button className="back-btn" onClick={() => navigate(-1)}>
-          ← Back
-        </button>
         <div className="breadcrumb">
           <h1 className="page-title">{getPageTitle()}</h1>
-          {/* <span className="separator">/</span> */}
-          {/* <span className="current-page">Current Page</span> */}
         </div>
       </div>
 
