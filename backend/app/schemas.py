@@ -25,6 +25,23 @@ class ContractResponse(ContractBase):
     processing_time: Optional[float] = None
     comprehensive_data: Optional[Dict[str, Any]] = None  # Add this line
     chroma_id: Optional[str] = None  # Add this line
+    investment_id: Optional[str] = None
+    project_id: Optional[str] = None
+    grant_id: Optional[str] = None
+    extracted_reference_ids: Optional[List[Dict[str, Any]]] = None
+    @property
+    def display_id(self) -> str:
+        """Get the most relevant display ID"""
+        if self.investment_id:
+            return f"INV-{self.investment_id}"
+        elif self.project_id:
+            return f"PRJ-{self.project_id}"
+        elif self.grant_id:
+            return f"GRANT-{self.grant_id}"
+        else:
+            return f"CONT-{self.id}"
+    
+    
     
     class Config:
         from_attributes = True
