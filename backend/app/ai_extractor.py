@@ -32,6 +32,53 @@ class AIExtractor:
         
         self.extraction_prompt = """ANALYZE THIS GRANT CONTRACT THOROUGHLY AND EXTRACT ALL INFORMATION.
     
+        CRITICAL FOR SCOPE OF WORK EXTRACTION:
+
+        1. EXTRACT THE ENTIRE SCOPE SECTION: Don't summarize or shorten. Include all details.
+
+        2. LOOK FOR THESE SPECIFIC ELEMENTS:
+        - Project overview and background
+        - Specific tasks to be performed
+        - Deliverables with descriptions
+        - Technical specifications
+        - Performance requirements
+        - Timeline with phases
+        - Resource requirements
+        - Quality standards
+        - Testing procedures
+        - Documentation requirements
+
+        3. EXTRACT FROM THESE SECTIONS:
+        - 'Scope of Work'
+        - 'Services to be Provided'
+        - 'Work Description'
+        - 'Technical Approach'
+        - 'Methodology'
+        - 'Deliverables Schedule'
+        - Any section containing work/task descriptions
+
+        4. PRESERVE STRUCTURE:
+        - Keep bullet points and numbered lists
+        - Preserve hierarchical structure
+        - Include all specifications and requirements
+        - Capture conditional requirements
+        - Include dependencies between tasks
+
+        5. IF SCOPE IS IN TABLES: Extract ALL table data including headers and rows.
+
+        6. USE THIS STRUCTURE FOR DETAILED SCOPE:
+        project_description: Full narrative description
+        main_activities: List of primary work areas
+        deliverables_list: Complete list of outputs
+        tasks_and_responsibilities: Specific tasks for each role
+        timeline_phases: Project phases with durations
+        technical_requirements: Technical specs and standards
+        performance_standards: Quality and performance criteria
+        work_breakdown_structure: Hierarchical task breakdown
+        key_milestones: Major project milestones
+        resources_required: Personnel, equipment, materials
+        assumptions_and_constraints: Project assumptions and limitations
+
         LOGO AND HEADER EXTRACTION GUIDANCE:
         1. CONTRACT TITLE OFTEN APPEARS IN:
            - The first all-caps line before "BETWEEN"
@@ -196,12 +243,25 @@ class AIExtractor:
             "purpose": "string",
             "objectives": ["array of strings"],
             "scope_of_work": "string",
+            "detailed_scope_of_work": {{
+                "project_description": "string",
+                "main_activities": ["array"],
+                "deliverables_list": ["array"],
+                "tasks_and_responsibilities": ["array"],
+                "timeline_phases": ["array"],
+                "technical_requirements": ["array"],
+                "performance_standards": ["array"],
+                "work_breakdown_structure": ["array"],
+                "key_milestones": ["array"],
+                "resources_required": ["array"],
+                "assumptions_and_constraints": ["array"]
+            }},
             "geographic_scope": "string",
             "risk_management": "string",
             "key_dates": {{
-            "proposal_submission_date": "string",
-            "approval_date": "string",
-            "notification_date": "string"
+                "proposal_submission_date": "string",
+                "approval_date": "string",
+                "notification_date": "string"
             }}
         }},
         "financial_details": {{"existing structure..."}},
@@ -367,6 +427,109 @@ class AIExtractor:
             os.environ['OPENAI_API_KEY'] = self.api_key
             return openai.OpenAI()
     
+    def _extract_detailed_scope_of_work(self, text: str) -> Dict[str, Any]:
+        """Extract detailed scope of work with structured breakdown"""
+        import re
+        
+        detailed_scope = {
+            "project_description": "",
+            "main_activities": [],
+            "deliverables_list": [],
+            "tasks_and_responsibilities": [],
+            "timeline_phases": [],
+            "technical_requirements": [],
+            "performance_standards": [],
+            "work_breakdown_structure": [],
+            "key_milestones": [],
+            "resources_required": [],
+            "assumptions_and_constraints": []
+        }
+        
+        # Look for scope of work patterns in the text
+        scope_keywords = [
+            r'(?:Scope\s+of\s+Work|Scope\s+of\s+Services|Work\s+Scope|Project\s+Scope)[:\s]*([\s\S]+?)(?=\n\n|SECTION|ARTICLE|\d+\.|$)',
+            r'(?:The\s+scope\s+of\s+work\s+includes|Scope\s+includes|Work\s+shall\s+include)[:\s]*([\s\S]+?)(?=\n\n|\.\s+[A-Z]|$)',
+            r'(?:Services\s+to\s+be\s+Provided|Work\s+to\s+be\s+Performed)[:\s]*([\s\S]+?)(?=\n\n|SECTION|ARTICLE)'
+        ]
+        
+        scope_text = ""
+        for pattern in scope_keywords:
+            match = re.search(pattern, text, re.IGNORECASE | re.MULTILINE)
+            if match:
+                scope_text = match.group(1).strip()
+                break
+        
+        if not scope_text:
+            # Try to find by section headers
+            sections = re.findall(r'(?:SECTION|ARTICLE|CLAUSE)\s+\d+[\.\s]*([\s\S]+?)(?=\n\n[SECTION|ARTICLE|CLAUSE])', text, re.IGNORECASE)
+            for section in sections:
+                if any(keyword in section.lower() for keyword in ['scope', 'work', 'services', 'deliverables']):
+                    scope_text = section
+                    break
+        
+        if scope_text:
+            # Clean and structure the scope text
+            scope_text = re.sub(r'\s+', ' ', scope_text).strip()
+            
+            # Extract main activities (bullet points or numbered lists)
+            activities = re.findall(r'(?:•|\d+\.|\-)\s*([^\.]+?\.?)', scope_text)
+            if activities:
+                detailed_scope["main_activities"] = [act.strip() for act in activities if len(act.strip()) > 10]
+            
+            # Extract deliverables
+            deliverable_patterns = [
+                r'(?:deliver|provide|submit|produce)\s+(?:a|an|the)?\s*([A-Z][^\.]+?(?:report|document|plan|analysis|assessment))',
+                r'(?:deliverable|output|product|result)\s*(?:is|are|includes?)[:\s]*([^\.]+)',
+                r'Deliverable[s]?[:\s]*([^\.]+)'
+            ]
+            
+            deliverables = []
+            for pattern in deliverable_patterns:
+                matches = re.findall(pattern, scope_text, re.IGNORECASE)
+                deliverables.extend([match.strip() for match in matches if len(match.strip()) > 5])
+            
+            detailed_scope["deliverables_list"] = list(set(deliverables))[:20]  # Limit to 20
+            
+            # Extract tasks and responsibilities
+            task_patterns = [
+                r'(?:task|activity|responsibility)[:\s]*([^\.]+?\.)',
+                r'(?:shall|will|must)\s+(?:[^\.]+?\.)',
+                r'(?:The\s+[A-Za-z]+\s+shall|The\s+[A-Za-z]+\s+will)[^\.]+\.'
+            ]
+            
+            tasks = []
+            for pattern in task_patterns:
+                matches = re.findall(pattern, scope_text, re.IGNORECASE)
+                tasks.extend([match.strip() for match in matches if len(match.strip()) > 15])
+            
+            detailed_scope["tasks_and_responsibilities"] = tasks[:15]
+            
+            # Extract timeline phases
+            timeline_matches = re.findall(r'(?:Phase|Stage|Month|Quarter|Year)\s+\d+[:\s]*([^\.]+)', scope_text, re.IGNORECASE)
+            detailed_scope["timeline_phases"] = [match.strip() for match in timeline_matches if len(match.strip()) > 5]
+            
+            # Extract technical requirements
+            tech_patterns = [
+                r'(?:technical|technology|software|hardware|equipment)[\s\S]+?(?=\n\n|\.\s+[A-Z])',
+                r'(?:comply\s+with|meet\s+the\s+requirements\s+of)[^\.]+\.'
+            ]
+            
+            tech_requirements = []
+            for pattern in tech_patterns:
+                matches = re.findall(pattern, scope_text, re.IGNORECASE)
+                tech_requirements.extend([match.strip() for match in matches if len(match.strip()) > 10])
+            
+            detailed_scope["technical_requirements"] = tech_requirements[:10]
+            
+            # If we have a lot of text but not much structured extraction, use the full scope
+            if not any(detailed_scope.values()):
+                detailed_scope["project_description"] = scope_text[:2000]  # Limit to 2000 chars
+        
+        return detailed_scope
+
+
+
+
     def extract_contract_data(self, text: str) -> Dict[str, Any]:
         """Extract comprehensive structured data from contract text with focus on tables"""
         try:
@@ -431,6 +594,12 @@ class AIExtractor:
                 - DATES: extract ALL dates in any format and convert to YYYY-MM-DD when possible
                 - SIGNATURES: extract names, titles, and dates from signature blocks
 
+
+                
+
+
+
+
                 Be extremely thorough with ALL sections, not just financial data.
                 Be extremely thorough with numerical data and dates.
                 
@@ -452,13 +621,32 @@ class AIExtractor:
         
             result["reference_ids"] = reference_ids
 
+            detailed_scope = self._extract_detailed_scope_of_work(text)
+        
+            # Add detailed scope to contract_details
+            if "contract_details" in result:
+                result["contract_details"]["detailed_scope_of_work"] = detailed_scope
+                
+                # Also keep the original scope_of_work field for backward compatibility
+                if not result["contract_details"].get("scope_of_work"):
+                    # Create a summary from detailed scope
+                    summary_parts = []
+                    if detailed_scope["project_description"]:
+                        summary_parts.append(detailed_scope["project_description"][:500])
+                    elif detailed_scope["main_activities"]:
+                        summary_parts.append("; ".join(detailed_scope["main_activities"][:3]))
+                    elif detailed_scope["deliverables_list"]:
+                        summary_parts.append("Deliverables include: " + ", ".join(detailed_scope["deliverables_list"][:5]))
+                    
+                    result["contract_details"]["scope_of_work"] = " ".join(summary_parts) if summary_parts else "Not specified in contract"
+
             # Add timestamp if not present
             import datetime
             if "metadata" in result and "extraction_timestamp" not in result["metadata"]:
                 result["metadata"]["extraction_timestamp"] = datetime.datetime.now().isoformat()
             
             # Validate and clean the extracted data - PASS THE ORIGINAL TEXT
-            result = self._validate_extracted_data(result, text[:5000]) 
+            # result = self._validate_extracted_data(result, text[:5000]) 
             result = self._post_process_extracted_data(result, text[:5000])
             return result
             
@@ -834,9 +1022,30 @@ class AIExtractor:
                         break
         
         # 2. ENHANCE THE PROMPT FURTHER IN THE SYSTEM MESSAGE
-        # Update the system message in extract_contract_data method to include:
+
         system_message_content = """You are a highly experienced contract analyst specializing in financial and legal contract analysis.
         
+
+        SPECIAL FOCUS ON SCOPE OF WORK:
+        - Extract the COMPLETE scope of work section with all details
+        - Include ALL activities, tasks, and responsibilities
+        - Extract ALL deliverables with their specifications
+        - Include technical requirements and performance standards
+        - Capture the work breakdown structure if available
+        - Extract timeline phases and key milestones
+        - Don't summarize - extract the actual content as completely as possible
+
+        For scope of work, extract EVERYTHING you find, including:
+        1. Full project description
+        2. All main activities and sub-activities
+        3. Complete list of deliverables with descriptions
+        4. Specific tasks and responsibilities for each party
+        5. Technical specifications and requirements
+        6. Performance standards and quality requirements
+        7. Timeline with phases and milestones
+        8. Resources required (personnel, equipment, etc.)
+        9. Any assumptions, constraints, or exclusions
+
         CRITICAL FOR CONTRACT NAMES: Look for contract names in these specific locations:
         1. LOGO TEXT - often all caps text near the beginning
         2. HEADER LINES - centered or bold text before "BETWEEN"
@@ -849,7 +1058,6 @@ class AIExtractor:
         NEVER leave contract name empty."""
         
         # 3. ADD LOGO/HEADER DETECTION TO THE PROMPT
-        # Add this to your extraction_prompt:
         logo_header_instructions = """
         SPECIAL ATTENTION TO LOGOS AND HEADERS:
         - Extract text from what appears to be logo areas (all caps, centered, special formatting)
@@ -890,6 +1098,25 @@ class AIExtractor:
         # 5. ADD METADATA ABOUT NAME EXTRACTION
         if "contract_details" in data:
             contract_details = data["contract_details"]
+
+            if "detailed_scope_of_work" not in contract_details:
+                contract_details["detailed_scope_of_work"] = self._get_empty_scope_structure()
+        
+            # If scope_of_work is missing but we have detailed scope, create a summary
+            if not contract_details.get("scope_of_work") and contract_details.get("detailed_scope_of_work"):
+                detailed = contract_details["detailed_scope_of_work"]
+                summary_parts = []
+                
+                if detailed.get("project_description"):
+                    summary_parts.append(detailed["project_description"][:300])
+                elif detailed.get("main_activities"):
+                    summary_parts.append("Key activities: " + ", ".join(detailed["main_activities"][:3]))
+                
+                if detailed.get("deliverables_list"):
+                    summary_parts.append("Deliverables: " + ", ".join(detailed["deliverables_list"][:3]))
+                
+                contract_details["scope_of_work"] = ". ".join(summary_parts) if summary_parts else "Scope detailed in structured format"
+
             if "name_extraction_method" not in contract_details:
                 contract_details["name_extraction_method"] = "AI_extraction" if contract_details.get("grant_name") else "not_found"
             
@@ -1039,6 +1266,23 @@ class AIExtractor:
         
         return data
 
+    def _get_empty_scope_structure(self) -> Dict[str, Any]:
+        """Return empty detailed scope structure"""
+        return {
+            "project_description": "",
+            "main_activities": [],
+            "deliverables_list": [],
+            "tasks_and_responsibilities": [],
+            "timeline_phases": [],
+            "technical_requirements": [],
+            "performance_standards": [],
+            "work_breakdown_structure": [],
+            "key_milestones": [],
+            "resources_required": [],
+            "assumptions_and_constraints": []
+        }
+
+
     def get_embedding(self, text: str) -> list:
         """Get vector embedding for text - used for ChromaDB"""
         try:
@@ -1100,7 +1344,8 @@ class AIExtractor:
                 "duration": None,
                 "purpose": None,
                 "objectives": [],              # ADDED as array
-                "scope_of_work": None,         # ADDED
+                "scope_of_work": None, 
+                "detailed_scope_of_work": self._get_empty_scope_structure(),        # ADDED
                 "geographic_scope": None,
                 "risk_management": None,       # ADDED
                 "key_dates": {                 # ADDED
