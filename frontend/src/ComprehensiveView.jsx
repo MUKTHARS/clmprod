@@ -1009,10 +1009,10 @@ function ComprehensiveView({ contractData }) {
         )}
 
         {/* Raw JSON View (for debugging) */}
-        <details className="raw-json">
+        {/* <details className="raw-json">
           <summary>View Raw JSON Data</summary>
           <pre>{JSON.stringify(data, null, 2)}</pre>
-        </details>
+        </details> */}
       </div>
     </div>
   )

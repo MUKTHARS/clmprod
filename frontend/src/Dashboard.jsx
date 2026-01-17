@@ -100,12 +100,12 @@ function Dashboard({ contracts, loading, refreshContracts }) {
       <div className="dashboard-header">
         <h1>Grant Contract Dashboard</h1>
         <div className="header-actions">
-          <button className="btn-secondary" onClick={refreshContracts}>
+          {/* <button className="btn-secondary" onClick={refreshContracts}>
             ↻ Refresh
           </button>
           <button className="btn-primary" onClick={() => navigate('/upload')}>
             + Upload New Contract
-          </button>
+          </button> */}
         </div>
       </div>
 
@@ -157,9 +157,9 @@ function Dashboard({ contracts, loading, refreshContracts }) {
         <div className="section-header">
           <h2>Recent Contracts</h2>
           <div>
-            <button className="btn-secondary" onClick={refreshContracts}>
+            {/* <button className="btn-secondary" onClick={refreshContracts}>
               ↻ Refresh
-            </button>
+            </button> */}
             <button className="btn-secondary" onClick={() => navigate('/contracts')}>
               View All Contracts
             </button>
