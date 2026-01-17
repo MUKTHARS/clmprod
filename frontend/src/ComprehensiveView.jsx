@@ -1,4 +1,5 @@
 import React from 'react'
+import './styles/ComprehensiveView.css'
 
 function ComprehensiveView({ contractData }) {
   if (!contractData || !contractData.comprehensive_data) {
@@ -64,6 +65,66 @@ function ComprehensiveView({ contractData }) {
       </div>
     ) : null
   )
+
+  // New function to render report types and due dates horizontally
+  const renderReportRequirements = (reportingRequirements) => {
+    if (!reportingRequirements) return null;
+    
+    const { frequency, report_types, due_dates, format_requirements, submission_method } = reportingRequirements;
+    
+    // Find the maximum length between report_types and due_dates
+    const maxLength = Math.max(
+      report_types?.length || 0,
+      due_dates?.length || 0
+    );
+    
+    if (maxLength === 0) return null;
+    
+    return (
+      <div className="reporting-info">
+        <h4>Reporting Requirements:</h4>
+        {frequency && (
+          <p><strong>Frequency:</strong> {frequency}</p>
+        )}
+        
+        {(report_types || due_dates) && (
+          <div className="report-requirements-table">
+            <table className="requirements-table">
+              <thead>
+                <tr>
+                  {report_types && report_types.length > 0 && (
+                    <th>Report Type</th>
+                  )}
+                  {due_dates && due_dates.length > 0 && (
+                    <th>Due Date</th>
+                  )}
+                </tr>
+              </thead>
+              <tbody>
+                {Array.from({ length: maxLength }).map((_, index) => (
+                  <tr key={index}>
+                    {report_types && report_types.length > 0 && (
+                      <td>{report_types[index] || 'N/A'}</td>
+                    )}
+                    {due_dates && due_dates.length > 0 && (
+                      <td>{due_dates[index] || 'N/A'}</td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        
+        {format_requirements && (
+          <p><strong>Format Requirements:</strong> {format_requirements}</p>
+        )}
+        {submission_method && (
+          <p><strong>Submission Method:</strong> {submission_method}</p>
+        )}
+      </div>
+    );
+  }
 
   const renderInstallments = (installments, currency = 'USD') => (
     installments && installments.length > 0 ? (
@@ -194,17 +255,17 @@ function ComprehensiveView({ contractData }) {
         <table className="dates-table">
           <thead>
             <tr>
-              <th>Date</th>
               <th>Type</th>
               <th>Context</th>
+              <th>Date</th>
             </tr>
           </thead>
           <tbody>
             {allDates.map((dateItem, idx) => (
               <tr key={idx}>
-                <td>{dateItem.date || 'Not specified'}</td>
                 <td>{dateItem.type || 'Not specified'}</td>
                 <td>{dateItem.context || 'Not specified'}</td>
+                <td>{dateItem.date || 'Not specified'}</td>
               </tr>
             ))}
           </tbody>
@@ -266,6 +327,214 @@ function ComprehensiveView({ contractData }) {
       </div>
     ) : null
   )
+
+  // New function to render detailed deliverables
+  const renderDetailedDeliverables = (detailedDeliverables) => {
+    if (!detailedDeliverables) return null
+    
+    const {
+      project_deliverables_summary,
+      deliverable_items,
+      milestone_deliverables,
+      reporting_deliverables,
+      documentation_deliverables,
+      technical_deliverables,
+      training_deliverables,
+      quality_deliverables,
+      delivery_schedule,
+      acceptance_criteria,
+      delivery_methods
+    } = detailedDeliverables
+    
+    const hasDeliverableItems = deliverable_items && deliverable_items.length > 0
+    const hasMilestoneDeliverables = milestone_deliverables && milestone_deliverables.length > 0
+    const hasDeliverySchedule = delivery_schedule && delivery_schedule.length > 0
+    const hasAnyData = project_deliverables_summary || hasDeliverableItems || hasMilestoneDeliverables || 
+                      hasDeliverySchedule || acceptance_criteria?.length > 0
+    
+    if (!hasAnyData) return null
+    
+    return (
+      <div className="section detailed-deliverables-section">
+        <h3 className="section-title">Detailed Project Deliverables</h3>
+        
+        {/* Project Deliverables Summary */}
+        {project_deliverables_summary && (
+          <div className="deliverables-summary">
+            <p><strong>Summary:</strong> {project_deliverables_summary}</p>
+          </div>
+        )}
+        
+        {/* Main Deliverable Items */}
+        {hasDeliverableItems && (
+          <div className="deliverable-items-section">
+            <h4>Key Deliverables</h4>
+            <div className="deliverables-grid">
+              {deliverable_items.map((item, idx) => (
+                <div key={idx} className="deliverable-card">
+                  <div className="deliverable-header">
+                    <h5>{item.deliverable_name}</h5>
+                    {item.deliverable_type && (
+                      <span className={`deliverable-type ${item.deliverable_type.toLowerCase().replace(/\s+/g, '-')}`}>
+                        {item.deliverable_type}
+                      </span>
+                    )}
+                  </div>
+                  <div className="deliverable-body">
+                    {item.description && (
+                      <p><strong>Description:</strong> {item.description}</p>
+                    )}
+                    {item.due_date && (
+                      <p><strong>Due Date:</strong> {item.due_date}</p>
+                    )}
+                    {item.format && item.format !== 'Not specified' && (
+                      <p><strong>Format:</strong> {item.format}</p>
+                    )}
+                    {item.acceptance_criteria && item.acceptance_criteria !== 'Not specified' && (
+                      <p><strong>Acceptance Criteria:</strong> {item.acceptance_criteria}</p>
+                    )}
+                    {item.quality_requirements && item.quality_requirements.length > 0 && (
+                      <div className="quality-requirements">
+                        <strong>Quality Requirements:</strong>
+                        <ul>
+                          {item.quality_requirements.map((req, reqIdx) => (
+                            <li key={reqIdx}>{req}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        
+        {/* Milestone Deliverables */}
+        {hasMilestoneDeliverables && (
+          <div className="milestone-deliverables-section">
+            <h4>Milestone-Based Deliverables</h4>
+            <div className="milestone-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Milestone</th>
+                    <th>Deliverable</th>
+                    <th>Description</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {milestone_deliverables.map((item, idx) => (
+                    <tr key={idx}>
+                      <td>{item.milestone}</td>
+                      <td>{item.deliverable}</td>
+                      <td>{item.description}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+        
+        {/* Reporting Deliverables */}
+        {reporting_deliverables && reporting_deliverables.length > 0 && (
+          <div className="reporting-deliverables-section">
+            <h4>Reporting Deliverables</h4>
+            <ul>
+              {reporting_deliverables.map((deliverable, idx) => (
+                <li key={idx}>{deliverable}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+        
+        {/* Documentation Deliverables */}
+        {documentation_deliverables && documentation_deliverables.length > 0 && (
+          <div className="documentation-deliverables-section">
+            <h4>Documentation Deliverables</h4>
+            <ul>
+              {documentation_deliverables.map((deliverable, idx) => (
+                <li key={idx}>{deliverable}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+        
+        {/* Technical Deliverables */}
+        {technical_deliverables && technical_deliverables.length > 0 && (
+          <div className="technical-deliverables-section">
+            <h4>Technical Deliverables</h4>
+            <ul>
+              {technical_deliverables.map((deliverable, idx) => (
+                <li key={idx}>{deliverable}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+        
+        {/* Training Deliverables */}
+        {training_deliverables && training_deliverables.length > 0 && (
+          <div className="training-deliverables-section">
+            <h4>Training Deliverables</h4>
+            <ul>
+              {training_deliverables.map((deliverable, idx) => (
+                <li key={idx}>{deliverable}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+        
+        {/* Quality Deliverables */}
+        {quality_deliverables && quality_deliverables.length > 0 && (
+          <div className="quality-deliverables-section">
+            <h4>Quality Deliverables</h4>
+            <ul>
+              {quality_deliverables.map((deliverable, idx) => (
+                <li key={idx}>{deliverable}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+        
+        {/* Delivery Schedule */}
+        {hasDeliverySchedule && (
+          <div className="delivery-schedule-section">
+            <h4>Delivery Schedule</h4>
+            <ul>
+              {delivery_schedule.map((schedule, idx) => (
+                <li key={idx}>{schedule}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+        
+        {/* Acceptance Criteria */}
+        {acceptance_criteria && acceptance_criteria.length > 0 && (
+          <div className="acceptance-criteria-section">
+            <h4>Acceptance Criteria</h4>
+            <ul>
+              {acceptance_criteria.map((criteria, idx) => (
+                <li key={idx}>{criteria}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+        
+        {/* Delivery Methods */}
+        {delivery_methods && delivery_methods.length > 0 && (
+          <div className="delivery-methods-section">
+            <h4>Delivery Methods</h4>
+            <ul>
+              {delivery_methods.map((method, idx) => (
+                <li key={idx}>{method}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+    )
+  }
 
   return (
     <div className="comprehensive-view">
@@ -351,10 +620,6 @@ function ComprehensiveView({ contractData }) {
                 <strong>Purpose:</strong>
                 <p>{data.contract_details?.purpose || 'Not specified'}</p>
               </div>
-              {/* <div className="detail-item full-width">
-                <strong>Scope of Work:</strong>
-                <p>{data.contract_details?.scope_of_work || 'Not specified'}</p>
-              </div> */}
               <div className="detail-item">
                 <strong>Geographic Scope:</strong>
                 <span>{data.contract_details?.geographic_scope || 'Not specified'}</span>
@@ -611,18 +876,18 @@ function ComprehensiveView({ contractData }) {
           </div>
         )}
 
-        {/* Deliverables */}
+        {/* Detailed Deliverables Section - NEW */}
+        {data.deliverables?.detailed_deliverables && (
+          renderDetailedDeliverables(data.deliverables.detailed_deliverables)
+        )}
+
+        {/* Deliverables (Original) */}
         {renderSection("Deliverables & Reporting",
           <div className="deliverables-section">
             {renderDeliverables(data.deliverables?.items)}
             
             {data.deliverables?.reporting_requirements && (
-              <div className="reporting-info">
-                <h4>Reporting Requirements:</h4>
-                <p><strong>Frequency:</strong> {data.deliverables.reporting_requirements.frequency || 'Not specified'}</p>
-                {renderArray(data.deliverables.reporting_requirements.report_types, "Report Types")}
-                {renderArray(data.deliverables.reporting_requirements.due_dates, "Due Dates")}
-              </div>
+              renderReportRequirements(data.deliverables.reporting_requirements)
             )}
           </div>
         )}

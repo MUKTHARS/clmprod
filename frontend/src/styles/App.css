@@ -1,0 +1,199 @@
+@import './variables.css';
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-family);
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  overflow-x: hidden;
+}
+
+/* App Container */
+.app-container {
+  display: flex;
+  min-height: 100vh;
+  width: 100%;
+  position: relative;
+}
+
+/* Main Content Area */
+.main-content {
+  flex: 1;
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+  margin-left: 280px; /* Fixed sidebar width */
+  width: calc(100% - 280px);
+  transition: none; /* Remove transition */
+}
+
+/* When sidebar is collapsed */
+.app-container:has(.sidebar.collapsed) .main-content {
+  margin-left: 80px;
+  width: calc(100% - 80px);
+}
+
+.content-area {
+  padding: var(--spacing-xl);
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* Top Bar within Content Area */
+.main-content .topbar {
+  width: 100%;
+  left: 0;
+  right: 0;
+  position: sticky;
+  z-index: 99;
+  margin-left: 0; /* Ensure no left margin */
+}
+
+/* Loading States */
+.loading-page, .loading-table {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  gap: var(--spacing-md);
+}
+
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 3px solid var(--border-color);
+  border-top-color: var(--primary-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Error States */
+.error-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  gap: var(--spacing-lg);
+  text-align: center;
+  padding: var(--spacing-2xl);
+}
+
+.error-page h2 {
+  color: var(--danger-color);
+  font-size: var(--font-size-3xl);
+}
+
+/* Empty States */
+.empty-table, .empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-2xl);
+  text-align: center;
+  background: var(--bg-card);
+  border-radius: var(--border-radius-xl);
+  box-shadow: var(--shadow-sm);
+  margin: var(--spacing-xl) 0;
+}
+
+.empty-icon {
+  font-size: 4rem;
+  margin-bottom: var(--spacing-lg);
+  opacity: 0.5;
+}
+
+/* Ensure content width doesn't exceed viewport */
+.dashboard,
+.contracts-list-page,
+.contract-details-page,
+.upload-container,
+.comprehensive-view {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 1024px) {
+  .content-area {
+    padding: var(--spacing-lg);
+  }
+  
+  .app-container:has(.sidebar:not(.collapsed)) .main-content,
+  .app-container:has(.sidebar.collapsed) .main-content {
+    margin-left: 0 !important;
+    width: 100% !important;
+    position: static;
+  }
+  
+  .sidebar {
+    transform: translateX(-100%);
+    z-index: 1002;
+  }
+  
+  .sidebar.mobile-open {
+    transform: translateX(0);
+  }
+}
+
+@media (max-width: 768px) {
+  .content-area {
+    padding: var(--spacing-md);
+  }
+  
+  .main-content .topbar {
+    padding: 0 var(--spacing-md);
+  }
+}
+
+/* Print styles */
+@media print {
+  .sidebar,
+  .topbar {
+    display: none;
+  }
+  
+  .main-content {
+    margin-left: 0 !important;
+    width: 100% !important;
+  }
+  
+  .content-area {
+    padding: 0;
+  }
+}
+
+/* Utility classes for overflow handling */
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.overflow-visible {
+  overflow: visible !important;
+}
+
+/* Ensure tables are responsive */
+table {
+  min-width: 100%;
+}
+
+/* Fix for modal/dropdown positioning */
+.modal-open,
+.dropdown-open {
+  overflow: hidden;
+}

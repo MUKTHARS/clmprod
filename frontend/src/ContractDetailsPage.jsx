@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import ComprehensiveView from './ComprehensiveView';
 import API_CONFIG, { fetchAPI } from './config';
+import './styles/ContractDetailsPage.css';
 
 function ContractDetailsPage() {
   const { id } = useParams();
