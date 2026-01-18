@@ -17,45 +17,29 @@
 .topbar-left {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 12px;
 }
 
-.back-btn {
+/* Logo container styling */
+.logo-container {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  color: #475569;
-  font-size: 14px;
-  font-weight: 500;
+  gap: 12px;
   cursor: pointer;
-  transition: all 0.2s;
+  padding: 8px;
+  border-radius: 8px;
+  transition: background-color 0.2s;
 }
 
-.back-btn:hover {
-  background: #f1f5f9;
-  border-color: #cbd5e1;
-  color: #334155;
+.logo-container:hover {
+  background: #f8fafc;
 }
 
-.back-icon {
-  font-size: 16px;
-}
-
-.breadcrumb {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.page-title {
-  font-size: 20px;
+.logo-full-text {
+  font-size: 18px;
   font-weight: 600;
   color: #1e293b;
-  margin: 0;
+  white-space: nowrap;
 }
 
 .topbar-right {
@@ -90,27 +74,37 @@
   color: #334155;
 }
 
-.copilot-btn {
-  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+/* AI Assistant Button - New Style */
+.ai-assistant-btn {
+  background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
   border: none;
   color: white;
 }
 
-.copilot-btn:hover {
-  background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+.ai-assistant-btn:hover {
+  background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
   color: white;
 }
 
-.notification-btn {
+.ai-assistant-btn .action-icon svg {
+  color: white;
+}
+
+/* Alert Notification Button - New Style */
+.alert-notification-btn {
   position: relative;
   padding: 8px;
 }
 
-.notification-btn .action-icon {
-  font-size: 20px;
+.alert-notification-btn .action-icon svg {
+  color: #475569;
 }
 
-.badge {
+.alert-notification-btn:hover .action-icon svg {
+  color: #334155;
+}
+
+.alert-badge {
   position: absolute;
   top: -6px;
   right: -6px;
@@ -125,6 +119,18 @@
   align-items: center;
   justify-content: center;
   padding: 0 4px;
+}
+
+/* Action icon styling */
+.action-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.action-icon svg {
+  width: 18px;
+  height: 18px;
 }
 
 .profile-btn {
@@ -149,15 +155,16 @@
 .profile-avatar {
   width: 36px;
   height: 36px;
-  background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.profile-avatar span {
-  font-size: 18px;
+.profile-avatar svg {
+  width: 18px;
+  height: 18px;
   color: white;
 }
 
@@ -182,15 +189,24 @@
   color: #94a3b8;
   font-size: 12px;
   margin-left: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dropdown-arrow svg {
+  width: 14px;
+  height: 14px;
+  color: #94a3b8;
 }
 
 /* Dropdowns */
-.notification-container,
+.alert-notification-container,
 .profile-container {
   position: relative;
 }
 
-.notification-dropdown,
+.alert-notification-dropdown,
 .profile-dropdown {
   position: absolute;
   top: calc(100% + 10px);
@@ -204,7 +220,7 @@
   overflow: hidden;
 }
 
-.notification-dropdown {
+.alert-notification-dropdown {
   width: 360px;
 }
 
@@ -265,9 +281,20 @@
 }
 
 .notification-icon {
-  font-size: 20px;
-  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
+}
+
+.notification-icon svg {
+  width: 18px;
+  height: 18px;
+  color: #64748b;
+}
+
+.notification-item.unread .notification-icon svg {
+  color: #3b82f6;
 }
 
 .notification-content {
@@ -322,159 +349,6 @@
   color: #1e293b;
 }
 
-.dropdown-item.logout {
-  color: #ef4444;
-}
-
-.dropdown-item.logout:hover {
-  background: #fef2f2;
-}
-
-.item-icon {
-  font-size: 18px;
-  width: 20px;
-  text-align: center;
-}
-
-.dropdown-divider {
-  height: 1px;
-  background: #e5e7eb;
-  margin: 8px 0;
-}
-
-/* Responsive */
-@media (max-width: 1024px) {
-  .topbar {
-    left: 60px; /* Updated sidebar width on mobile */
-    padding: 0 16px;
-  }
-  
-  .back-text {
-    display: none;
-  }
-  
-  .action-label {
-    display: none;
-  }
-  
-  .profile-info {
-    display: none;
-  }
-  
-  .dropdown-arrow {
-    display: none;
-  }
-  
-  .notification-dropdown {
-    right: -100px;
-    width: 300px;
-  }
-}
-
-@media (max-width: 768px) {
-  .topbar {
-    height: 60px;
-  }
-  
-  .back-btn {
-    padding: 6px 12px;
-  }
-  
-  .action-btn {
-    padding: 6px 12px;
-  }
-  
-  .profile-btn {
-    padding: 6px 12px;
-  }
-  
-  .profile-avatar {
-    width: 32px;
-    height: 32px;
-  }
-  
-  .profile-avatar span {
-    font-size: 16px;
-  }
-}
-
-
-
-/* Action icon styling */
-.action-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.action-icon svg {
-  width: 18px;
-  height: 18px;
-}
-
-.copilot-btn .action-icon svg {
-  color: white;
-}
-
-.notification-btn .action-icon svg {
-  color: #475569;
-}
-
-.notification-btn:hover .action-icon svg {
-  color: #334155;
-}
-
-/* Profile avatar styling */
-.profile-avatar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.profile-avatar svg {
-  width: 18px;
-  height: 18px;
-  color: white;
-}
-
-/* Dropdown arrow */
-.dropdown-arrow {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.dropdown-arrow svg {
-  width: 14px;
-  height: 14px;
-  color: #94a3b8;
-}
-
-/* Notification icons */
-.notification-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.notification-icon svg {
-  width: 18px;
-  height: 18px;
-  color: #64748b;
-}
-
-.notification-item.unread .notification-icon svg {
-  color: #3b82f6;
-}
-
-/* Profile dropdown icons */
-.dropdown-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
 .item-icon {
   display: flex;
   align-items: center;
@@ -492,19 +366,50 @@
   color: #3b82f6;
 }
 
-/* Remove logout styles since it's removed */
-.dropdown-item.logout {
-  display: none;
+.dropdown-divider {
+  height: 1px;
+  background: #e5e7eb;
+  margin: 8px 0;
 }
 
-/* Responsive updates */
+/* Responsive */
 @media (max-width: 1024px) {
+  .topbar {
+    left: 60px; /* Updated sidebar width on mobile */
+    padding: 0 16px;
+  }
+  
+  .logo-full-text {
+    display: none;
+  }
+  
+  .logo-container {
+    padding: 6px;
+  }
+  
+  /* .action-label {
+    display: none;
+  } */
+  
+  .profile-info {
+    display: none;
+  }
+  
+  .dropdown-arrow {
+    display: none;
+  }
+  
+  .alert-notification-dropdown {
+    right: -100px;
+    width: 300px;
+  }
+  
   .action-icon svg {
     width: 20px;
     height: 20px;
   }
   
-  .notification-btn .action-icon svg {
+  .alert-notification-btn .action-icon svg {
     width: 20px;
     height: 20px;
   }
@@ -516,6 +421,23 @@
 }
 
 @media (max-width: 768px) {
+  .topbar {
+    height: 60px;
+  }
+  
+  .action-btn {
+    padding: 6px 12px;
+  }
+  
+  .profile-btn {
+    padding: 6px 12px;
+  }
+  
+  .profile-avatar {
+    width: 32px;
+    height: 32px;
+  }
+  
   .action-icon svg {
     width: 18px;
     height: 18px;
@@ -527,95 +449,137 @@
   }
 }
 
-/* Replace or add these styles to your existing TopBar.css */
-
-.topbar-left {
-  display: flex;
-  align-items: center;
-  gap: 20px;
+@media (max-width: 640px) {
+  .topbar {
+    padding: 0 12px;
+  }
 }
 
-/* Remove these if they exist */
-.back-btn,
-.breadcrumb,
-.page-title {
-  display: none;
-}
-
-/* Logo container styling */
-.logo-container {
+/* New AI Assistant Button - No Container */
+.ai-assistant-btn {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
+  padding: 10px 16px;
+  background: transparent;
+  border: none;
+  color: #8b5cf6;
+  font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
-  padding: 8px;
+  transition: all 0.2s;
   border-radius: 8px;
-  transition: background-color 0.2s;
 }
 
-.logo-container:hover {
-  background: #f8fafc;
+.ai-assistant-btn:hover {
+  background: rgba(139, 92, 246, 0.1);
+  color: #7c3aed;
+  transform: scale(1.05);
 }
 
-.topbar-logo {
-  width: 40px;
-  height: 40px;
-  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-  border-radius: 10px;
+.ai-icon svg {
+  width: 20px;
+  height: 20px;
+  color: #8b5cf6;
+}
+
+.ai-assistant-btn:hover .ai-icon svg {
+  color: #7c3aed;
+}
+
+.ai-label {
+  font-weight: 500;
+}
+
+/* New Alert Button - No Container */
+.alert-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
 }
 
-.logo-text {
+.alert-btn:hover {
+  background: rgba(100, 116, 139, 0.1);
+  transform: scale(1.05);
+}
+
+.alert-icon svg {
+  width: 20px;
+  height: 20px;
+  color: #475569;
+}
+
+.alert-btn:hover .alert-icon svg {
+  color: #334155;
+}
+
+.alert-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: #ef4444;
   color: white;
-  font-weight: bold;
-  font-size: 18px;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-}
-
-.logo-full-text {
-  font-size: 18px;
+  font-size: 11px;
   font-weight: 600;
-  color: #1e293b;
-  white-space: nowrap;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
 }
 
-/* Responsive: Hide full text on smaller screens */
+/* Alert Dropdown */
+.alert-container {
+  position: relative;
+}
+
+.alert-dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 320px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e5e7eb;
+  z-index: 1000;
+  overflow: hidden;
+}
+
+/* Responsive */
 @media (max-width: 1024px) {
-  .logo-full-text {
+  .ai-label {
     display: none;
   }
   
-  .logo-container {
-    padding: 6px;
+  .ai-assistant-btn {
+    padding: 10px;
   }
   
-  .topbar-logo {
-    width: 36px;
-    height: 36px;
-  }
-  
-  .logo-text {
-    font-size: 16px;
+  .alert-dropdown {
+    right: -100px;
+    width: 300px;
   }
 }
 
 @media (max-width: 768px) {
-  .topbar-logo {
-    width: 32px;
-    height: 32px;
+  .ai-icon svg {
+    width: 18px;
+    height: 18px;
   }
   
-  .logo-text {
-    font-size: 14px;
-  }
-}
-
-/* Update topbar padding if needed */
-@media (max-width: 640px) {
-  .topbar {
-    padding: 0 12px;
+  .alert-icon svg {
+    width: 18px;
+    height: 18px;
   }
 }
