@@ -1,5 +1,5 @@
 -- Create grant_contracts table without vector
-CREATE TABLE IF NOT EXISTS grant_contracts (
+CREATE TABLE IF NOT EXISTS contracts (
     id SERIAL PRIMARY KEY,
     filename VARCHAR NOT NULL,
     uploaded_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,

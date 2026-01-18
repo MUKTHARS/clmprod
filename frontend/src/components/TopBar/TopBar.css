@@ -397,3 +397,225 @@
     font-size: 16px;
   }
 }
+
+
+
+/* Action icon styling */
+.action-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.action-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.copilot-btn .action-icon svg {
+  color: white;
+}
+
+.notification-btn .action-icon svg {
+  color: #475569;
+}
+
+.notification-btn:hover .action-icon svg {
+  color: #334155;
+}
+
+/* Profile avatar styling */
+.profile-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.profile-avatar svg {
+  width: 18px;
+  height: 18px;
+  color: white;
+}
+
+/* Dropdown arrow */
+.dropdown-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dropdown-arrow svg {
+  width: 14px;
+  height: 14px;
+  color: #94a3b8;
+}
+
+/* Notification icons */
+.notification-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.notification-icon svg {
+  width: 18px;
+  height: 18px;
+  color: #64748b;
+}
+
+.notification-item.unread .notification-icon svg {
+  color: #3b82f6;
+}
+
+/* Profile dropdown icons */
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.item-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+}
+
+.item-icon svg {
+  width: 18px;
+  height: 18px;
+  color: #64748b;
+}
+
+.dropdown-item:hover .item-icon svg {
+  color: #3b82f6;
+}
+
+/* Remove logout styles since it's removed */
+.dropdown-item.logout {
+  display: none;
+}
+
+/* Responsive updates */
+@media (max-width: 1024px) {
+  .action-icon svg {
+    width: 20px;
+    height: 20px;
+  }
+  
+  .notification-btn .action-icon svg {
+    width: 20px;
+    height: 20px;
+  }
+  
+  .profile-avatar svg {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+@media (max-width: 768px) {
+  .action-icon svg {
+    width: 18px;
+    height: 18px;
+  }
+  
+  .profile-avatar svg {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+/* Replace or add these styles to your existing TopBar.css */
+
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+/* Remove these if they exist */
+.back-btn,
+.breadcrumb,
+.page-title {
+  display: none;
+}
+
+/* Logo container styling */
+.logo-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 8px;
+  transition: background-color 0.2s;
+}
+
+.logo-container:hover {
+  background: #f8fafc;
+}
+
+.topbar-logo {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.logo-text {
+  color: white;
+  font-weight: bold;
+  font-size: 18px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.logo-full-text {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1e293b;
+  white-space: nowrap;
+}
+
+/* Responsive: Hide full text on smaller screens */
+@media (max-width: 1024px) {
+  .logo-full-text {
+    display: none;
+  }
+  
+  .logo-container {
+    padding: 6px;
+  }
+  
+  .topbar-logo {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .logo-text {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 768px) {
+  .topbar-logo {
+    width: 32px;
+    height: 32px;
+  }
+  
+  .logo-text {
+    font-size: 14px;
+  }
+}
+
+/* Update topbar padding if needed */
+@media (max-width: 640px) {
+  .topbar {
+    padding: 0 12px;
+  }
+}
