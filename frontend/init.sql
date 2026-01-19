@@ -42,13 +42,13 @@ CREATE INDEX IF NOT EXISTS idx_extraction_logs_contract_id ON extraction_logs(co
 -- Optional: add chroma_id column to a table if it exists
 -- ALTER TABLE contracts ADD COLUMN chroma_id VARCHAR(255);
 
-ALTER TABLE contracts 
+ALTER TABLE grant_contracts 
 ADD COLUMN IF NOT EXISTS investment_id VARCHAR(255),
 ADD COLUMN IF NOT EXISTS project_id VARCHAR(255),
 ADD COLUMN IF NOT EXISTS grant_id VARCHAR(255),
 ADD COLUMN IF NOT EXISTS extracted_reference_ids JSONB DEFAULT '[]';
 
 -- Create index for faster searching
-CREATE INDEX IF NOT EXISTS idx_contracts_investment_id ON contracts(investment_id);
-CREATE INDEX IF NOT EXISTS idx_contracts_project_id ON contracts(project_id);
-CREATE INDEX IF NOT EXISTS idx_contracts_grant_id ON contracts(grant_id);
+CREATE INDEX IF NOT EXISTS idx_contracts_investment_id ON grant_contracts(investment_id);
+CREATE INDEX IF NOT EXISTS idx_contracts_project_id ON grant_contracts(project_id);
+CREATE INDEX IF NOT EXISTS idx_contracts_grant_id ON grant_contracts(grant_id);
