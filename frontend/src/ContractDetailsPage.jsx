@@ -35,10 +35,9 @@ import {
   ShieldCheck,
   Plus,
   Minus,
-  ExternalLink,
-  ChevronDown,
-  ChevronUp
+  ExternalLink
 } from 'lucide-react';
+import ComprehensiveView from './ComprehensiveView';
 import API_CONFIG, { fetchAPI } from './config';
 import './styles/ContractDetailsPage.css';
 
@@ -49,13 +48,13 @@ function ContractDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('analysis');
   const [expandedSections, setExpandedSections] = useState({
-    contractDetails: false,
-    financial: false,
-    parties: false,
-    deliverables: false,
-    terms: false,
-    compliance: false,
-    executiveSummary: false
+    contractDetails: true,
+    financial: true,
+    parties: true,
+    deliverables: true,
+    terms: true,
+    compliance: true,
+    executiveSummary: true
   });
   
   useEffect(() => {
@@ -132,7 +131,7 @@ function ContractDetailsPage() {
     try {
       return new Date(dateString).toLocaleDateString('en-US', {
         year: 'numeric',
-        month: 'short',
+        month: 'long',
         day: 'numeric'
       });
     } catch (e) {
@@ -147,19 +146,7 @@ function ContractDetailsPage() {
     }));
   };
 
-  const toggleAllSections = (expand) => {
-    setExpandedSections({
-      contractDetails: expand,
-      financial: expand,
-      parties: expand,
-      deliverables: expand,
-      terms: expand,
-      compliance: expand,
-      executiveSummary: expand
-    });
-  };
-
-  const renderDetailRow = (label, value, icon = null, type = 'text') => {
+  const renderField = (label, value, icon = null, type = 'text') => {
     if (!value && value !== 0 && type !== 'currency') return null;
     
     let displayValue = value;
@@ -167,33 +154,62 @@ function ContractDetailsPage() {
       displayValue = formatDate(value);
     } else if (type === 'currency' && (value || value === 0)) {
       displayValue = formatCurrency(value);
+    } else if (type === 'array' && Array.isArray(value)) {
+      if (value.length === 0) return null;
+      return (
+        <div className="field-card array-field">
+          <div className="field-header">
+            {icon && <span className="field-icon">{icon}</span>}
+            <label className="field-label">{label}</label>
+          </div>
+          <div className="array-values">
+            {value.map((item, idx) => (
+              <div key={idx} className="array-item">
+                <CheckCircle size={12} />
+                <span>{item}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
     }
     
     return (
-      <div className="detail-row">
-        <div className="detail-label">
-          {icon && <span className="detail-icon">{icon}</span>}
-          <span>{label}</span>
+      <div className="field-card">
+        <div className="field-header">
+          {icon && <span className="field-icon">{icon}</span>}
+          <label className="field-label">{label}</label>
         </div>
-        <div className="detail-value">{displayValue}</div>
+        <span className="field-value">{displayValue}</span>
       </div>
     );
   };
 
-  const renderArrayItems = (items, label) => {
-    if (!items || items.length === 0) return null;
+  const renderTable = (title, headers, data, icon = null) => {
+    if (!data || data.length === 0) return null;
     
     return (
-      <div className="array-section">
-        <div className="array-label">{label}</div>
-        <div className="array-items">
-          {items.map((item, idx) => (
-            <div key={idx} className="array-item">
-              <CheckCircle size={12} />
-              <span>{item}</span>
-            </div>
-          ))}
-        </div>
+      <div className="data-table">
+        <table>
+          <thead>
+            <tr>
+              {headers.map((header, idx) => (
+                <th key={idx}>{header}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {data.map((row, rowIdx) => (
+              <tr key={rowIdx}>
+                {headers.map((header, colIdx) => (
+                  <td key={colIdx}>
+                    {row[header.toLowerCase().replace(/\s+/g, '_')] || row[colIdx] || 'N/A'}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     );
   };
@@ -217,6 +233,10 @@ function ContractDetailsPage() {
           <AlertCircle className="error-icon" />
           <h2>Invalid Contract ID</h2>
           <p>No valid contract ID was provided in the URL.</p>
+          {/* <button className="btn-primary" onClick={() => navigate('/dashboard')}>
+            <ArrowLeft size={16} />
+            Back to Dashboard
+          </button> */}
         </div>
       </div>
     );
@@ -229,6 +249,10 @@ function ContractDetailsPage() {
           <FileText className="error-icon" />
           <h2>Contract Not Found</h2>
           <p>The contract with ID {id} could not be found.</p>
+          {/* <button className="btn-primary" onClick={() => navigate('/dashboard')}>
+            <ArrowLeft size={16} />
+            Back to Dashboard
+          </button> */}
         </div>
       </div>
     );
@@ -250,7 +274,7 @@ function ContractDetailsPage() {
     duration: contractDetails.duration || 'N/A',
     deliverablesCount: deliverables?.items?.length || 0,
     installmentsCount: financial?.payment_schedule?.installments?.length || 0,
-    daysRemaining: 180,
+    daysRemaining: 180, // Example data
     riskLevel: 'Medium'
   };
 
@@ -258,6 +282,41 @@ function ContractDetailsPage() {
     <div className="contract-details-page">
       {/* Header Section */}
       <div className="contract-header">
+        <div className="header-top">
+          {/* <button className="btn-back" onClick={() => navigate('/dashboard')}>
+            <ArrowLeft size={20} />
+            <span>Back to Dashboard</span>
+          </button> */}
+          
+          <div className="header-actions-right">
+            <button 
+              className="btn-primary"
+              onClick={() => navigate('/upload')}
+            >
+              <Upload size={18} />
+              <span>Upload New</span>
+            </button>
+            
+            <div className="quick-actions-mini">
+              <button className="action-btn-mini" title="Export PDF">
+                <Download size={16} />
+              </button>
+              <button className="action-btn-mini" title="Copy Details">
+                <Copy size={16} />
+              </button>
+              <button className="action-btn-mini" title="Share">
+                <Link size={16} />
+              </button>
+              <button className="action-btn-mini" title="Analytics">
+                <BarChart3 size={16} />
+              </button>
+              <button className="action-btn-mini" title="Reminder">
+                <Bell size={16} />
+              </button>
+            </div>
+          </div>
+        </div>
+
         <div className="contract-title-section">
           <div className="title-left">
             <h1>{contractDetails.grant_name || parties.grantor?.organization_name || contractData.filename}</h1>
@@ -294,31 +353,6 @@ function ContractDetailsPage() {
                 <span className="value-amount">
                   {formatCurrency(metrics.totalAmount)}
                 </span>
-              </div>
-            </div>
-            
-            <div className="header-actions-right">
-              <button 
-                className="btn-primary"
-                onClick={() => navigate('/upload')}
-              >
-                <Upload size={18} />
-                <span>Upload New</span>
-              </button>
-              
-              <div className="quick-actions-mini">
-                <button className="action-btn-mini" title="Export PDF">
-                  <Download size={16} />
-                </button>
-                <button className="action-btn-mini" title="Copy Details">
-                  <Copy size={16} />
-                </button>
-                <button className="action-btn-mini" title="Share">
-                  <Link size={16} />
-                </button>
-                <button className="action-btn-mini" title="Analytics">
-                  <BarChart3 size={16} />
-                </button>
               </div>
             </div>
           </div>
@@ -383,20 +417,28 @@ function ContractDetailsPage() {
         </div>
       </div>
 
-      {/* Comprehensive Analysis */}
+      {/* Single Tab: AI Analysis with Expandable Sections */}
       <div className="tab-content">
+        {/* Comprehensive AI Analysis Section */}
         <div className="section-card">
           <div className="section-header">
             <div className="section-icon">
               <TrendingUp size={20} />
             </div>
-            <h3>Contract Details</h3>
+            <h3>Comprehensive Analysis</h3>
             <div className="section-actions">
-              <button 
-                className="btn-expand-all"
-                onClick={() => toggleAllSections(!Object.values(expandedSections).every(v => v))}
-              >
-                {Object.values(expandedSections).every(v => v) ? 'Collapse All' : 'Expand All'}
+              <button className="btn-expand-all" onClick={() => {
+                setExpandedSections({
+                  contractDetails: true,
+                  financial: true,
+                  parties: true,
+                  deliverables: true,
+                  terms: true,
+                  compliance: true,
+                  executiveSummary: true
+                });
+              }}>
+                Expand All
               </button>
             </div>
           </div>
@@ -408,16 +450,14 @@ function ContractDetailsPage() {
               onClick={() => toggleSection('executiveSummary')}
             >
               <div className="expand-icon">
-                {expandedSections.executiveSummary ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                {expandedSections.executiveSummary ? <Minus size={18} /> : <Plus size={18} />}
               </div>
               <BookOpen size={20} />
               <h4>Executive Summary</h4>
             </div>
             {expandedSections.executiveSummary && summary.executive_summary && (
               <div className="expandable-content">
-                <div className="detail-content">
-                  <div className="summary-text">{summary.executive_summary}</div>
-                </div>
+                <p className="summary-text">{summary.executive_summary}</p>
               </div>
             )}
           </div>
@@ -429,40 +469,50 @@ function ContractDetailsPage() {
               onClick={() => toggleSection('contractDetails')}
             >
               <div className="expand-icon">
-                {expandedSections.contractDetails ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                {expandedSections.contractDetails ? <Minus size={18} /> : <Plus size={18} />}
               </div>
               <FileText size={20} />
               <h4>Contract Details</h4>
             </div>
             {expandedSections.contractDetails && (
               <div className="expandable-content">
-                <div className="detail-content">
-                  <div className="detail-grid">
-                    {renderDetailRow('Contract Name', contractDetails.grant_name, <FileText size={16} />)}
-                    {renderDetailRow('Contract Number', contractDetails.contract_number, <FileText size={16} />)}
-                    {renderDetailRow('Grant Reference', contractDetails.grant_reference, <Award size={16} />)}
-                    {renderDetailRow('Agreement Type', contractDetails.agreement_type, <FileText size={16} />)}
-                    {renderDetailRow('Effective Date', contractDetails.effective_date, <Calendar size={16} />, 'date')}
-                    {renderDetailRow('Signature Date', contractDetails.signature_date, <Calendar size={16} />, 'date')}
-                    {renderDetailRow('Start Date', contractDetails.start_date, <Calendar size={16} />, 'date')}
-                    {renderDetailRow('End Date', contractDetails.end_date, <Calendar size={16} />, 'date')}
-                    {renderDetailRow('Duration', contractDetails.duration, <Clock size={16} />)}
-                    {renderDetailRow('Purpose', contractDetails.purpose, <Target size={16} />)}
-                    {renderDetailRow('Geographic Scope', contractDetails.geographic_scope, <MapPin size={16} />)}
-                    {renderDetailRow('Risk Management', contractDetails.risk_management, <AlertCircle size={16} />)}
-                  </div>
-
-                  {contractDetails.objectives && contractDetails.objectives.length > 0 && (
-                    renderArrayItems(contractDetails.objectives, 'Objectives')
-                  )}
-                  
-                  {contractDetails.scope_of_work && (
-                    <div className="scope-section">
-                      <div className="scope-label">Scope of Work</div>
-                      <div className="scope-text">{contractDetails.scope_of_work}</div>
-                    </div>
-                  )}
+                <div className="fields-grid">
+                  {renderField('Contract Name', contractDetails.grant_name, <FileText size={16} />)}
+                  {renderField('Contract Number', contractDetails.contract_number, <FileText size={16} />)}
+                  {renderField('Grant Reference', contractDetails.grant_reference, <Award size={16} />)}
+                  {renderField('Agreement Type', contractDetails.agreement_type, <FileText size={16} />)}
+                  {renderField('Effective Date', contractDetails.effective_date, <Calendar size={16} />, 'date')}
+                  {renderField('Signature Date', contractDetails.signature_date, <Calendar size={16} />, 'date')}
+                  {renderField('Start Date', contractDetails.start_date, <Calendar size={16} />, 'date')}
+                  {renderField('End Date', contractDetails.end_date, <Calendar size={16} />, 'date')}
+                  {renderField('Duration', contractDetails.duration, <Clock size={16} />)}
+                  {renderField('Purpose', contractDetails.purpose, <Target size={16} />)}
+                  {renderField('Geographic Scope', contractDetails.geographic_scope, <MapPin size={16} />)}
+                  {renderField('Risk Management', contractDetails.risk_management, <AlertCircle size={16} />)}
                 </div>
+                
+                {contractDetails.objectives && contractDetails.objectives.length > 0 && (
+                  <div className="objectives-section">
+                    <h4>Objectives</h4>
+                    <div className="objectives-list">
+                      {contractDetails.objectives.map((obj, idx) => (
+                        <div key={idx} className="objective-item">
+                          <CheckCircle size={16} />
+                          <span>{obj}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {contractDetails.scope_of_work && (
+                  <div className="scope-section">
+                    <h4>Scope of Work</h4>
+                    <div className="scope-content">
+                      {contractDetails.scope_of_work}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -474,67 +524,72 @@ function ContractDetailsPage() {
               onClick={() => toggleSection('financial')}
             >
               <div className="expand-icon">
-                {expandedSections.financial ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                {expandedSections.financial ? <Minus size={18} /> : <Plus size={18} />}
               </div>
               <DollarSign size={20} />
               <h4>Financial Details</h4>
             </div>
             {expandedSections.financial && (
               <div className="expandable-content">
-                <div className="detail-content">
-                  <div className="detail-grid">
-                    {renderDetailRow('Total Grant Amount', financial?.total_grant_amount, <DollarSign size={16} />, 'currency')}
-                    {renderDetailRow('Currency', financial?.currency, <DollarSign size={16} />)}
-                    {renderDetailRow('Payment Terms', financial?.payment_terms, <FileText size={16} />)}
-                    {renderDetailRow('Financial Reporting Requirements', financial?.financial_reporting_requirements, <FileBarChart size={16} />)}
-                  </div>
-
-                  {/* Payment Schedule */}
-                  {financial?.payment_schedule?.installments && financial.payment_schedule.installments.length > 0 && (
-                    <div className="table-section">
-                      <div className="table-label">Payment Schedule</div>
-                      <div className="data-table">
-                        <table>
-                          <thead>
-                            <tr>
-                              <th>#</th>
-                              <th>Amount</th>
-                              <th>Due Date</th>
-                              <th>Condition</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {financial.payment_schedule.installments.map((inst, idx) => (
-                              <tr key={idx}>
-                                <td>{inst.installment_number || idx + 1}</td>
-                                <td className="amount-cell">{formatCurrency(inst.amount)}</td>
-                                <td>{inst.due_date ? formatDate(inst.due_date) : 'Not specified'}</td>
-                                <td>{inst.trigger_condition || 'Not specified'}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Budget Breakdown */}
-                  {financial?.budget_breakdown && Object.keys(financial.budget_breakdown).length > 0 && (
-                    <div className="budget-section">
-                      <div className="budget-label">Budget Breakdown</div>
-                      <div className="budget-items">
-                        {Object.entries(financial.budget_breakdown).map(([key, value]) => (
-                          value !== null && value !== undefined && (
-                            <div key={key} className="budget-item">
-                              <div className="budget-category">{key.replace('_', ' ').toUpperCase()}</div>
-                              <div className="budget-amount">{formatCurrency(value)}</div>
-                            </div>
-                          )
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                <div className="fields-grid">
+                  {renderField('Total Grant Amount', financial?.total_grant_amount, <DollarSign size={16} />, 'currency')}
+                  {renderField('Currency', financial?.currency, <DollarSign size={16} />)}
+                  {renderField('Payment Terms', financial?.payment_terms, <FileText size={16} />)}
+                  {renderField('Financial Reporting Requirements', financial?.financial_reporting_requirements, <FileBarChart size={16} />)}
                 </div>
+
+                {/* Payment Schedule */}
+                {financial?.payment_schedule?.installments && financial.payment_schedule.installments.length > 0 && (
+                  <div className="payment-schedule">
+                    <h4>Payment Schedule</h4>
+                    <div className="data-table">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>#</th>
+                            <th>Amount</th>
+                            <th>Due Date</th>
+                            <th>Condition</th>
+                            <th>Description</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {financial.payment_schedule.installments.map((inst, idx) => (
+                            <tr key={idx}>
+                              <td>{inst.installment_number || idx + 1}</td>
+                              <td className="amount-cell">{formatCurrency(inst.amount)}</td>
+                              <td>{inst.due_date ? formatDate(inst.due_date) : 'Not specified'}</td>
+                              <td>{inst.trigger_condition || 'Not specified'}</td>
+                              <td>{inst.description || 'Not specified'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Budget Breakdown */}
+                {financial?.budget_breakdown && Object.keys(financial.budget_breakdown).length > 0 && (
+                  <div className="budget-breakdown">
+                    <h4>Budget Breakdown</h4>
+                    <div className="budget-items">
+                      {Object.entries(financial.budget_breakdown).map(([key, value]) => (
+                        value !== null && value !== undefined && (
+                          <div key={key} className="budget-item">
+                            <div className="budget-label">
+                              <DollarSign size={14} />
+                              <span>{key.replace('_', ' ').toUpperCase()}</span>
+                            </div>
+                            <div className="budget-amount">
+                              {formatCurrency(value)}
+                            </div>
+                          </div>
+                        )
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -546,55 +601,53 @@ function ContractDetailsPage() {
               onClick={() => toggleSection('parties')}
             >
               <div className="expand-icon">
-                {expandedSections.parties ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                {expandedSections.parties ? <Minus size={18} /> : <Plus size={18} />}
               </div>
               <Users size={20} />
               <h4>Parties Information</h4>
             </div>
             {expandedSections.parties && (
               <div className="expandable-content">
-                <div className="detail-content">
-                  <div className="parties-columns">
-                    {/* Grantor */}
-                    <div className="party-column">
+                <div className="parties-grid">
+                  {/* Grantor */}
+                  <div className="party-card">
+                    <div className="party-header">
+                      <Building className="party-icon" />
                       <div className="party-title">
-                        <Building className="party-icon" />
-                        <div>
-                          <h5>Grantor</h5>
-                          <div className="party-subtitle">Funding Organization</div>
-                        </div>
-                      </div>
-                      <div className="party-details">
-                        {renderDetailRow('Organization', parties.grantor?.organization_name, <Building size={14} />)}
-                        {renderDetailRow('Address', parties.grantor?.address, <MapPin size={14} />)}
-                        {renderDetailRow('Contact Person', parties.grantor?.contact_person, <User size={14} />)}
-                        {renderDetailRow('Email', parties.grantor?.email, <Mail size={14} />)}
-                        {renderDetailRow('Phone', parties.grantor?.phone, <Phone size={14} />)}
-                        {renderDetailRow('Signatory', parties.grantor?.signatory_name, <FileText size={14} />)}
-                        {renderDetailRow('Title', parties.grantor?.signatory_title, <User size={14} />)}
-                        {renderDetailRow('Signature Date', parties.grantor?.signature_date, <Calendar size={14} />, 'date')}
+                        <h4>Grantor</h4>
+                        <span className="party-role">Funding Organization</span>
                       </div>
                     </div>
+                    <div className="party-details">
+                      {renderField('Organization', parties.grantor?.organization_name, <Building size={14} />)}
+                      {renderField('Address', parties.grantor?.address, <MapPin size={14} />)}
+                      {renderField('Contact Person', parties.grantor?.contact_person, <User size={14} />)}
+                      {renderField('Email', parties.grantor?.email, <Mail size={14} />)}
+                      {renderField('Phone', parties.grantor?.phone, <Phone size={14} />)}
+                      {renderField('Signatory', parties.grantor?.signatory_name, <FileText size={14} />)}
+                      {renderField('Signatory Title', parties.grantor?.signatory_title, <User size={14} />)}
+                      {renderField('Signature Date', parties.grantor?.signature_date, <Calendar size={14} />, 'date')}
+                    </div>
+                  </div>
 
-                    {/* Grantee */}
-                    <div className="party-column">
+                  {/* Grantee */}
+                  <div className="party-card">
+                    <div className="party-header">
+                      <Building className="party-icon" />
                       <div className="party-title">
-                        <Building className="party-icon" />
-                        <div>
-                          <h5>Grantee</h5>
-                          <div className="party-subtitle">Recipient Organization</div>
-                        </div>
+                        <h4>Grantee</h4>
+                        <span className="party-role">Recipient Organization</span>
                       </div>
-                      <div className="party-details">
-                        {renderDetailRow('Organization', parties.grantee?.organization_name, <Building size={14} />)}
-                        {renderDetailRow('Address', parties.grantee?.address, <MapPin size={14} />)}
-                        {renderDetailRow('Contact Person', parties.grantee?.contact_person, <User size={14} />)}
-                        {renderDetailRow('Email', parties.grantee?.email, <Mail size={14} />)}
-                        {renderDetailRow('Phone', parties.grantee?.phone, <Phone size={14} />)}
-                        {renderDetailRow('Signatory', parties.grantee?.signatory_name, <FileText size={14} />)}
-                        {renderDetailRow('Title', parties.grantee?.signatory_title, <User size={14} />)}
-                        {renderDetailRow('Signature Date', parties.grantee?.signature_date, <Calendar size={14} />, 'date')}
-                      </div>
+                    </div>
+                    <div className="party-details">
+                      {renderField('Organization', parties.grantee?.organization_name, <Building size={14} />)}
+                      {renderField('Address', parties.grantee?.address, <MapPin size={14} />)}
+                      {renderField('Contact Person', parties.grantee?.contact_person, <User size={14} />)}
+                      {renderField('Email', parties.grantee?.email, <Mail size={14} />)}
+                      {renderField('Phone', parties.grantee?.phone, <Phone size={14} />)}
+                      {renderField('Signatory', parties.grantee?.signatory_name, <FileText size={14} />)}
+                      {renderField('Signatory Title', parties.grantee?.signatory_title, <User size={14} />)}
+                      {renderField('Signature Date', parties.grantee?.signature_date, <Calendar size={14} />, 'date')}
                     </div>
                   </div>
                 </div>
@@ -609,64 +662,62 @@ function ContractDetailsPage() {
               onClick={() => toggleSection('deliverables')}
             >
               <div className="expand-icon">
-                {expandedSections.deliverables ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                {expandedSections.deliverables ? <Minus size={18} /> : <Plus size={18} />}
               </div>
               <Target size={20} />
               <h4>Deliverables & Reporting</h4>
             </div>
             {expandedSections.deliverables && (
               <div className="expandable-content">
-                <div className="detail-content">
-                  {deliverables?.items && deliverables.items.length > 0 ? (
-                    <>
-                      <div className="table-section">
-                        <div className="data-table">
-                          <table>
-                            <thead>
-                              <tr>
-                                <th>Deliverable</th>
-                                <th>Due Date</th>
-                                <th>Status</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {deliverables.items.map((del, idx) => (
-                                <tr key={idx}>
-                                  <td className="deliverable-name">
-                                    <Target size={14} />
-                                    {del.deliverable_name || `Deliverable ${idx + 1}`}
-                                  </td>
-                                  <td>{del.due_date ? formatDate(del.due_date) : 'Not specified'}</td>
-                                  <td>
-                                    <span className={`status-badge ${del.status?.toLowerCase() || 'pending'}`}>
-                                      {del.status || 'Pending'}
-                                    </span>
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
+                {deliverables?.items && deliverables.items.length > 0 ? (
+                  <>
+                    <div className="data-table">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Deliverable</th>
+                            <th>Description</th>
+                            <th>Due Date</th>
+                            <th>Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {deliverables.items.map((del, idx) => (
+                            <tr key={idx}>
+                              <td className="deliverable-name">
+                                <Target size={14} />
+                                {del.deliverable_name || `Deliverable ${idx + 1}`}
+                              </td>
+                              <td>{del.description || 'Not specified'}</td>
+                              <td>{del.due_date ? formatDate(del.due_date) : 'Not specified'}</td>
+                              <td>
+                                <span className={`status-badge ${del.status?.toLowerCase() || 'pending'}`}>
+                                  {del.status || 'Pending'}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {deliverables?.reporting_requirements && (
+                      <div className="reporting-requirements">
+                        <h4>Reporting Requirements</h4>
+                        <div className="fields-grid">
+                          {renderField('Frequency', deliverables.reporting_requirements.frequency, <Calendar size={16} />)}
+                          {renderField('Format Requirements', deliverables.reporting_requirements.format_requirements, <FileText size={16} />)}
+                          {renderField('Submission Method', deliverables.reporting_requirements.submission_method, <Upload size={16} />)}
                         </div>
                       </div>
-
-                      {deliverables?.reporting_requirements && (
-                        <div className="reporting-section">
-                          <div className="section-label">Reporting Requirements</div>
-                          <div className="detail-grid">
-                            {renderDetailRow('Frequency', deliverables.reporting_requirements.frequency, <Calendar size={16} />)}
-                            {renderDetailRow('Format', deliverables.reporting_requirements.format_requirements, <FileText size={16} />)}
-                            {renderDetailRow('Submission Method', deliverables.reporting_requirements.submission_method, <Upload size={16} />)}
-                          </div>
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <div className="empty-state">
-                      <Target size={48} />
-                      <p>No deliverables specified in this contract</p>
-                    </div>
-                  )}
-                </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="empty-state">
+                    <Target size={48} />
+                    <p>No deliverables specified in this contract</p>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -678,32 +729,24 @@ function ContractDetailsPage() {
               onClick={() => toggleSection('terms')}
             >
               <div className="expand-icon">
-                {expandedSections.terms ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                {expandedSections.terms ? <Minus size={18} /> : <Plus size={18} />}
               </div>
               <Shield size={20} />
               <h4>Terms & Conditions</h4>
             </div>
             {expandedSections.terms && (
               <div className="expandable-content">
-                <div className="detail-content">
-                  <div className="detail-grid">
-                    {renderDetailRow('Intellectual Property', terms.intellectual_property, <FileText size={16} />)}
-                    {renderDetailRow('Confidentiality', terms.confidentiality, <Shield size={16} />)}
-                    {renderDetailRow('Liability', terms.liability, <AlertCircle size={16} />)}
-                    {renderDetailRow('Termination Clauses', terms.termination_clauses, <FileText size={16} />)}
-                    {renderDetailRow('Renewal Options', terms.renewal_options, <Clock size={16} />)}
-                    {renderDetailRow('Dispute Resolution', terms.dispute_resolution, <Shield size={16} />)}
-                    {renderDetailRow('Governing Law', terms.governing_law, <FileText size={16} />)}
-                    {renderDetailRow('Force Majeure', terms.force_majeure, <AlertCircle size={16} />)}
-                  </div>
-
-                  {terms.key_obligations && terms.key_obligations.length > 0 && (
-                    renderArrayItems(terms.key_obligations, 'Key Obligations')
-                  )}
-                  
-                  {terms.restrictions && terms.restrictions.length > 0 && (
-                    renderArrayItems(terms.restrictions, 'Restrictions')
-                  )}
+                <div className="fields-grid">
+                  {renderField('Intellectual Property', terms.intellectual_property, <FileText size={16} />)}
+                  {renderField('Confidentiality', terms.confidentiality, <Shield size={16} />)}
+                  {renderField('Liability', terms.liability, <AlertCircle size={16} />)}
+                  {renderField('Termination Clauses', terms.termination_clauses, <FileText size={16} />)}
+                  {renderField('Renewal Options', terms.renewal_options, <Clock size={16} />)}
+                  {renderField('Dispute Resolution', terms.dispute_resolution, <Shield size={16} />)}
+                  {renderField('Governing Law', terms.governing_law, <FileText size={16} />)}
+                  {renderField('Force Majeure', terms.force_majeure, <AlertCircle size={16} />)}
+                  {renderField('Key Obligations', terms.key_obligations, <CheckCircle size={16} />, 'array')}
+                  {renderField('Restrictions', terms.restrictions, <AlertCircle size={16} />, 'array')}
                 </div>
               </div>
             )}
@@ -716,20 +759,18 @@ function ContractDetailsPage() {
               onClick={() => toggleSection('compliance')}
             >
               <div className="expand-icon">
-                {expandedSections.compliance ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                {expandedSections.compliance ? <Minus size={18} /> : <Plus size={18} />}
               </div>
               <ShieldCheck size={20} />
               <h4>Compliance Requirements</h4>
             </div>
             {expandedSections.compliance && (
               <div className="expandable-content">
-                <div className="detail-content">
-                  <div className="detail-grid">
-                    {renderDetailRow('Audit Requirements', compliance.audit_requirements, <FileCheck size={16} />)}
-                    {renderDetailRow('Record Keeping', compliance.record_keeping, <FileText size={16} />)}
-                    {renderDetailRow('Regulatory Compliance', compliance.regulatory_compliance, <ShieldCheck size={16} />)}
-                    {renderDetailRow('Ethics Requirements', compliance.ethics_requirements, <Users size={16} />)}
-                  </div>
+                <div className="fields-grid">
+                  {renderField('Audit Requirements', compliance.audit_requirements, <FileCheck size={16} />)}
+                  {renderField('Record Keeping', compliance.record_keeping, <FileText size={16} />)}
+                  {renderField('Regulatory Compliance', compliance.regulatory_compliance, <ShieldCheck size={16} />)}
+                  {renderField('Ethics Requirements', compliance.ethics_requirements, <Users size={16} />)}
                 </div>
               </div>
             )}
