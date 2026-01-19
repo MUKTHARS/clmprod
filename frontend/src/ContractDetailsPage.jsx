@@ -362,54 +362,54 @@ function ContractDetailsPage() {
       {/* Metrics Overview */}
       <div className="metrics-overview">
         <div className="metric-card">
-          <div className="metric-icon financial">
+          {/* <div className="metric-icon financial">
             <DollarSign size={24} />
-          </div>
+          </div> */}
           <div className="metric-content">
             <span className="metric-value">{formatCurrency(metrics.totalAmount)}</span>
             <span className="metric-label">Total Value</span>
           </div>
         </div>
         <div className="metric-card">
-          <div className="metric-icon duration">
+          {/* <div className="metric-icon duration">
             <Clock size={24} />
-          </div>
+          </div> */}
           <div className="metric-content">
             <span className="metric-value">{metrics.duration}</span>
             <span className="metric-label">Duration</span>
           </div>
         </div>
         <div className="metric-card">
-          <div className="metric-icon deliverables">
+          {/* <div className="metric-icon deliverables">
             <Target size={24} />
-          </div>
+          </div> */}
           <div className="metric-content">
             <span className="metric-value">{metrics.deliverablesCount}</span>
             <span className="metric-label">Deliverables</span>
           </div>
         </div>
         <div className="metric-card">
-          <div className="metric-icon installments">
+          {/* <div className="metric-icon installments">
             <FileBarChart size={24} />
-          </div>
+          </div> */}
           <div className="metric-content">
             <span className="metric-value">{metrics.installmentsCount}</span>
             <span className="metric-label">Installments</span>
           </div>
         </div>
         <div className="metric-card">
-          <div className="metric-icon timeline">
+          {/* <div className="metric-icon timeline">
             <Calendar size={24} />
-          </div>
+          </div> */}
           <div className="metric-content">
             <span className="metric-value">{metrics.daysRemaining}d</span>
             <span className="metric-label">Days Remaining</span>
           </div>
         </div>
         <div className="metric-card">
-          <div className="metric-icon risk">
+          {/* <div className="metric-icon risk">
             <AlertCircle size={24} />
-          </div>
+          </div> */}
           <div className="metric-content">
             <span className="metric-value">{metrics.riskLevel}</span>
             <span className="metric-label">Risk Level</span>
@@ -422,9 +422,9 @@ function ContractDetailsPage() {
         {/* Comprehensive AI Analysis Section */}
         <div className="section-card">
           <div className="section-header">
-            <div className="section-icon">
+            {/* <div className="section-icon">
               <TrendingUp size={20} />
-            </div>
+            </div> */}
             <h3>Comprehensive Analysis</h3>
             <div className="section-actions">
               <button className="btn-expand-all" onClick={() => {

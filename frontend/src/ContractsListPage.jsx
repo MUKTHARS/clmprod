@@ -440,45 +440,45 @@ function ContractsListPage() {
       {/* Metrics Overview */}
       <div className="metrics-overview">
         <div className="metric-card">
-          <div className="metric-icon total">
+          {/* <div className="metric-icon total">
             <FileText size={24} />
-          </div>
+          </div> */}
           <div className="metric-content">
             <span className="metric-value">{metrics.totalContracts}</span>
             <span className="metric-label">Total Contracts</span>
           </div>
         </div>
         <div className="metric-card">
-          <div className="metric-icon value">
+          {/* <div className="metric-icon value">
             <DollarSign size={24} />
-          </div>
+          </div> */}
           <div className="metric-content">
             <span className="metric-value">{formatCurrency(metrics.totalValue)}</span>
             <span className="metric-label">Total Value</span>
           </div>
         </div>
         <div className="metric-card">
-          <div className="metric-icon active">
+          {/* <div className="metric-icon active">
             <CheckCircle size={24} />
-          </div>
+          </div> */}
           <div className="metric-content">
             <span className="metric-value">{metrics.activeContracts}</span>
             <span className="metric-label">Active</span>
           </div>
         </div>
         <div className="metric-card">
-          <div className="metric-icon expiring">
+          {/* <div className="metric-icon expiring">
             <AlertCircle size={24} />
-          </div>
+          </div> */}
           <div className="metric-content">
             <span className="metric-value">{metrics.expiringSoon}</span>
             <span className="metric-label">Expiring Soon</span>
           </div>
         </div>
         <div className="metric-card">
-          <div className="metric-icon average">
+          {/* <div className="metric-icon average">
             <TrendingUp size={24} />
-          </div>
+          </div> */}
           <div className="metric-content">
             <span className="metric-value">{formatCurrency(metrics.averageValue)}</span>
             <span className="metric-label">Average Value</span>

@@ -106,6 +106,12 @@
   border: 1px solid #e5e7eb;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-height: 120px;
 }
 
 .metric-card:hover {
@@ -114,11 +120,11 @@
   transform: translateY(-2px);
 }
 
-.metric-content {
+/* .metric-content {
   display: flex;
   align-items: center;
   gap: 16px;
-}
+} */
 
 .metric-icon {
   width: 48px;
@@ -134,29 +140,29 @@
 }
 
 /* Improved icon colors for better contrast */
-.metric-icon svg {
+/* .metric-icon svg {
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
-}
-
+} */
+/* 
 .metric-info {
   flex: 1;
   min-width: 0;
-}
+} */
 
-.metric-value {
+/* .metric-value {
   font-size: 28px;
   font-weight: 700;
   color: #1e293b;
   margin-bottom: 4px;
   line-height: 1;
-}
+} */
 
-.metric-label {
+/* .metric-label {
   font-size: 13px;
   color: #64748b;
   font-weight: 500;
   letter-spacing: 0.3px;
-}
+} */
 
 /* Recent Contracts Section - FIXED: Search on left, buttons on right */
 .recent-contracts {
@@ -1189,3 +1195,4 @@
     grid-template-columns: 1fr;
   }
 }
+
