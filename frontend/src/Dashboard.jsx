@@ -124,6 +124,16 @@ function Dashboard({ contracts, loading, refreshContracts }) {
     }).format(amount);
   };
 
+  const formatCurrencyWithDecimals = (amount) => {
+    if (!amount && amount !== 0) return '-';
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(amount);
+  };
+
   const getDaysRemaining = (dateString) => {
     if (!dateString) return 'N/A';
     try {
@@ -185,6 +195,12 @@ function Dashboard({ contracts, loading, refreshContracts }) {
     }
   };
 
+  const getProgressColor = (percentage) => {
+    if (percentage >= 80) return '#22c55e';
+    if (percentage >= 50) return '#f59e0b';
+    return '#ef4444';
+  };
+
   const filteredContracts = contracts.filter(contract => 
     searchTerm === '' || 
     (contract.grant_name && contract.grant_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -196,26 +212,15 @@ function Dashboard({ contracts, loading, refreshContracts }) {
     <div className="dashboard">
       {/* Header */}
       <div className="dashboard-header">
-        <div className="header-content">
-          <h1>Dashboard</h1>
-          <p className="header-subtitle">Overview of your grant contracts and analytics</p>
-        </div>
         <div className="header-actions">
-          <button 
+          {/* <button 
             className="btn-secondary"
             onClick={refreshContracts}
             disabled={loading}
           >
             <RefreshCw size={18} className={loading ? 'spinning' : ''} />
             <span>Refresh</span>
-          </button>
-          <button 
-            className="btn-primary"
-            onClick={() => navigate('/upload')}
-          >
-            <Upload size={18} />
-            <span>Upload</span>
-          </button>
+          </button> */}
         </div>
       </div>
 
@@ -273,11 +278,6 @@ function Dashboard({ contracts, loading, refreshContracts }) {
       {/* Recent Contracts Section */}
       <div className="recent-contracts">
         <div className="section-header">
-          <div className="section-title">
-            <h2>Recent Contracts</h2>
-            <p className="section-subtitle">Latest contracts added to the system</p>
-          </div>
-          
           <div className="section-controls">
             <div className="search-box">
               <Search size={16} />
@@ -290,30 +290,40 @@ function Dashboard({ contracts, loading, refreshContracts }) {
               />
             </div>
             
-            <div className="view-toggle">
+            <div className="controls-right">
+              <div className="view-toggle">
+                <button 
+                  className={`view-btn ${activeView === 'list' ? 'active' : ''}`}
+                  onClick={() => setActiveView('list')}
+                >
+                  <span className="view-icon">☰</span>
+                  List
+                </button>
+                <button 
+                  className={`view-btn ${activeView === 'grid' ? 'active' : ''}`}
+                  onClick={() => setActiveView('grid')}
+                >
+                  <span className="view-icon">⏹️</span>
+                  Grid
+                </button>
+              </div>
+
               <button 
-                className={`view-btn ${activeView === 'list' ? 'active' : ''}`}
-                onClick={() => setActiveView('list')}
+                className="btn-view-all"
+                onClick={() => navigate('/contracts')}
               >
-                <span className="view-icon">☰</span>
-                List
+                <span>View All</span>
+                <ArrowRight size={16} />
               </button>
+              
               <button 
-                className={`view-btn ${activeView === 'grid' ? 'active' : ''}`}
-                onClick={() => setActiveView('grid')}
+                className="btn-primary"
+                onClick={() => navigate('/upload')}
               >
-                <span className="view-icon">⏹️</span>
-                Grid
+                <Upload size={18} />
+                <span>Upload</span>
               </button>
             </div>
-
-            <button 
-              className="btn-view-all"
-              onClick={() => navigate('/contracts')}
-            >
-              <span>View All</span>
-              <ArrowRight size={16} />
-            </button>
           </div>
         </div>
 
@@ -490,34 +500,87 @@ function Dashboard({ contracts, loading, refreshContracts }) {
 
       {/* Financial & Deadlines Summary */}
       <div className="summary-container">
-        {/* Financial Summary */}
+        {/* Financial Summary - Individual Contracts */}
         <div className="summary-card">
           <div className="summary-header">
             <DollarSign size={20} />
             <h3>Financial Summary</h3>
           </div>
           <div className="financial-summary">
-            <div className="financial-item">
-              <span className="item-label">Total Value</span>
-              <span className="item-value">{formatCurrency(stats.totalAmount)}</span>
-            </div>
-            <div className="financial-item">
-              <span className="item-label">Funds Received</span>
-              <span className="item-value received">{formatCurrency(stats.fundsReceived)}</span>
-            </div>
-            {/* <div className="financial-item">
-              <span className="item-label">Funds Remaining</span>
-              <span className="item-value remaining">{formatCurrency(stats.fundsRemaining)}</span>
-            </div> */}
-            <div className="progress-container">
-              <div className="progress-bar">
-                <div 
-                  className="progress-fill"
-                  style={{ width: `${stats.totalAmount > 0 ? (stats.fundsReceived / stats.totalAmount * 100) : 0}%` }}
-                ></div>
+            {/* Individual Contract Financials */}
+            {contracts.slice(0, 3).map((contract) => {
+              const totalAmount = contract.total_amount || 0;
+              const fundsReceived = totalAmount * 0.5;
+              const fundsRemaining = totalAmount - fundsReceived;
+              const progressPercentage = totalAmount > 0 ? Math.round((fundsReceived / totalAmount) * 100) : 0;
+              
+              return (
+                <div key={contract.id} className="contract-financial-item">
+                  <div className="contract-financial-header">
+                    <h4 className="contract-financial-name">
+                      {contract.grant_name || contract.filename || 'Unnamed Contract'}
+                    </h4>
+                    <div className="contract-financial-id">
+                      {getContractDisplayId(contract)}
+                    </div>
+                  </div>
+                  
+                  <div className="contract-financial-details">
+                    <div className="financial-item">
+                      <span className="item-label">Total Value</span>
+                      <span className="item-value total">{formatCurrency(totalAmount)}</span>
+                    </div>
+                    <div className="financial-item">
+                      <span className="item-label">Funds Received</span>
+                      <span className="item-value received">{formatCurrencyWithDecimals(fundsReceived)}</span>
+                    </div>
+                    <div className="financial-item">
+                      <span className="item-label">Funds Remaining</span>
+                      <span className="item-value remaining">{formatCurrencyWithDecimals(fundsRemaining)}</span>
+                    </div>
+                  </div>
+                  
+                  <div className="progress-container contract-progress">
+                    <div className="progress-bar">
+                      <div 
+                        className="progress-fill"
+                        style={{ 
+                          width: `${progressPercentage}%`,
+                          backgroundColor: getProgressColor(progressPercentage)
+                        }}
+                      ></div>
+                    </div>
+                    <div className="progress-text">
+                      <span>Progress: {progressPercentage}%</span>
+                      <button 
+                        className="btn-action-small"
+                        onClick={() => navigate(`/contracts/${contract.id}`)}
+                        title="View contract details"
+                      >
+                        <ChevronRight size={16} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+            
+            {/* Overall Progress Summary */}
+            <div className="overall-progress">
+              <div className="financial-item">
+                <span className="item-label">Total Value (All)</span>
+                <span className="item-value total">{formatCurrency(stats.totalAmount)}</span>
               </div>
-              <div className="progress-text">
-                <span>Progress: {stats.totalAmount > 0 ? Math.round((stats.fundsReceived / stats.totalAmount * 100)) : 0}%</span>
+              <div className="progress-container">
+                <div className="progress-bar">
+                  <div 
+                    className="progress-fill"
+                    style={{ width: `${stats.totalAmount > 0 ? Math.round((stats.fundsReceived / stats.totalAmount * 100)) : 0}%` }}
+                  ></div>
+                </div>
+                <div className="progress-text">
+                  <span>Overall Progress: {stats.totalAmount > 0 ? Math.round((stats.fundsReceived / stats.totalAmount * 100)) : 0}%</span>
+                </div>
               </div>
             </div>
           </div>
@@ -581,7 +644,7 @@ function Dashboard({ contracts, loading, refreshContracts }) {
         </div>
       </div>
 
-      {/* Quick Actions */}
+      {/* Quick Actions
       <div className="quick-actions">
         <div className="section-header">
           <h2>Quick Actions</h2>
@@ -633,7 +696,7 @@ function Dashboard({ contracts, loading, refreshContracts }) {
             </div>
           </button>
         </div>
-      </div>
+      </div> */}
     </div>
   );
 }
