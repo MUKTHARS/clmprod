@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import API_CONFIG from './config';
+import './styles/UploadPage.css';
 
 function UploadPage({ setLoading, onUploadComplete }) {
   const [file, setFile] = useState(null);
@@ -98,9 +99,9 @@ function UploadPage({ setLoading, onUploadComplete }) {
     <div className="upload-page">
       <div className="page-header">
         <h1>Upload Contract</h1>
-        <button className="btn-secondary" onClick={() => navigate('/dashboard')}>
+        {/* <button className="btn-secondary" onClick={() => navigate('/dashboard')}>
           ← Back to Dashboard
-        </button>
+        </button> */}
       </div>
 
       <div className="upload-container">
@@ -233,6 +234,7 @@ function UploadPage({ setLoading, onUploadComplete }) {
 }
 
 export default UploadPage;
+
 // import React, { useState } from 'react';
 // import axios from 'axios';
 // import { useNavigate } from 'react-router-dom';

@@ -10,6 +10,11 @@ class Contract(Base):
     filename = Column(String, nullable=False)
     uploaded_at = Column(DateTime(timezone=True), server_default=func.now())
     
+    investment_id = Column(String, nullable=True)
+    project_id = Column(String, nullable=True)
+    grant_id = Column(String, nullable=True)
+    extracted_reference_ids = Column(JSONB, nullable=True, default=list)
+    
     # Basic extracted data (for backward compatibility)
     contract_number = Column(String, nullable=True)
     grant_name = Column(String, nullable=True)
