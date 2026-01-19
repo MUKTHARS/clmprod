@@ -413,13 +413,13 @@ function ContractsListPage() {
     <div className="contracts-list-page">
       {/* Header Section */}
       <div className="page-header">
-        <div className="header-left">
+        {/* <div className="header-left">
           <h1>Contracts Library</h1>
           <p className="page-subtitle">
             Manage and analyze all your grant contracts in one place
           </p>
-        </div>
-        <div className="header-actions">
+        </div> */}
+        {/* <div className="header-actions">
           <button 
             className="btn-icon"
             onClick={fetchContracts}
@@ -434,7 +434,7 @@ function ContractsListPage() {
             <Plus size={20} />
             <span>Upload Contract</span>
           </button>
-        </div>
+        </div> */}
       </div>
 
       {/* Metrics Overview */}
@@ -711,7 +711,7 @@ function ContractsListPage() {
             </div>
           </div> */}
 
-          <div className="action-suggestions">
+          {/* <div className="action-suggestions">
             <h4>Quick Actions</h4>
             <div className="suggestions-grid">
               <button className="suggestion-btn">
@@ -731,7 +731,7 @@ function ContractsListPage() {
                 <span>Risk Analysis</span>
               </button>
             </div>
-          </div>
+          </div> */}
         </div>
       )}
     </div>
