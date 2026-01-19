@@ -228,9 +228,9 @@ function Dashboard({ contracts, loading, refreshContracts }) {
       <div className="metrics-container">
         <div className="metric-card">
           <div className="metric-content">
-            <div className="metric-icon">
+            {/* <div className="metric-icon">
               <FileText size={20} />
-            </div>
+            </div> */}
             <div className="metric-info">
               <div className="metric-value">{stats.totalGrants}</div>
               <div className="metric-label">Total Contracts</div>
@@ -240,9 +240,9 @@ function Dashboard({ contracts, loading, refreshContracts }) {
 
         <div className="metric-card">
           <div className="metric-content">
-            <div className="metric-icon">
+            {/* <div className="metric-icon">
               <DollarSign size={20} />
-            </div>
+            </div> */}
             <div className="metric-info">
               <div className="metric-value">{formatCurrency(stats.totalAmount)}</div>
               <div className="metric-label">Total Value</div>
@@ -252,9 +252,9 @@ function Dashboard({ contracts, loading, refreshContracts }) {
 
         <div className="metric-card">
           <div className="metric-content">
-            <div className="metric-icon">
+            {/* <div className="metric-icon">
               <CheckCircle size={20} />
-            </div>
+            </div> */}
             <div className="metric-info">
               <div className="metric-value">{stats.activeContracts}</div>
               <div className="metric-label">Active</div>
@@ -264,9 +264,9 @@ function Dashboard({ contracts, loading, refreshContracts }) {
 
         <div className="metric-card">
           <div className="metric-content">
-            <div className="metric-icon">
+            {/* <div className="metric-icon">
               <AlertCircle size={20} />
-            </div>
+            </div> */}
             <div className="metric-info">
               <div className="metric-value">{stats.upcomingDeadlines}</div>
               <div className="metric-label">Deadlines</div>
@@ -534,10 +534,10 @@ function Dashboard({ contracts, loading, refreshContracts }) {
                       <span className="item-label">Funds Received</span>
                       <span className="item-value received">{formatCurrencyWithDecimals(fundsReceived)}</span>
                     </div>
-                    <div className="financial-item">
+                    {/* <div className="financial-item">
                       <span className="item-label">Funds Remaining</span>
                       <span className="item-value remaining">{formatCurrencyWithDecimals(fundsRemaining)}</span>
-                    </div>
+                    </div> */}
                   </div>
                   
                   <div className="progress-container contract-progress">
