@@ -413,13 +413,13 @@ function ContractsListPage() {
     <div className="contracts-list-page">
       {/* Header Section */}
       <div className="page-header">
-        <div className="header-left">
+        {/* <div className="header-left">
           <h1>Contracts Library</h1>
           <p className="page-subtitle">
             Manage and analyze all your grant contracts in one place
           </p>
-        </div>
-        <div className="header-actions">
+        </div> */}
+        {/* <div className="header-actions">
           <button 
             className="btn-icon"
             onClick={fetchContracts}
@@ -434,51 +434,51 @@ function ContractsListPage() {
             <Plus size={20} />
             <span>Upload Contract</span>
           </button>
-        </div>
+        </div> */}
       </div>
 
       {/* Metrics Overview */}
       <div className="metrics-overview">
         <div className="metric-card">
-          <div className="metric-icon total">
+          {/* <div className="metric-icon total">
             <FileText size={24} />
-          </div>
+          </div> */}
           <div className="metric-content">
             <span className="metric-value">{metrics.totalContracts}</span>
             <span className="metric-label">Total Contracts</span>
           </div>
         </div>
         <div className="metric-card">
-          <div className="metric-icon value">
+          {/* <div className="metric-icon value">
             <DollarSign size={24} />
-          </div>
+          </div> */}
           <div className="metric-content">
             <span className="metric-value">{formatCurrency(metrics.totalValue)}</span>
             <span className="metric-label">Total Value</span>
           </div>
         </div>
         <div className="metric-card">
-          <div className="metric-icon active">
+          {/* <div className="metric-icon active">
             <CheckCircle size={24} />
-          </div>
+          </div> */}
           <div className="metric-content">
             <span className="metric-value">{metrics.activeContracts}</span>
             <span className="metric-label">Active</span>
           </div>
         </div>
         <div className="metric-card">
-          <div className="metric-icon expiring">
+          {/* <div className="metric-icon expiring">
             <AlertCircle size={24} />
-          </div>
+          </div> */}
           <div className="metric-content">
             <span className="metric-value">{metrics.expiringSoon}</span>
             <span className="metric-label">Expiring Soon</span>
           </div>
         </div>
         <div className="metric-card">
-          <div className="metric-icon average">
+          {/* <div className="metric-icon average">
             <TrendingUp size={24} />
-          </div>
+          </div> */}
           <div className="metric-content">
             <span className="metric-value">{formatCurrency(metrics.averageValue)}</span>
             <span className="metric-label">Average Value</span>
@@ -711,7 +711,7 @@ function ContractsListPage() {
             </div>
           </div> */}
 
-          <div className="action-suggestions">
+          {/* <div className="action-suggestions">
             <h4>Quick Actions</h4>
             <div className="suggestions-grid">
               <button className="suggestion-btn">
@@ -731,7 +731,7 @@ function ContractsListPage() {
                 <span>Risk Analysis</span>
               </button>
             </div>
-          </div>
+          </div> */}
         </div>
       )}
     </div>

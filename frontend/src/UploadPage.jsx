@@ -21,8 +21,8 @@ import {
   Loader2,
   X,
   ChevronRight,
-  Sparkles,
-  Zap
+  FileCheck,
+  ChevronDown
 } from 'lucide-react';
 import './styles/UploadPage.css';
 
@@ -36,14 +36,26 @@ function UploadPage({ setLoading, onUploadComplete }) {
   const navigate = useNavigate();
 
   const extractionStages = [
-    { id: 'upload', label: 'Uploading File', icon: Upload, weight: 10 },
-    { id: 'parsing', label: 'Parsing Document', icon: FileText, weight: 15 },
-    { id: 'structure', label: 'Analyzing Structure', icon: Layers, weight: 20 },
-    { id: 'financial', label: 'Extracting Financial Data', icon: DollarSign, weight: 20 },
-    { id: 'parties', label: 'Identifying Parties', icon: User, weight: 10 },
-    { id: 'dates', label: 'Extracting Dates', icon: Calendar, weight: 10 },
-    { id: 'terms', label: 'Analyzing Terms', icon: Shield, weight: 15 },
-    { id: 'summary', label: 'Generating Summary', icon: BarChart3, weight: 10 },
+    { id: 'upload', label: 'Uploading', icon: Upload, weight: 10 },
+    { id: 'parsing', label: 'Parsing', icon: FileText, weight: 15 },
+    { id: 'structure', label: 'Structure', icon: Layers, weight: 20 },
+    { id: 'financial', label: 'Financial Data', icon: DollarSign, weight: 20 },
+    { id: 'parties', label: 'Parties', icon: User, weight: 10 },
+    { id: 'dates', label: 'Dates', icon: Calendar, weight: 10 },
+    { id: 'terms', label: 'Terms', icon: Shield, weight: 15 },
+    { id: 'summary', label: 'Summary', icon: BarChart3, weight: 10 },
+  ];
+
+  // Sample data for the preview table
+  const previewData = [
+    { field: 'Contract Name', value: 'Will be extracted from document', icon: FileText },
+    { field: 'Contract Value', value: 'Financial amount extracted', icon: DollarSign },
+    { field: 'Start Date', value: 'Contract commencement date', icon: Calendar },
+    { field: 'End Date', value: 'Contract expiration date', icon: Calendar },
+    { field: 'Grantor', value: 'Funding organization', icon: User },
+    { field: 'Grantee', value: 'Receiving organization', icon: User },
+    { field: 'Payment Schedule', value: 'Installment details', icon: TrendingUp },
+    { field: 'Key Terms', value: 'Important clauses', icon: Shield },
   ];
 
   const handleFileChange = (e) => {
@@ -90,7 +102,7 @@ function UploadPage({ setLoading, onUploadComplete }) {
 
     setLoading(true);
     setCurrentStage('uploading');
-    setUploadStatus('Starting upload...');
+    setUploadStatus('Uploading file...');
     setUploadProgress(5);
 
     try {
@@ -106,7 +118,7 @@ function UploadPage({ setLoading, onUploadComplete }) {
           const progress = progressEvent.total ? 
             Math.round((progressEvent.loaded * 100) / progressEvent.total) : 
             0;
-          setUploadProgress(15 + progress * 0.2); // Upload takes 20% of total
+          setUploadProgress(15 + progress * 0.2);
         },
       });
 
@@ -119,19 +131,16 @@ function UploadPage({ setLoading, onUploadComplete }) {
         setCurrentStage(stage.id);
         setUploadStatus(`Processing: ${stage.label}`);
         
-        // Calculate progress based on stage weight
         const stageStart = 35 + extractionStages.slice(0, i).reduce((sum, s) => sum + s.weight, 0);
         const stageEnd = stageStart + stage.weight;
         
         await simulateStageProgress(stage.id, 1000 + Math.random() * 500);
-        
-        // Update overall progress
         setUploadProgress(stageEnd);
       }
 
       setUploadProgress(100);
       setCurrentStage('complete');
-      setUploadStatus('Analysis complete!');
+      setUploadStatus('Analysis complete');
       
       if (response.data) {
         setExtractionDetails({
@@ -147,12 +156,10 @@ function UploadPage({ setLoading, onUploadComplete }) {
         });
       }
       
-      // Call the callback if provided
       if (onUploadComplete) {
         onUploadComplete(response.data);
       }
       
-      // Navigate after a delay
       setTimeout(() => {
         navigate(`/contracts/${response.data.id}`);
       }, 2500);
@@ -198,18 +205,15 @@ function UploadPage({ setLoading, onUploadComplete }) {
       <div className="upload-container">
         <div className="upload-card">
           <div className="upload-header">
-            <div className="upload-icon-wrapper">
-              <Sparkles className="upload-icon-sparkle" />
-              <FileText className="upload-icon-main" />
-            </div>
-            <h1>AI-Powered Contract Analysis</h1>
+            <FileCheck className="upload-icon-main" />
+            <h1>Upload Contract</h1>
             <p className="upload-subtitle">
-              Upload grant contracts for comprehensive AI analysis and intelligent insights
+              Upload PDF contracts for automated analysis and data extraction
             </p>
           </div>
 
           <div className="upload-content">
-            {/* File Selection Area */}
+            {/* File Selection Area - Compact */}
             {!file && (
               <div className="file-selection-area">
                 <input
@@ -226,93 +230,109 @@ function UploadPage({ setLoading, onUploadComplete }) {
                   onDrop={handleDrop}
                 >
                   <div className="dropzone-content">
-                    <Upload className="dropzone-icon" />
                     <div className="dropzone-text">
-                      <p className="dropzone-title">Drag & drop your PDF contract</p>
-                      <p className="dropzone-subtext">or click to browse files</p>
+                      <Upload className="dropzone-icon" />
+                      <div>
+                        <p className="dropzone-title">Upload PDF Contract</p>
+                        <p className="dropzone-subtext">Click to select or drag & drop</p>
+                      </div>
                     </div>
                     <div className="file-type-badge">
                       <File size={14} />
-                      <span>PDF only</span>
+                      <span>PDF files only</span>
                     </div>
                   </div>
                 </label>
               </div>
             )}
 
-            {/* File Preview */}
+            {/* File Preview - Compact */}
             {file && currentStage === 'idle' && (
               <div className="file-preview-section">
                 <div className="selected-file-card">
                   <div className="selected-file-header">
-                    <FileText className="file-preview-icon" />
                     <div className="file-info">
-                      <h3>{file.name}</h3>
-                      <div className="file-meta">
-                        <span className="file-size">
-                          {(file.size / 1024 / 1024).toFixed(2)} MB
-                        </span>
-                        <span className="file-type">PDF Document</span>
+                      <div className="file-header-row">
+                        <FileText className="file-preview-icon" />
+                        <div>
+                          <h3>{file.name}</h3>
+                          <div className="file-meta">
+                            <span className="file-size">
+                              {(file.size / 1024 / 1024).toFixed(2)} MB
+                            </span>
+                            <span className="file-type">PDF Document</span>
+                          </div>
+                        </div>
                       </div>
+                      <button 
+                        className="btn-remove-file"
+                        onClick={() => {
+                          setFile(null);
+                          document.getElementById('pdf-upload').value = '';
+                        }}
+                      >
+                        <X size={18} />
+                      </button>
                     </div>
+                    
                     <button 
-                      className="btn-remove-file"
-                      onClick={() => {
-                        setFile(null);
-                        document.getElementById('pdf-upload').value = '';
-                      }}
+                      onClick={handleUpload} 
+                      className="btn-analyze"
                     >
-                      <X size={20} />
+                      <FileCheck size={18} />
+                      <span>Analyze Contract</span>
                     </button>
                   </div>
-                  
-                  <div className="analysis-preview">
-                    <h4>What will be analyzed:</h4>
-                    <div className="preview-features">
-                      <div className="preview-feature">
-                        <DollarSign size={16} />
-                        <span>Financial Data & Payment Schedules</span>
-                      </div>
-                      <div className="preview-feature">
-                        <Calendar size={16} />
-                        <span>Key Dates & Milestones</span>
-                      </div>
-                      <div className="preview-feature">
-                        <User size={16} />
-                        <span>Parties & Signatories</span>
-                      </div>
-                      <div className="preview-feature">
-                        <Shield size={16} />
-                        <span>Terms & Conditions</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <button 
-                    onClick={handleUpload} 
-                    className="btn-analyze"
-                  >
-                    <Zap className="analyze-icon" />
-                    <span>Start AI Analysis</span>
-                    <ChevronRight size={18} />
-                  </button>
                 </div>
               </div>
             )}
+
+            {/* Preview Table of What Will Be Extracted */}
+            <div className="preview-table-section">
+              <div className="preview-table-header">
+                <h3>Data to be Extracted</h3>
+                <p className="table-subtitle">The following information will be extracted from your contract:</p>
+              </div>
+              
+              <div className="preview-table-container">
+                <table className="preview-table">
+                  <thead>
+                    <tr>
+                      <th>Field</th>
+                      <th>Description</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {previewData.map((item, index) => {
+                      const Icon = item.icon;
+                      return (
+                        <tr key={index}>
+                          <td>
+                            <div className="field-cell">
+                              <Icon size={16} />
+                              <span>{item.field}</span>
+                            </div>
+                          </td>
+                          <td>{item.value}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
 
             {/* Processing State */}
             {(currentStage !== 'idle' && currentStage !== 'complete' && currentStage !== 'error') && (
               <div className="processing-section">
                 <div className="processing-header">
-                  <Loader2 className="processing-spinner" />
-                  <h2>Analyzing Contract</h2>
-                  <p className="processing-subtitle">AI is extracting and analyzing contract data</p>
+                  <h3>Processing Contract</h3>
+                  <p className="processing-subtitle">Extracting contract data...</p>
                 </div>
 
-                {/* Main Progress Bar */}
                 <div className="main-progress-container">
                   <div className="progress-header">
-                    <span className="progress-label">Overall Progress</span>
+                    <span className="progress-label">Progress</span>
                     <span className="progress-percentage">{Math.round(uploadProgress)}%</span>
                   </div>
                   <div className="main-progress-bar">
@@ -323,12 +343,11 @@ function UploadPage({ setLoading, onUploadComplete }) {
                   </div>
                 </div>
 
-                {/* Extraction Stages */}
+                {/* Extraction Stages - Simplified */}
                 <div className="extraction-stages">
                   {extractionStages.map((stage, index) => {
                     const isActive = currentStage === stage.id;
                     const isCompleted = stageProgress[stage.id] === 100;
-                    const isUpcoming = !stageProgress[stage.id] && !isActive;
                     
                     return (
                       <div 
@@ -338,35 +357,21 @@ function UploadPage({ setLoading, onUploadComplete }) {
                         <div className="stage-icon-container">
                           <div className="stage-icon-bg">
                             {isCompleted ? (
-                              <CheckCircle size={18} />
+                              <CheckCircle size={14} />
                             ) : isActive ? (
-                              <Loader2 className="stage-spinner" size={18} />
+                              <Loader2 className="stage-spinner" size={14} />
                             ) : (
-                              <stage.icon size={18} />
+                              <stage.icon size={14} />
                             )}
                           </div>
-                          {index < extractionStages.length - 1 && (
-                            <div className="stage-connector">
-                              <div 
-                                className="stage-connector-fill"
-                                style={{ width: `${stageProgress[stage.id] || 0}%` }}
-                              ></div>
-                            </div>
-                          )}
                         </div>
                         <div className="stage-content">
-                          <div className="stage-header">
-                            <span className="stage-label">{stage.label}</span>
-                            <span className="stage-percentage">
-                              {stageProgress[stage.id] ? `${Math.round(stageProgress[stage.id])}%` : ''}
-                            </span>
-                          </div>
+                          <span className="stage-label">{stage.label}</span>
                           {stageProgress[stage.id] && (
-                            <div className="stage-progress-bar">
-                              <div 
-                                className="stage-progress-fill"
-                                style={{ width: `${stageProgress[stage.id]}%` }}
-                              ></div>
+                            <div className="stage-progress">
+                              <span className="stage-percentage">
+                                {Math.round(stageProgress[stage.id])}%
+                              </span>
                             </div>
                           )}
                         </div>
@@ -388,57 +393,37 @@ function UploadPage({ setLoading, onUploadComplete }) {
                   <div className="success-icon-wrapper">
                     <CheckCircle className="success-icon" />
                   </div>
-                  <h2>Analysis Complete!</h2>
+                  <h3>Contract Analyzed</h3>
                   <p className="complete-subtitle">
-                    Contract successfully analyzed by AI
+                    Ready to view details
                   </p>
                 </div>
 
                 <div className="extraction-results">
                   <div className="result-card">
                     <div className="result-icon">
-                      <FileText size={20} />
+                      <FileText size={16} />
                     </div>
                     <div className="result-content">
-                      <span className="result-label">Contract Name</span>
+                      <span className="result-label">Contract</span>
                       <span className="result-value">{extractionDetails.contractName}</span>
                     </div>
                   </div>
 
                   <div className="result-card">
                     <div className="result-icon">
-                      <DollarSign size={20} />
+                      <DollarSign size={16} />
                     </div>
                     <div className="result-content">
-                      <span className="result-label">Total Value</span>
+                      <span className="result-label">Value</span>
                       <span className="result-value">{extractionDetails.totalAmount}</span>
                     </div>
                   </div>
 
-                  <div className="result-card">
-                    <div className="result-icon">
-                      <Calendar size={20} />
-                    </div>
-                    <div className="result-content">
-                      <span className="result-label">Duration</span>
-                      <span className="result-value">{extractionDetails.duration}</span>
-                    </div>
+                  <div className="redirect-notice">
+                    <Loader2 className="redirect-spinner" />
+                    <span>Redirecting to contract details...</span>
                   </div>
-
-                  <div className="result-card">
-                    <div className="result-icon">
-                      <Layers size={20} />
-                    </div>
-                    <div className="result-content">
-                      <span className="result-label">Sections Analyzed</span>
-                      <span className="result-value">{extractionDetails.extractedSections}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="redirect-notice">
-                  <Loader2 className="redirect-spinner" />
-                  <span>Redirecting to contract details...</span>
                 </div>
               </div>
             )}
@@ -448,7 +433,7 @@ function UploadPage({ setLoading, onUploadComplete }) {
               <div className="error-section">
                 <div className="error-header">
                   <AlertCircle className="error-icon" />
-                  <h2>Analysis Failed</h2>
+                  <h3>Processing Error</h3>
                 </div>
                 <div className="error-content">
                   <p>{uploadStatus}</p>
@@ -468,40 +453,40 @@ function UploadPage({ setLoading, onUploadComplete }) {
             )}
           </div>
 
-          {/* Features Grid */}
+          {/* Features Grid - Simplified */}
           <div className="features-section">
-            <h3>Comprehensive AI Analysis Features</h3>
+            <h3>Extraction Capabilities</h3>
             <div className="features-grid">
               <div className="feature-card">
                 <div className="feature-icon financial">
-                  <DollarSign size={24} />
+                  <DollarSign size={20} />
                 </div>
-                <h4>Financial Intelligence</h4>
-                <p>Extracts payment schedules, budgets, and financial terms with precision</p>
+                <h4>Financial Data</h4>
+                <p>Extracts payment schedules and budget information</p>
               </div>
 
               <div className="feature-card">
                 <div className="feature-icon legal">
-                  <Shield size={24} />
+                  <Shield size={20} />
                 </div>
-                <h4>Legal Analysis</h4>
-                <p>Identifies key clauses, obligations, and risk factors</p>
+                <h4>Legal Terms</h4>
+                <p>Identifies key clauses and obligations</p>
               </div>
 
               <div className="feature-card">
                 <div className="feature-icon timeline">
-                  <TrendingUp size={24} />
+                  <Calendar size={20} />
                 </div>
-                <h4>Timeline Mapping</h4>
-                <p>Extracts all dates, milestones, and project timelines</p>
+                <h4>Dates & Milestones</h4>
+                <p>Extracts all timeline information</p>
               </div>
 
               <div className="feature-card">
                 <div className="feature-icon parties">
-                  <User size={24} />
+                  <User size={20} />
                 </div>
-                <h4>Party Intelligence</h4>
-                <p>Identifies all parties, roles, and contact information</p>
+                <h4>Parties Information</h4>
+                <p>Identifies all involved organizations and contacts</p>
               </div>
             </div>
           </div>
