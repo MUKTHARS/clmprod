@@ -15,3 +15,8 @@ pydantic==2.5.0
 pydantic-settings==2.1.0
 alembic==1.12.1
 chromadb==0.4.22
+
+# Authentication
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.6

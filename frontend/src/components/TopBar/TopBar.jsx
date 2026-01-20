@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 import './TopBar.css';
 
-const TopBar = () => {
+const TopBar = ({ user = null }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [showNotifications, setShowNotifications] = useState(false);
@@ -68,7 +68,17 @@ const TopBar = () => {
     setPageTitle(pageInfo.title);
     setPageIcon(pageInfo.icon);
   }, [location.pathname]);
-
+if (!user) {
+  return (
+    <header className="topbar">
+      <div className="topbar-left">
+        <div className="page-title-container">
+          <h1 className="page-title">Grant Analyzer</h1>
+        </div>
+      </div>
+    </header>
+  );
+}
   return (
     <header className="topbar">
       <div className="topbar-left">
@@ -77,7 +87,15 @@ const TopBar = () => {
             {pageIcon}
           </div> */}
           <div className="page-title-content">
-            <h1 className="page-title">{pageTitle}</h1>
+             <h1 className="page-title">{pageTitle}</h1>
+            {user && (
+              <div className="user-badge">
+                <span className="user-name">{user.full_name || user.username}</span>
+                <span className={`user-role role-${user.role}`}>
+                  {user.role.replace('_', ' ').toUpperCase()}
+                </span>
+              </div>
+            )}
             <p className="page-subtitle">
               {/* {location.pathname === '/dashboard' 
                 ? 'Welcome back! Here\'s what\'s happening with your contracts today.'
