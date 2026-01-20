@@ -15,6 +15,9 @@ import ContractApproval from './components/Workflow/ContractApproval';
 // import AdvancedSearch from './components/AdvancedSearch/AdvancedSearch';
 // import ActivityLogs from './components/Activity/ActivityLogs';
 import ContractReview from './components/workflow/ContractReview';
+import ProjectManagerActions from './components/workflow/ProjectManagerActions';
+import ProjectManagerDashboard from './pages/ProjectManagerDashboard'; // ADD THIS IMPORT
+
 function App() {
   const [contracts, setContracts] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -163,6 +166,14 @@ const fetchContracts = async () => {
                       </PrivateRoute>
                     } 
                   />
+                  <Route 
+                    path="/pm-dashboard" 
+                    element={
+                      <PrivateRoute user={user} requiredRole="project_manager">
+                        <ProjectManagerDashboard user={user} />
+                      </PrivateRoute>
+                    } 
+                  />
                   <Route path="/login" element={<Navigate to="/dashboard" />} />
                   <Route path="/" element={<Navigate to="/dashboard" />} />
                 </Routes>
@@ -175,65 +186,62 @@ const fetchContracts = async () => {
           <Routes>
             <Route path="/login" element={<Login onLogin={handleLogin} />} />
             <Route path="*" element={<Navigate to="/login" />} />
-              <Route 
-    path="/review" 
-    element={
-      <PrivateRoute user={user} requiredRole="program_manager">
-        <ContractReview />
-      </PrivateRoute>
-    } 
-  />
-  <Route 
-    path="/approvals" 
-    element={
-      <PrivateRoute user={user} requiredRole="director">
-        <ContractApproval />
-      </PrivateRoute>
-    } 
-  />
-  <Route 
-    path="/my-reviews" 
-    element={
-      <PrivateRoute user={user} requiredRole="program_manager">
-        <ContractReview />
-      </PrivateRoute>
-    } 
-  />
-  <Route 
-    path="/pending-approvals" 
-    element={
-      <PrivateRoute user={user} requiredRole="director">
-        <ContractApproval />
-      </PrivateRoute>
-    } 
-  />
-  {/* <Route 
-    path="/advanced-search" 
-    element={
-      <PrivateRoute user={user}>
-        <AdvancedSearch />
-      </PrivateRoute>
-    } 
-  /> */}
-  {/* <Route 
-    path="/activity" 
-    element={
-      <PrivateRoute user={user} requiredRole="director">
-        <ActivityLogs />
-      </PrivateRoute>
-    } 
-  /> */}
-  {/* <Route 
-    path="/exports" 
-    element={
-      <PrivateRoute user={user}>
-        <Exports />
-      </PrivateRoute>
-    } 
-  /> */}
-
-
-
+            <Route 
+              path="/review" 
+              element={
+                <PrivateRoute user={user} requiredRole="program_manager">
+                  <ContractReview />
+                </PrivateRoute>
+              } 
+            />
+            <Route 
+              path="/approvals" 
+              element={
+                <PrivateRoute user={user} requiredRole="director">
+                  <ContractApproval />
+                </PrivateRoute>
+              } 
+            />
+            <Route 
+              path="/my-reviews" 
+              element={
+                <PrivateRoute user={user} requiredRole="program_manager">
+                  <ContractReview />
+                </PrivateRoute>
+              } 
+            />
+            <Route 
+              path="/pending-approvals" 
+              element={
+                <PrivateRoute user={user} requiredRole="director">
+                  <ContractApproval />
+                </PrivateRoute>
+              } 
+            />
+            {/* <Route 
+              path="/advanced-search" 
+              element={
+                <PrivateRoute user={user}>
+                  <AdvancedSearch />
+                </PrivateRoute>
+              } 
+            /> */}
+            {/* <Route 
+              path="/activity" 
+              element={
+                <PrivateRoute user={user} requiredRole="director">
+                  <ActivityLogs />
+                </PrivateRoute>
+              } 
+            /> */}
+            {/* <Route 
+              path="/exports" 
+              element={
+                <PrivateRoute user={user}>
+                  <Exports />
+                </PrivateRoute>
+              } 
+            /> */}
           </Routes>
         )}
       </div>

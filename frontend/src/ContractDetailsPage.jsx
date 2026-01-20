@@ -41,6 +41,7 @@ import {
 } from 'lucide-react';
 import ComprehensiveView from './ComprehensiveView';
 import API_CONFIG from './config';
+import ProjectManagerActions from './components/workflow/ProjectManagerActions'; // ADD THIS IMPORT
 import './styles/ContractDetailsPage.css';
 
 function ContractDetailsPage({ user = null }) {
@@ -964,6 +965,17 @@ function ContractDetailsPage({ user = null }) {
           </div>
         </div>
       </div>
+      
+      {/* Project Manager Actions Section - ADDED HERE */}
+      {user && user.role === "project_manager" && contractData && (
+        <div className="workflow-section">
+          <ProjectManagerActions 
+            contract={contractData}
+            user={user}
+            onActionComplete={() => fetchContractData(contractId)}
+          />
+        </div>
+      )}
     </div>
   );
 }

@@ -1,352 +1,483 @@
-.workflow-container {
-  padding: 2rem;
-  max-width: 1200px;
-  margin: 0 auto;
+/* src/components/workflow/Workflow.css */
+.project-manager-actions {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-top: 20px;
 }
 
-.workflow-header {
-  margin-bottom: 2rem;
-}
-
-.workflow-header h1 {
-  font-size: 2rem;
-  font-weight: 600;
+.project-manager-actions h3 {
+  margin-top: 0;
+  margin-bottom: 8px;
   color: #1f2937;
-  margin-bottom: 0.5rem;
-}
-
-.workflow-header p {
-  color: #6b7280;
-}
-
-.workflow-content {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 2rem;
-}
-
-@media (min-width: 1024px) {
-  .workflow-content {
-    grid-template-columns: 2fr 1fr;
-  }
-}
-
-.contracts-list-section h2 {
-  font-size: 1.25rem;
+  font-size: 18px;
   font-weight: 600;
-  color: #374151;
-  margin-bottom: 1rem;
 }
 
-.empty-state {
-  text-align: center;
-  padding: 3rem;
-  background: #f9fafb;
-  border-radius: 0.5rem;
-  border: 2px dashed #d1d5db;
-}
-
-.empty-state svg {
-  color: #9ca3af;
-  margin-bottom: 1rem;
-}
-
-.empty-state h3 {
-  font-size: 1.125rem;
-  font-weight: 500;
-  color: #374151;
-  margin-bottom: 0.5rem;
-}
-
-.empty-state p {
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
   color: #6b7280;
+  font-size: 14px;
 }
 
-.contracts-grid {
+.status-badge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.status-badge.draft {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status-badge.under_review {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.status-badge.reviewed {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.status-badge.approved {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.status-badge.rejected {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.version-badge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #e5e7eb;
+  color: #4b5563;
+}
+
+.action-buttons-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1rem;
+  gap: 16px;
 }
 
-.contract-card {
+.action-btn {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
   background: white;
   border: 1px solid #e5e7eb;
-  border-radius: 0.5rem;
-  padding: 1rem;
+  border-radius: 8px;
+  text-align: left;
+  transition: all 0.2s ease;
   cursor: pointer;
-  transition: all 0.2s;
+  width: 100%;
 }
 
-.contract-card:hover {
-  border-color: #3b82f6;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+.action-btn:hover:not(:disabled) {
+  background: #f9fafb;
+  border-color: #d1d5db;
+  transform: translateY(-1px);
 }
 
-.contract-card.selected {
+.action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.action-btn.primary {
   border-color: #3b82f6;
   background: #eff6ff;
 }
 
-.contract-card-header {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.75rem;
-  margin-bottom: 0.75rem;
+.action-btn.primary:hover:not(:disabled) {
+  background: #dbeafe;
+  border-color: #2563eb;
 }
 
-.contract-card-header svg {
-  color: #6b7280;
-  flex-shrink: 0;
+.action-btn.secondary {
+  border-color: #10b981;
+  background: #ecfdf5;
 }
 
-.contract-card-header h3 {
-  font-size: 1rem;
+.action-btn.secondary:hover:not(:disabled) {
+  background: #d1fae5;
+  border-color: #059669;
+}
+
+.action-content {
+  flex: 1;
+}
+
+.action-title {
+  display: block;
   font-weight: 600;
   color: #1f2937;
-  margin-bottom: 0.25rem;
+  margin-bottom: 4px;
+  font-size: 14px;
 }
 
-.contract-meta {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+.action-description {
+  display: block;
+  font-size: 12px;
   color: #6b7280;
-  font-size: 0.875rem;
+  line-height: 1.4;
 }
 
-.separator {
-  margin: 0 0.25rem;
-}
-
-.contract-card-body {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.contract-info {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  font-size: 0.875rem;
-}
-
-.btn-view {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-  padding: 0.375rem 0.75rem;
-  background: #f3f4f6;
-  border: 1px solid #d1d5db;
-  border-radius: 0.375rem;
-  color: #374151;
-  font-size: 0.875rem;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-view:hover {
-  background: #e5e7eb;
-}
-
-.review-panel {
-  background: white;
+/* Versions Panel */
+.versions-panel {
+  margin-top: 20px;
   border: 1px solid #e5e7eb;
-  border-radius: 0.5rem;
+  border-radius: 8px;
   overflow: hidden;
 }
 
-.review-panel-header {
+.versions-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem;
+  padding: 16px;
   background: #f9fafb;
   border-bottom: 1px solid #e5e7eb;
 }
 
-.review-panel-header h2 {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #1f2937;
+.versions-header h4 {
+  margin: 0;
+  color: #374151;
+  font-size: 16px;
 }
 
 .btn-close {
   background: none;
   border: none;
-  font-size: 1.5rem;
   color: #6b7280;
   cursor: pointer;
-  padding: 0;
-  width: 2rem;
-  height: 2rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  padding: 4px;
+  border-radius: 4px;
 }
 
 .btn-close:hover {
+  background: #e5e7eb;
   color: #374151;
 }
 
-.review-panel-body {
-  padding: 1.5rem;
-}
-
-.contract-summary h3 {
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: #1f2937;
-  margin-bottom: 0.75rem;
-}
-
-.summary-details {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 0.5rem;
-  margin-bottom: 1.5rem;
-  font-size: 0.875rem;
-}
-
-.detail-item {
+.loading-versions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 40px;
   color: #6b7280;
 }
 
-.action-section {
-  margin-bottom: 1.5rem;
+.empty-versions {
+  text-align: center;
+  padding: 40px;
+  color: #6b7280;
 }
 
-.action-section h3 {
-  font-size: 1rem;
-  font-weight: 600;
+.empty-versions svg {
+  margin-bottom: 12px;
+  color: #d1d5db;
+}
+
+.versions-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.version-card {
+  padding: 16px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.version-card:last-child {
+  border-bottom: none;
+}
+
+.version-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.version-type {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   color: #374151;
-  margin-bottom: 0.75rem;
+  font-weight: 500;
+  font-size: 14px;
 }
 
-.action-buttons {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.75rem;
+.version-number {
+  font-size: 12px;
+  color: #6b7280;
+  background: #f3f4f6;
+  padding: 2px 8px;
+  border-radius: 12px;
 }
 
-.action-btn {
+.version-body {
+  font-size: 13px;
+}
+
+.version-description {
+  margin: 0 0 12px 0;
+  color: #4b5563;
+  line-height: 1.5;
+}
+
+.version-meta {
+  display: flex;
+  gap: 12px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.version-changes {
+  margin-top: 12px;
+  padding: 12px;
+  background: #f9fafb;
+  border-radius: 6px;
+}
+
+.version-changes h5 {
+  margin: 0 0 8px 0;
+  font-size: 13px;
+  color: #374151;
+}
+
+.version-changes ul {
+  margin: 0;
+  padding-left: 20px;
+  list-style-type: disc;
+}
+
+.version-changes li {
+  margin-bottom: 4px;
+  color: #4b5563;
+  font-size: 12px;
+}
+
+.version-response {
+  margin-top: 12px;
+  padding: 12px;
+  background: #eff6ff;
+  border-radius: 6px;
+}
+
+.version-response h5 {
+  margin: 0 0 8px 0;
+  font-size: 13px;
+  color: #1e40af;
+}
+
+.response-preview {
+  margin: 0;
+  color: #4b5563;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* Review Comment Preview */
+.review-comment-preview {
+  margin-bottom: 20px;
+}
+
+.review-comment-preview h4 {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  color: #374151;
+}
+
+.comment-card {
+  padding: 12px;
+  background: #f9fafb;
+  border-left: 3px solid #3b82f6;
+  border-radius: 6px;
+  margin-bottom: 16px;
+}
+
+.comment-card p {
+  margin: 0 0 8px 0;
+  color: #4b5563;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.comment-meta {
+  display: flex;
+  gap: 8px;
+  font-size: 11px;
+  color: #6b7280;
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modal {
+  background: white;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 600px;
+  max-height: 90vh;
   display: flex;
   flex-direction: column;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 0.5rem;
-  padding: 1rem;
-  background: #f9fafb;
-  border: 2px solid #e5e7eb;
-  border-radius: 0.5rem;
-  cursor: pointer;
-  transition: all 0.2s;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e5e7eb;
 }
 
-.action-btn:hover {
-  border-color: #d1d5db;
-}
-
-.action-btn.selected {
-  border-color: #3b82f6;
-  background: #eff6ff;
-}
-
-.action-btn svg {
-  color: #6b7280;
-}
-
-.action-btn.selected svg {
-  color: #3b82f6;
-}
-
-.action-btn span {
-  font-size: 0.875rem;
-  font-weight: 500;
-  text-align: center;
-}
-
-.comments-section h3 {
-  font-size: 1rem;
+.modal-header h3 {
+  margin: 0;
+  color: #1f2937;
+  font-size: 18px;
   font-weight: 600;
+}
+
+.modal-body {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 20px 24px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 6px;
   color: #374151;
-  margin-bottom: 0.75rem;
+  font-weight: 500;
+  font-size: 14px;
 }
 
-.comments-section textarea {
+.form-group input,
+.form-group textarea {
   width: 100%;
-  padding: 0.75rem;
+  padding: 10px 12px;
   border: 1px solid #d1d5db;
-  border-radius: 0.375rem;
-  font-family: inherit;
-  font-size: 0.875rem;
-  resize: vertical;
-  margin-bottom: 0.75rem;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: border-color 0.2s ease;
 }
 
-.comments-section textarea:focus {
+.form-group input:focus,
+.form-group textarea:focus {
   outline: none;
   border-color: #3b82f6;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
-.comment-guidelines {
+.form-hint {
   display: flex;
   align-items: flex-start;
-  gap: 0.5rem;
-  padding: 0.75rem;
-  background: #fef3c7;
-  border: 1px solid #fde68a;
-  border-radius: 0.375rem;
-  font-size: 0.875rem;
-  color: #92400e;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 12px;
+  color: #6b7280;
 }
 
-.comment-guidelines svg {
+.form-hint svg {
   flex-shrink: 0;
-  margin-top: 0.125rem;
+  margin-top: 1px;
 }
 
-.review-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.75rem;
-  margin-top: 1.5rem;
-}
-
-.btn-cancel {
-  padding: 0.625rem 1.25rem;
-  background: #f3f4f6;
-  border: 1px solid #d1d5db;
-  border-radius: 0.375rem;
-  color: #374151;
+.btn-primary {
+  background: #3b82f6;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-cancel:hover {
-  background: #e5e7eb;
-}
-
-.btn-submit {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.625rem 1.25rem;
-  background: #3b82f6;
-  border: none;
-  border-radius: 0.375rem;
-  color: white;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
+  gap: 8px;
+  transition: background 0.2s ease;
 }
 
-.btn-submit:hover:not(:disabled) {
+.btn-primary:hover:not(:disabled) {
   background: #2563eb;
 }
 
-.btn-submit:disabled {
+.btn-primary:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: white;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-secondary:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+
+/* Spinner animation */
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }

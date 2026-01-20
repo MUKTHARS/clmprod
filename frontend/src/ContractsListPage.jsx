@@ -27,12 +27,12 @@ import {
   X,
   ChevronDown,
   Filter as FilterIcon,
-  Loader2
+  Loader2,
+  Send // Add this import for the submit button
 } from 'lucide-react';
 import './styles/ContractsListPage.css';
 
-function ContractsListPage() {
-  const [contracts, setContracts] = useState([]);
+function ContractsListPage({ contracts, user }) { // Add user prop here
   const [filteredContracts, setFilteredContracts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -47,336 +47,313 @@ function ContractsListPage() {
     fetchContracts();
   }, []);
 
-useEffect(() => {
-  if (contracts.length > 0 && contracts.every(c => c && c.id)) {
-    console.log('Filtering valid contracts...', contracts.length);
-    filterContracts();
-  }
-}, [contracts, searchTerm, statusFilter, dateFilter]);
-  // Helper function to normalize contract data - same as Dashboard
-const normalizeContractData = (contract) => {
-  // If contract is malformed but we need to display something
-  if (!contract || typeof contract !== 'object') {
-    console.warn('Invalid contract data, creating minimal object');
-    return {
-      id: Math.floor(Math.random() * 1000),
-      filename: 'Unknown Contract',
-      grant_name: 'Unknown Contract',
-      grantor: 'Unknown',
-      total_amount: 0,
-      status: 'unknown'
-    };
-  }
-  
-  // Check if it has any data at all
-  const keys = Object.keys(contract);
-  if (keys.length === 0) {
-    console.error('Contract object is empty:', contract);
-    return null;
-  }
-  
-  // Get contract ID - check multiple possible properties
-  const contractId = contract.id || contract.contract_id || 
-                     (contract.basic_data && contract.basic_data.id) || 
-                     (contract.comprehensive_data && contract.comprehensive_data.contract_id);
-  
-  if (!contractId) {
-    console.warn('Contract has no ID property, but has data:', contract);
-    // Still try to process it with a temporary ID
-  }
-  
-  console.log(`Processing contract with ID: ${contractId || 'temporary'}`);
-  
-  // Check if we have comprehensive_data or basic fields
-  const hasComprehensiveData = contract.comprehensive_data && 
-                              typeof contract.comprehensive_data === 'object' &&
-                              Object.keys(contract.comprehensive_data).length > 0;
-  
-  const hasBasicData = contract.grant_name || contract.grantor || contract.total_amount || 
-                      (contract.basic_data && typeof contract.basic_data === 'object');
-  
-  // Build normalized contract object
-  const normalized = {
-    id: contractId || Math.random().toString(36).substr(2, 9), // Generate temp ID if needed
-    filename: contract.filename || 'Unnamed Contract',
-    uploaded_at: contract.uploaded_at,
-    status: contract.status || 'processed',
-    investment_id: contract.investment_id,
-    project_id: contract.project_id,
-    grant_id: contract.grant_id,
-    extracted_reference_ids: contract.extracted_reference_ids || [],
-    comprehensive_data: contract.comprehensive_data || null
-  };
-  
-  // Extract from comprehensive_data if available
-  if (hasComprehensiveData) {
-    console.log(`Contract ${contractId} has comprehensive_data`);
-    const compData = contract.comprehensive_data;
-    
-    // Extract contract details
-    const contractDetails = compData.contract_details || {};
-    if (contractDetails && typeof contractDetails === 'object') {
-      normalized.grant_name = contractDetails.grant_name || 
-                             contract.grant_name || 
-                             contract.filename || 
-                             'Unnamed Contract';
-      
-      normalized.contract_number = contractDetails.contract_number || 
-                                  contract.contract_number;
-      
-      normalized.start_date = contractDetails.start_date || 
-                             contract.start_date;
-      
-      normalized.end_date = contractDetails.end_date || 
-                           contract.end_date;
-      
-      normalized.purpose = contractDetails.purpose || 
-                          contract.purpose;
-    } else {
-      normalized.grant_name = contract.grant_name || 
-                             contract.filename || 
-                             'Unnamed Contract';
+  useEffect(() => {
+    if (contracts.length > 0 && contracts.every(c => c && c.id)) {
+      console.log('Filtering valid contracts...', contracts.length);
+      filterContracts();
     }
-    
-    // Extract parties information
-    const parties = compData.parties || {};
-    if (parties && typeof parties === 'object') {
-      normalized.grantor = parties.grantor?.organization_name || 
-                          contract.grantor || 
-                          'Unknown Grantor';
-      
-      normalized.grantee = parties.grantee?.organization_name || 
-                          contract.grantee || 
-                          'Unknown Grantee';
-    } else {
-      normalized.grantor = contract.grantor || 'Unknown Grantor';
-      normalized.grantee = contract.grantee || 'Unknown Grantee';
-    }
-    
-    // Extract financial information
-    const financial = compData.financial_details || {};
-    if (financial && typeof financial === 'object') {
-      normalized.total_amount = financial.total_grant_amount || 
-                               contract.total_amount || 
-                               0;
-      normalized.currency = financial.currency || 'USD';
-    } else {
-      normalized.total_amount = contract.total_amount || 0;
-    }
-    
-  } else if (hasBasicData) {
-    console.log(`Contract ${contractId} has basic fields`);
-    // Use basic data fields
-    normalized.grant_name = contract.grant_name || 
-                           (contract.basic_data && contract.basic_data.grant_name) || 
-                           contract.filename || 
-                           'Unnamed Contract';
-    
-    normalized.grantor = contract.grantor || 
-                        (contract.basic_data && contract.basic_data.grantor) || 
-                        'Unknown Grantor';
-    
-    normalized.grantee = contract.grantee || 
-                        (contract.basic_data && contract.basic_data.grantee) || 
-                        'Unknown Grantee';
-    
-    normalized.total_amount = contract.total_amount || 
-                             (contract.basic_data && contract.basic_data.total_amount) || 
-                             0;
-    
-    normalized.contract_number = contract.contract_number || 
-                                (contract.basic_data && contract.basic_data.contract_number);
-    
-    normalized.start_date = contract.start_date || 
-                           (contract.basic_data && contract.basic_data.start_date);
-    
-    normalized.end_date = contract.end_date || 
-                         (contract.basic_data && contract.basic_data.end_date);
-    
-    normalized.purpose = contract.purpose || 
-                        (contract.basic_data && contract.basic_data.purpose);
-    
-  } else {
-    console.log(`Contract ${contractId} has limited data, using fallback`);
-    // Fallback values
-    normalized.grant_name = contract.filename || 'Unnamed Contract';
-    normalized.grantor = 'Unknown Grantor';
-    normalized.grantee = 'Unknown Grantee';
-    normalized.total_amount = 0;
-  }
-  
-  console.log(`Normalized contract ${normalized.id}:`, {
-    grant_name: normalized.grant_name,
-    grantor: normalized.grantor,
-    total_amount: normalized.total_amount,
-    hasComprehensiveData: hasComprehensiveData
-  });
-  
-  return normalized;
-};
+  }, [contracts, searchTerm, statusFilter, dateFilter]);
 
-
-const extractFieldFromComprehensiveData = (contract, fieldPath) => {
-  if (!contract.comprehensive_data) return null;
-  
-  const paths = fieldPath.split('.');
-  let value = contract.comprehensive_data;
-  
-  for (const path of paths) {
-    if (value && typeof value === 'object' && path in value) {
-      value = value[path];
-    } else {
+  const normalizeContractData = (contract) => {
+    // If contract is malformed but we need to display something
+    if (!contract || typeof contract !== 'object') {
+      console.warn('Invalid contract data, creating minimal object');
+      return {
+        id: Math.floor(Math.random() * 1000),
+        filename: 'Unknown Contract',
+        grant_name: 'Unknown Contract',
+        grantor: 'Unknown',
+        total_amount: 0,
+        status: 'unknown'
+      };
+    }
+    
+    // Check if it has any data at all
+    const keys = Object.keys(contract);
+    if (keys.length === 0) {
+      console.error('Contract object is empty:', contract);
       return null;
     }
-  }
-  
-  return value;
-};
-
-
-const fetchContracts = async () => {
-  try {
-    setLoading(true);
-    console.log('Starting to fetch contracts...');
     
-    // Get authentication token
-    const token = localStorage.getItem('token');
-    const headers = {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json'
-    };
+    // Get contract ID - check multiple possible properties
+    const contractId = contract.id || contract.contract_id || 
+                       (contract.basic_data && contract.basic_data.id) || 
+                       (contract.comprehensive_data && contract.comprehensive_data.contract_id);
     
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
+    if (!contractId) {
+      console.warn('Contract has no ID property, but has data:', contract);
+      // Still try to process it with a temporary ID
     }
     
-    // FIX: Use the correct endpoint - remove "/comprehensive" from URL
-    // Use the same endpoint that Dashboard uses
-    const response = await fetch(`${API_CONFIG.BASE_URL}/api/contracts/`, {
-      headers: headers
-    });
+    console.log(`Processing contract with ID: ${contractId || 'temporary'}`);
     
-    console.log('API response status:', response.status);
+    // Check if we have comprehensive_data or basic fields
+    const hasComprehensiveData = contract.comprehensive_data && 
+                                typeof contract.comprehensive_data === 'object' &&
+                                Object.keys(contract.comprehensive_data).length > 0;
     
-    if (response.ok) {
-      const data = await response.json();
-      console.log('Contracts data received:', data);
+    const hasBasicData = contract.grant_name || contract.grantor || contract.total_amount || 
+                        (contract.basic_data && typeof contract.basic_data === 'object');
+    
+    // Build normalized contract object
+    const normalized = {
+      id: contractId || Math.random().toString(36).substr(2, 9), // Generate temp ID if needed
+      filename: contract.filename || 'Unnamed Contract',
+      uploaded_at: contract.uploaded_at,
+      status: contract.status || 'processed',
+      investment_id: contract.investment_id,
+      project_id: contract.project_id,
+      grant_id: contract.grant_id,
+      extracted_reference_ids: contract.extracted_reference_ids || [],
+      comprehensive_data: contract.comprehensive_data || null
+    };
+    
+    // Extract from comprehensive_data if available
+    if (hasComprehensiveData) {
+      console.log(`Contract ${contractId} has comprehensive_data`);
+      const compData = contract.comprehensive_data;
       
-      // Handle different response formats
-      let contractsArray = [];
-      
-      if (Array.isArray(data)) {
-        contractsArray = data;
-      } else if (data && typeof data === 'object') {
-        // If response is an object with contracts property
-        if (data.contracts && Array.isArray(data.contracts)) {
-          contractsArray = data.contracts;
-        } else if (data.data && Array.isArray(data.data)) {
-          contractsArray = data.data;
-        } else {
-          // Convert object values to array
-          contractsArray = Object.values(data);
-        }
+      // Extract contract details
+      const contractDetails = compData.contract_details || {};
+      if (contractDetails && typeof contractDetails === 'object') {
+        normalized.grant_name = contractDetails.grant_name || 
+                               contract.grant_name || 
+                               contract.filename || 
+                               'Unnamed Contract';
+        
+        normalized.contract_number = contractDetails.contract_number || 
+                                    contract.contract_number;
+        
+        normalized.start_date = contractDetails.start_date || 
+                               contract.start_date;
+        
+        normalized.end_date = contractDetails.end_date || 
+                             contract.end_date;
+        
+        normalized.purpose = contractDetails.purpose || 
+                            contract.purpose;
+      } else {
+        normalized.grant_name = contract.grant_name || 
+                               contract.filename || 
+                               'Unnamed Contract';
       }
       
-      console.log('Processed contracts array:', contractsArray.length);
-      
-      // DEBUG: Show what we're actually getting
-      if (contractsArray.length > 0) {
-        console.log('First contract raw structure:', {
-          keys: Object.keys(contractsArray[0]),
-          values: contractsArray[0]
-        });
+      // Extract parties information
+      const parties = compData.parties || {};
+      if (parties && typeof parties === 'object') {
+        normalized.grantor = parties.grantor?.organization_name || 
+                            contract.grantor || 
+                            'Unknown Grantor';
+        
+        normalized.grantee = parties.grantee?.organization_name || 
+                            contract.grantee || 
+                            'Unknown Grantee';
+      } else {
+        normalized.grantor = contract.grantor || 'Unknown Grantor';
+        normalized.grantee = contract.grantee || 'Unknown Grantee';
       }
       
-      // Don't filter out empty objects immediately - try to normalize first
-      const normalizedContracts = contractsArray
-        .map((contract, index) => {
-          // If contract appears empty, it might have hidden properties
-          console.log(`Contract ${index}:`, contract);
-          
-          if (!contract || typeof contract !== 'object') {
-            console.warn(`Contract ${index} is invalid, creating placeholder`);
-            return {
-              id: index + 1,
-              filename: `Contract ${index + 1}`,
-              grant_name: `Contract ${index + 1}`,
-              grantor: 'Unknown',
-              total_amount: 0,
-              status: 'unknown'
-            };
-          }
-          
-          return normalizeContractData(contract);
-        })
-        .filter(contract => contract !== null);
-      
-      console.log('Final normalized contracts count:', normalizedContracts.length);
-      
-      if (normalizedContracts.length > 0) {
-        console.log('First normalized contract:', normalizedContracts[0]);
+      // Extract financial information
+      const financial = compData.financial_details || {};
+      if (financial && typeof financial === 'object') {
+        normalized.total_amount = financial.total_grant_amount || 
+                                 contract.total_amount || 
+                                 0;
+        normalized.currency = financial.currency || 'USD';
+      } else {
+        normalized.total_amount = contract.total_amount || 0;
       }
       
-      setContracts(normalizedContracts);
-      setFilteredContracts(normalizedContracts);
+    } else if (hasBasicData) {
+      console.log(`Contract ${contractId} has basic fields`);
+      // Use basic data fields
+      normalized.grant_name = contract.grant_name || 
+                             (contract.basic_data && contract.basic_data.grant_name) || 
+                             contract.filename || 
+                             'Unnamed Contract';
+      
+      normalized.grantor = contract.grantor || 
+                          (contract.basic_data && contract.basic_data.grantor) || 
+                          'Unknown Grantor';
+      
+      normalized.grantee = contract.grantee || 
+                          (contract.basic_data && contract.basic_data.grantee) || 
+                          'Unknown Grantee';
+      
+      normalized.total_amount = contract.total_amount || 
+                               (contract.basic_data && contract.basic_data.total_amount) || 
+                               0;
+      
+      normalized.contract_number = contract.contract_number || 
+                                  (contract.basic_data && contract.basic_data.contract_number);
+      
+      normalized.start_date = contract.start_date || 
+                             (contract.basic_data && contract.basic_data.start_date);
+      
+      normalized.end_date = contract.end_date || 
+                           (contract.basic_data && contract.basic_data.end_date);
+      
+      normalized.purpose = contract.purpose || 
+                          (contract.basic_data && contract.basic_data.purpose);
       
     } else {
-      console.error('Failed to fetch contracts:', response.status);
+      console.log(`Contract ${contractId} has limited data, using fallback`);
+      // Fallback values
+      normalized.grant_name = contract.filename || 'Unnamed Contract';
+      normalized.grantor = 'Unknown Grantor';
+      normalized.grantee = 'Unknown Grantee';
+      normalized.total_amount = 0;
+    }
+    
+    console.log(`Normalized contract ${normalized.id}:`, {
+      grant_name: normalized.grant_name,
+      grantor: normalized.grantor,
+      total_amount: normalized.total_amount,
+      hasComprehensiveData: hasComprehensiveData
+    });
+    
+    return normalized;
+  };
+
+  const fetchContracts = async () => {
+    try {
+      setLoading(true);
+      console.log('Starting to fetch contracts...');
       
-      // Try without trailing slash as fallback
-      try {
-        console.log('Trying without trailing slash...');
-        const fallbackResponse = await fetch(`${API_CONFIG.BASE_URL}/api/contracts`, {
-          headers: headers
-        });
+      // Get authentication token
+      const token = localStorage.getItem('token');
+      const headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
+      // First, try the comprehensive endpoint that ContractDetailsPage uses
+      const response = await fetch(`${API_CONFIG.BASE_URL}/api/contracts/`, {
+        headers: headers
+      });
+      
+      console.log('Comprehensive API response status:', response.status);
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Comprehensive contracts data received:', data);
         
-        if (fallbackResponse.ok) {
-          const fallbackData = await fallbackResponse.json();
-          console.log('Fallback contracts data:', fallbackData);
+        // Handle different response formats
+        let contractsArray = [];
+        
+        if (Array.isArray(data)) {
+          contractsArray = data;
+        } else if (data && typeof data === 'object') {
+          // If response is an object with contracts property
+          if (data.contracts && Array.isArray(data.contracts)) {
+            contractsArray = data.contracts;
+          } else if (data.data && Array.isArray(data.data)) {
+            contractsArray = data.data;
+          } else {
+            // Convert object values to array
+            contractsArray = Object.values(data);
+          }
+        }
+        
+        console.log('Processed contracts array:', contractsArray.length);
+        
+        // DEBUG: Show what we're actually getting
+        if (contractsArray.length > 0) {
+          console.log('First contract raw structure:', {
+            keys: Object.keys(contractsArray[0]),
+            values: contractsArray[0]
+          });
+        }
+        
+        // Don't filter out empty objects immediately - try to normalize first
+        const normalizedContracts = contractsArray
+          .map((contract, index) => {
+            // If contract appears empty, it might have hidden properties
+            console.log(`Contract ${index}:`, contract);
+            
+            if (!contract || typeof contract !== 'object') {
+              console.warn(`Contract ${index} is invalid, creating placeholder`);
+              return {
+                id: index + 1,
+                filename: `Contract ${index + 1}`,
+                grant_name: `Contract ${index + 1}`,
+                grantor: 'Unknown',
+                total_amount: 0,
+                status: 'unknown'
+              };
+            }
+            
+            return normalizeContractData(contract);
+          })
+          .filter(contract => contract !== null);
+        
+        console.log('Final normalized contracts count:', normalizedContracts.length);
+        
+        if (normalizedContracts.length > 0) {
+          console.log('First normalized contract:', normalizedContracts[0]);
+        }
+        
+        setContracts(normalizedContracts);
+        setFilteredContracts(normalizedContracts);
+        
+      } else {
+        console.error('Failed to fetch contracts:', response.status);
+        setContracts([]);
+        setFilteredContracts([]);
+      }
+    } catch (error) {
+      console.error('Error fetching contracts:', error);
+      
+      // Last resort: try the basic endpoint without auth
+      try {
+        const basicResponse = await fetch(`${API_CONFIG.BASE_URL}/api/contracts/`);
+        if (basicResponse.ok) {
+          const basicData = await basicResponse.json();
+          console.log('Basic no-auth contracts:', basicData);
           
-          if (Array.isArray(fallbackData) && fallbackData.length > 0) {
-            const normalized = fallbackData.map(contract => normalizeContractData(contract)).filter(c => c);
+          if (Array.isArray(basicData) && basicData.length > 0) {
+            const normalized = basicData.map(contract => normalizeContractData(contract)).filter(c => c);
             setContracts(normalized);
             setFilteredContracts(normalized);
-          } else {
-            setContracts([]);
-            setFilteredContracts([]);
           }
-        } else {
-          setContracts([]);
-          setFilteredContracts([]);
         }
       } catch (fallbackError) {
         console.error('Fallback also failed:', fallbackError);
         setContracts([]);
         setFilteredContracts([]);
       }
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    console.error('Error fetching contracts:', error);
-    
-    // Last resort: try the basic endpoint without auth (for development)
+  };
+
+  const handleSubmitForReview = async (contractId) => {
     try {
-      const basicResponse = await fetch(`${API_CONFIG.BASE_URL}/api/contracts/`);
-      if (basicResponse.ok) {
-        const basicData = await basicResponse.json();
-        console.log('Basic no-auth contracts:', basicData);
-        
-        if (Array.isArray(basicData) && basicData.length > 0) {
-          const normalized = basicData.map(contract => normalizeContractData(contract)).filter(c => c);
-          setContracts(normalized);
-          setFilteredContracts(normalized);
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_CONFIG.BASE_URL}/contracts/${contractId}/submit-review`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
+      });
+      
+      if (response.ok) {
+        alert('Contract submitted for review!');
+        fetchContracts(); // Refresh the contracts list
+      } else {
+        const error = await response.json();
+        alert(`Failed to submit: ${error.detail}`);
       }
-    } catch (fallbackError) {
-      console.error('Fallback also failed:', fallbackError);
-      setContracts([]);
-      setFilteredContracts([]);
+    } catch (error) {
+      console.error('Failed to submit for review:', error);
+      alert('Failed to submit for review');
     }
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   const filterContracts = () => {
     let filtered = [...contracts];
@@ -619,6 +596,25 @@ const fetchContracts = async () => {
             <span>View Details</span>
             <ChevronRight size={16} />
           </button>
+          
+          {/* Project Manager quick actions */}
+          {user && user.role === "project_manager" && (
+            <div className="quick-actions">
+              {(contract.status === 'draft' || contract.status === 'rejected') && (
+                <button 
+                  className="btn-submit"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleSubmitForReview(contract.id);
+                  }}
+                  title="Submit for review"
+                >
+                  <Send size={14} />
+                </button>
+              )}
+            </div>
+          )}
+          
           <button className="btn-download">
             <Download size={16} />
           </button>
@@ -772,9 +768,6 @@ const fetchContracts = async () => {
         </div>
       </div>
 
-      {/* Rest of the component remains the same as your original code */}
-      {/* ... (keep all the search, filters, and rendering logic as you had it) ... */}
-      
       {/* Search and Filters */}
       <div className="search-filters-section">
         <div className="search-container">

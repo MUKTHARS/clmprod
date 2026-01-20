@@ -171,3 +171,33 @@ ALTER TABLE contract_permissions ADD CONSTRAINT contract_permissions_granted_by_
 -- Activity logs relationships
 ALTER TABLE activity_logs ADD CONSTRAINT activity_logs_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id);
 ALTER TABLE activity_logs ADD CONSTRAINT activity_logs_contract_id_fkey FOREIGN KEY (contract_id) REFERENCES contracts(id);
+
+
+
+
+
+
+
+-- Create contract_versions table
+CREATE TABLE IF NOT EXISTS contract_versions (
+    id SERIAL PRIMARY KEY,
+    contract_id INTEGER NOT NULL REFERENCES contracts(id) ON DELETE CASCADE,
+    version_number INTEGER NOT NULL,
+    created_by INTEGER NOT NULL REFERENCES users(id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    contract_data JSONB NOT NULL,
+    changes_description TEXT,
+    version_type VARCHAR(50) DEFAULT 'metadata_update',
+    
+    -- Unique constraint for contract and version
+    UNIQUE(contract_id, version_number)
+);
+
+-- Create index for faster queries
+CREATE INDEX idx_contract_versions_contract_id ON contract_versions(contract_id);
+CREATE INDEX idx_contract_versions_created_by ON contract_versions(created_by);
+
+-- Add version column to contracts table if not exists
+ALTER TABLE contracts ADD COLUMN IF NOT EXISTS version INTEGER DEFAULT 1;
+
+
