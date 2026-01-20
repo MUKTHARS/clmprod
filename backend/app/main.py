@@ -550,17 +550,43 @@ async def get_comprehensive_data(
     request: Request = None
 ):
     """Get comprehensive data for a specific contract"""
-    # TEMPORARY FIX: Allow all authenticated users to view
+    print(f"=== get_comprehensive_data called for ID: {contract_id} ===")
+    
     contract = db.query(models.Contract).filter(models.Contract.id == contract_id).first()
     if not contract:
+        print(f"Contract {contract_id} not found")
         raise HTTPException(status_code=404, detail="Contract not found")
     
-    # Check permission - temporarily bypass for viewing
-    # if not check_permission(current_user, contract_id, "view", db):
-    #     raise HTTPException(
-    #         status_code=status.HTTP_403_FORBIDDEN,
-    #         detail="You don't have permission to view this contract"
-    #     )
+    print(f"Found contract: {contract.id}, created_by: {contract.created_by}, status: {contract.status}")
+    print(f"Current user: {current_user.id}, role: {current_user.role}")
+    
+    # Check permission based on role
+    if current_user.role == "project_manager":
+        # Project managers can only see contracts they created
+        if contract.created_by != current_user.id:
+            print(f"Permission denied: Contract created by {contract.created_by}, user is {current_user.id}")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You don't have permission to view this contract"
+            )
+    elif current_user.role == "program_manager":
+        # Program managers can only see contracts in review/approved status
+        if contract.status not in ["under_review", "reviewed", "approved", "draft"]:
+            print(f"Permission denied: Contract status is {contract.status}")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You don't have permission to view this contract"
+            )
+    # Directors can see all contracts
+    
+    # Helper function to safely format dates
+    def format_date(date_value):
+        if date_value and hasattr(date_value, 'isoformat'):
+            return date_value.isoformat()
+        return date_value
+    
+    # Get or create comprehensive_data
+    comp_data = contract.comprehensive_data or {}
     
     # Log activity
     log_activity(
@@ -574,18 +600,20 @@ async def get_comprehensive_data(
     
     return {
         "contract_id": contract.id,
-        "filename": contract.filename,
+        "filename": contract.filename or "Unknown",
         "basic_data": {
+            "id": contract.id,
             "contract_number": contract.contract_number,
-            "grant_name": contract.grant_name,
-            "grantor": contract.grantor,
-            "grantee": contract.grantee,
-            "total_amount": contract.total_amount,
-            "start_date": contract.start_date,
-            "end_date": contract.end_date,
-            "purpose": contract.purpose
+            "grant_name": contract.grant_name or "Unnamed Contract",
+            "grantor": contract.grantor or "Unknown Grantor",
+            "grantee": contract.grantee or "Unknown Grantee",
+            "total_amount": float(contract.total_amount) if contract.total_amount else 0.0,
+            "start_date": format_date(contract.start_date),
+            "end_date": format_date(contract.end_date),
+            "purpose": contract.purpose,
+            "status": contract.status or "draft"
         },
-        "comprehensive_data": contract.comprehensive_data
+        "comprehensive_data": comp_data
     }
 
 @app.get("/api/contracts/{contract_id}/similar")
@@ -652,52 +680,103 @@ async def get_all_contracts(
     db: Session = Depends(get_db),
     request: Request = None
 ):
-    """Get all contracts with pagination (temporarily show all to authenticated users)"""
+    """Get all contracts with pagination (with role-based filtering)"""
     print(f"=== get_all_contracts called ===")
     print(f"Current user: {current_user.username}, Role: {current_user.role}, ID: {current_user.id}")
     
     try:
-        # TEMPORARY FIX: Show all contracts to all authenticated users
-        # Comment out the role-based filtering for now
-        contracts = db.query(models.Contract).order_by(models.Contract.uploaded_at.desc()).offset(skip).limit(limit).all()
+        # Apply role-based filtering
+        if current_user.role == "director":
+            print("Director: Fetching all contracts")
+            query = db.query(models.Contract)
+        elif current_user.role == "program_manager":
+            print("Program Manager: Fetching contracts under review")
+            query = db.query(models.Contract).filter(
+                (models.Contract.status == "under_review") | 
+                (models.Contract.status == "reviewed") |
+                (models.Contract.status == "approved") |
+                (models.Contract.status == "draft")
+            )
+        else:  # project_manager
+            print(f"Project Manager: Fetching contracts created by user ID {current_user.id}")
+            query = db.query(models.Contract).filter(
+                models.Contract.created_by == current_user.id
+            )
         
-        # Original code (commented out for now):
-        # if current_user.role == "director":
-        #     print("Director: Fetching all contracts")
-        #     contracts = db.query(models.Contract).order_by(models.Contract.uploaded_at.desc()).offset(skip).limit(limit).all()
-        # elif current_user.role == "program_manager":
-        #     print("Program Manager: Fetching contracts under review")
-        #     contracts = db.query(models.Contract).filter(
-        #         (models.Contract.status == "under_review") | 
-        #         (models.Contract.status == "reviewed")
-        #     ).order_by(models.Contract.uploaded_at.desc()).offset(skip).limit(limit).all()
-        # else:
-        #     print(f"Project Manager: Fetching contracts created by user ID {current_user.id}")
-        #     contracts = db.query(models.Contract).filter(
-        #         models.Contract.created_by == current_user.id
-        #     ).order_by(models.Contract.uploaded_at.desc()).offset(skip).limit(limit).all()
+        # Get contracts
+        contracts = query.order_by(models.Contract.uploaded_at.desc()).offset(skip).limit(limit).all()
         
-        print(f"Found {len(contracts)} contracts")
+        print(f"Found {len(contracts)} contracts for user {current_user.role}")
+        
+        # Convert SQLAlchemy models to dictionaries with all fields
+        contracts_dict = []
+        for contract in contracts:
+            # Helper function to safely format dates
+            def format_date(date_value):
+                if date_value and hasattr(date_value, 'isoformat'):
+                    return date_value.isoformat()
+                return date_value
+            
+            # Build the contract dictionary with ALL fields
+            contract_dict = {
+                "id": contract.id,
+                "filename": contract.filename or "Unknown",
+                "uploaded_at": format_date(contract.uploaded_at),
+                "status": contract.status or "draft",
+                "investment_id": contract.investment_id,
+                "project_id": contract.project_id,
+                "grant_id": contract.grant_id,
+                "extracted_reference_ids": contract.extracted_reference_ids or [],
+                "comprehensive_data": contract.comprehensive_data or {},
+                "contract_number": contract.contract_number,
+                "grant_name": contract.grant_name or "Unnamed Contract",
+                "grantor": contract.grantor or "Unknown Grantor",
+                "grantee": contract.grantee or "Unknown Grantee",
+                "total_amount": float(contract.total_amount) if contract.total_amount else 0.0,
+                "start_date": format_date(contract.start_date),
+                "end_date": format_date(contract.end_date),
+                "purpose": contract.purpose,
+                "payment_schedule": contract.payment_schedule,
+                "terms_conditions": contract.terms_conditions,
+                "chroma_id": contract.chroma_id,
+                "created_by": contract.created_by,
+                # Include basic_data for compatibility
+                "basic_data": {
+                    "id": contract.id,
+                    "contract_number": contract.contract_number,
+                    "grant_name": contract.grant_name or "Unnamed Contract",
+                    "grantor": contract.grantor or "Unknown Grantor",
+                    "grantee": contract.grantee or "Unknown Grantee",
+                    "total_amount": float(contract.total_amount) if contract.total_amount else 0.0,
+                    "start_date": format_date(contract.start_date),
+                    "end_date": format_date(contract.end_date),
+                    "purpose": contract.purpose,
+                    "status": contract.status or "draft"
+                }
+            }
+            
+            contracts_dict.append(contract_dict)
         
         # Log activity
         log_activity(
             db, 
             current_user.id, 
             "view_all_contracts", 
-            details={"skip": skip, "limit": limit, "count": len(contracts)}, 
+            details={"skip": skip, "limit": limit, "count": len(contracts_dict)}, 
             request=request
         )
         
-        return contracts
+        print(f"Returning {len(contracts_dict)} contracts")
+        return contracts_dict
         
     except Exception as e:
         import traceback
         error_details = traceback.format_exc()
         print(f"Error in get_all_contracts: {str(e)}")
         print(f"Error details: {error_details}")
-        return JSONResponse(content=[], status_code=200)
+        # Return empty array instead of error for frontend compatibility
+        return []
 
-        
 @app.get("/api/contracts/{contract_id}")
 async def get_contract(
     contract_id: int, 
@@ -706,18 +785,78 @@ async def get_contract(
     request: Request = None
 ):
     """Get a single contract by ID"""
-    # TEMPORARY FIX: Allow all authenticated users to view contracts
-    # Remove or modify this after testing
+    print(f"=== get_contract called for ID: {contract_id} ===")
+    
+    # First, check if contract exists
     contract = db.query(models.Contract).filter(models.Contract.id == contract_id).first()
     if not contract:
+        print(f"Contract {contract_id} not found")
         raise HTTPException(status_code=404, detail="Contract not found")
     
-    # Check permission - temporarily bypass for viewing
-    # if not check_permission(current_user, contract_id, "view", db):
-    #     raise HTTPException(
-    #         status_code=status.HTTP_403_FORBIDDEN,
-    #         detail="You don't have permission to view this contract"
-    #     )
+    print(f"Found contract: {contract.id}, created_by: {contract.created_by}, status: {contract.status}")
+    print(f"Current user: {current_user.id}, role: {current_user.role}")
+    
+    # Check permission based on role
+    if current_user.role == "project_manager":
+        # Project managers can only see contracts they created
+        if contract.created_by != current_user.id:
+            print(f"Permission denied: Contract created by {contract.created_by}, user is {current_user.id}")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You don't have permission to view this contract"
+            )
+    elif current_user.role == "program_manager":
+        # Program managers can only see contracts in review/approved status
+        if contract.status not in ["under_review", "reviewed", "approved", "draft"]:
+            print(f"Permission denied: Contract status is {contract.status}")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You don't have permission to view this contract"
+            )
+    # Directors can see all contracts
+    
+    # Helper function to safely format dates
+    def format_date(date_value):
+        if date_value and hasattr(date_value, 'isoformat'):
+            return date_value.isoformat()
+        return date_value
+    
+    # Build the contract dictionary with ALL fields
+    contract_dict = {
+        "id": contract.id,
+        "filename": contract.filename or "Unknown",
+        "uploaded_at": format_date(contract.uploaded_at),
+        "status": contract.status or "draft",
+        "investment_id": contract.investment_id,
+        "project_id": contract.project_id,
+        "grant_id": contract.grant_id,
+        "extracted_reference_ids": contract.extracted_reference_ids or [],
+        "comprehensive_data": contract.comprehensive_data or {},
+        "contract_number": contract.contract_number,
+        "grant_name": contract.grant_name or "Unnamed Contract",
+        "grantor": contract.grantor or "Unknown Grantor",
+        "grantee": contract.grantee or "Unknown Grantee",
+        "total_amount": float(contract.total_amount) if contract.total_amount else 0.0,
+        "start_date": format_date(contract.start_date),
+        "end_date": format_date(contract.end_date),
+        "purpose": contract.purpose,
+        "payment_schedule": contract.payment_schedule,
+        "terms_conditions": contract.terms_conditions,
+        "chroma_id": contract.chroma_id,
+        "created_by": contract.created_by,
+        "basic_data": {
+            "id": contract.id,
+            "contract_number": contract.contract_number,
+            "grant_name": contract.grant_name or "Unnamed Contract",
+            "grantor": contract.grantor or "Unknown Grantor",
+            "grantee": contract.grantee or "Unknown Grantee",
+            "total_amount": float(contract.total_amount) if contract.total_amount else 0.0,
+            "start_date": format_date(contract.start_date),
+            "end_date": format_date(contract.end_date),
+            "purpose": contract.purpose,
+            "status": contract.status or "draft"
+        }
+    }
     
     # Log activity
     log_activity(
@@ -729,7 +868,8 @@ async def get_contract(
         request=request
     )
     
-    return contract
+    print(f"Returning contract {contract_id}")
+    return contract_dict
 
 @app.delete("/api/contracts/{contract_id}")
 async def delete_contract(
