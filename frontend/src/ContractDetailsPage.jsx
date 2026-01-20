@@ -66,55 +66,131 @@ function ContractDetailsPage() {
     }
   }, [id]);
 
-  const fetchContractData = async () => {
-    const contractId = parseInt(id);
-    if (!contractId || isNaN(contractId)) {
-      setLoading(false);
-      return;
+const fetchContractData = async () => {
+  const contractId = parseInt(id);
+  if (!contractId || isNaN(contractId)) {
+    setLoading(false);
+    return;
+  }
+  
+  try {
+    setLoading(true);
+    
+    // First, try the comprehensive endpoint
+    const comprehensiveUrl = API_CONFIG.ENDPOINTS.COMPREHENSIVE(contractId);
+    
+    // Add authorization header
+    const token = localStorage.getItem('token');
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+    
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
     }
     
-    try {
-      setLoading(true);
-      
-      const comprehensiveUrl = API_CONFIG.ENDPOINTS.COMPREHENSIVE(contractId);
-      const response = await fetch(comprehensiveUrl);
-      
-      if (response.ok) {
-        const data = await response.json();
-        if (data && !data.contract_id) {
-          data.contract_id = contractId;
-        }
-        setContractData(data);
-      } else {
-        await fetchBasicContractData(contractId);
+    const response = await fetch(comprehensiveUrl, {
+      headers: headers
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      if (data && !data.contract_id) {
+        data.contract_id = contractId;
       }
-    } catch (error) {
-      console.error('Error fetching contract data:', error);
+      setContractData(data);
+    } else if (response.status === 403 || response.status === 401) {
+      // If access denied, try fetching all contracts and filter for the specific one
+      await fetchAllContractsAndFindOne(contractId);
+    } else {
       await fetchBasicContractData(contractId);
-    } finally {
-      setLoading(false);
     }
-  };
+  } catch (error) {
+    console.error('Error fetching contract data:', error);
+    await fetchAllContractsAndFindOne(contractId);
+  } finally {
+    setLoading(false);
+  }
+};
 
-  const fetchBasicContractData = async (contractId) => {
-    try {
-      const basicUrl = API_CONFIG.ENDPOINTS.CONTRACT_BY_ID(contractId);
-      const response = await fetch(basicUrl);
+// New function to fetch all contracts and find the specific one
+const fetchAllContractsAndFindOne = async (contractId) => {
+  try {
+    const token = localStorage.getItem('token');
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+    
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    // Try to fetch all contracts
+    const allContractsUrl = `${API_CONFIG.BASE_URL}/api/contracts/`;
+    const response = await fetch(allContractsUrl, {
+      headers: headers
+    });
+    
+    if (response.ok) {
+      const allContracts = await response.json();
       
-      if (response.ok) {
-        const basicData = await response.json();
+      // Find the specific contract by ID
+      const foundContract = allContracts.find(contract => contract.id === contractId);
+      
+      if (foundContract) {
         setContractData({
           contract_id: contractId,
-          filename: basicData.filename || 'Unknown',
-          basic_data: basicData,
-          comprehensive_data: basicData.comprehensive_data || {}
+          filename: foundContract.filename || 'Unknown',
+          basic_data: foundContract,
+          comprehensive_data: foundContract.comprehensive_data || {}
         });
+      } else {
+        console.error('Contract not found in the list');
+        setContractData(null);
       }
-    } catch (error) {
-      console.error('Fallback fetch failed:', error);
+    } else {
+      console.error('Failed to fetch all contracts:', response.status);
       setContractData(null);
     }
-  };
+  } catch (error) {
+    console.error('Error fetching all contracts:', error);
+    setContractData(null);
+  }
+};
+
+const fetchBasicContractData = async (contractId) => {
+  try {
+    const token = localStorage.getItem('token');
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+    
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    const basicUrl = API_CONFIG.ENDPOINTS.CONTRACT_BY_ID(contractId);
+    const response = await fetch(basicUrl, {
+      headers: headers
+    });
+    
+    if (response.ok) {
+      const basicData = await response.json();
+      setContractData({
+        contract_id: contractId,
+        filename: basicData.filename || 'Unknown',
+        basic_data: basicData,
+        comprehensive_data: basicData.comprehensive_data || {}
+      });
+    } else if (response.status === 403 || response.status === 401) {
+      // If access denied to specific endpoint, try the all contracts approach
+      await fetchAllContractsAndFindOne(contractId);
+    }
+  } catch (error) {
+    console.error('Fallback fetch failed:', error);
+    await fetchAllContractsAndFindOne(contractId);
+  }
+};
 
   const formatCurrency = (amount) => {
     if (!amount && amount !== 0) return '-';

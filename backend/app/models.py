@@ -1,3 +1,4 @@
+# Update app/models.py - Add the missing created_by column
 from sqlalchemy import Column, Integer, String, DateTime, Text, Float, ForeignKey
 from sqlalchemy.sql import func
 from sqlalchemy.dialects.postgresql import JSONB
@@ -42,11 +43,10 @@ class Contract(Base):
     # ChromaDB reference
     chroma_id = Column(String, nullable=True)
     
-    # Workflow fields - ADD THIS LINE
-    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)  # <-- ADD THIS
+    # Workflow fields - FIXED: Ensure ForeignKey is correct
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     
     review_comments = Column(Text)
-
 
 class ExtractionLog(Base):
     __tablename__ = "extraction_logs"
