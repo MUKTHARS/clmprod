@@ -35,13 +35,16 @@ import {
   ShieldCheck,
   Plus,
   Minus,
-  ExternalLink
+  ExternalLink,
+  Loader2,
+  RefreshCw 
 } from 'lucide-react';
 import ComprehensiveView from './ComprehensiveView';
-import API_CONFIG, { fetchAPI } from './config';
+import API_CONFIG from './config';
+import ProjectManagerActions from './components/workflow/ProjectManagerActions'; // ADD THIS IMPORT
 import './styles/ContractDetailsPage.css';
 
-function ContractDetailsPage() {
+function ContractDetailsPage({ user = null }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const [contractData, setContractData] = useState(null);
@@ -58,60 +61,227 @@ function ContractDetailsPage() {
   });
   
   useEffect(() => {
-    if (id && !isNaN(parseInt(id))) {
-      fetchContractData();
+    console.log('ContractDetailsPage mounted with id:', id);
+    
+    // Check if id exists and is valid
+    if (id) {
+      const contractId = parseInt(id);
+      console.log('Parsed contract ID:', contractId);
+      
+      if (!isNaN(contractId) && contractId > 0) {
+        fetchContractData(contractId);
+      } else {
+        console.error('Invalid contract ID format:', id);
+        setLoading(false);
+        setContractData(null);
+      }
     } else {
-      console.error('Invalid contract ID:', id);
+      console.error('No contract ID provided');
       setLoading(false);
+      setContractData(null);
     }
   }, [id]);
 
-  const fetchContractData = async () => {
-    const contractId = parseInt(id);
-    if (!contractId || isNaN(contractId)) {
-      setLoading(false);
-      return;
-    }
+  const fetchContractData = async (contractId) => {
+    console.log('Fetching contract data for ID:', contractId);
     
     try {
       setLoading(true);
       
-      const comprehensiveUrl = API_CONFIG.ENDPOINTS.COMPREHENSIVE(contractId);
-      const response = await fetch(comprehensiveUrl);
+      // Get the authentication token
+      const token = localStorage.getItem('token');
+      const headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
+      // First try the comprehensive endpoint
+      const comprehensiveUrl = `${API_CONFIG.BASE_URL}/api/contracts/${contractId}/comprehensive`;
+      console.log('Trying comprehensive endpoint:', comprehensiveUrl);
+      
+      let response = await fetch(comprehensiveUrl, { headers });
       
       if (response.ok) {
         const data = await response.json();
-        if (data && !data.contract_id) {
-          data.contract_id = contractId;
-        }
-        setContractData(data);
+        console.log('Comprehensive data fetched:', data);
+        
+        // Normalize the data
+        const normalizedData = normalizeContractData(data);
+        setContractData(normalizedData);
       } else {
+        console.log('Comprehensive endpoint failed:', response.status);
+        
+        // Try the basic contract endpoint
         await fetchBasicContractData(contractId);
       }
     } catch (error) {
-      console.error('Error fetching contract data:', error);
+      console.error('Error fetching comprehensive data:', error);
       await fetchBasicContractData(contractId);
     } finally {
       setLoading(false);
     }
   };
 
+  const normalizeContractData = (apiResponse) => {
+    if (!apiResponse) return null;
+    
+    console.log('Normalizing API response:', apiResponse);
+    
+    // The API might return different structures
+    let contractId = apiResponse.contract_id || apiResponse.id;
+    let basicData = apiResponse.basic_data || {};
+    let compData = apiResponse.comprehensive_data || apiResponse;
+    let filename = apiResponse.filename || 'Unknown';
+    
+    // If the response is directly a contract object
+    if (apiResponse.id && !apiResponse.contract_id && !apiResponse.basic_data) {
+      contractId = apiResponse.id;
+      filename = apiResponse.filename || 'Unknown';
+      basicData = apiResponse;
+      compData = apiResponse.comprehensive_data || {};
+    }
+    
+    // Extract from comprehensive_data if available
+    if (compData && typeof compData === 'object') {
+      console.log('Extracting from comprehensive_data:', Object.keys(compData));
+      
+      const contractDetails = compData.contract_details || {};
+      const parties = compData.parties || {};
+      const financial = compData.financial_details || {};
+      const deliverables = compData.deliverables || {};
+      const terms = compData.terms_conditions || {};
+      const compliance = compData.compliance || {};
+      const summary = compData.summary || {};
+      
+      // Merge with basic data
+      const normalized = {
+        ...basicData,
+        contract_id: contractId,
+        filename: filename,
+        grant_name: contractDetails.grant_name || basicData.grant_name || filename,
+        contract_number: contractDetails.contract_number || basicData.contract_number,
+        grantor: parties.grantor?.organization_name || basicData.grantor || 'Unknown Grantor',
+        grantee: parties.grantee?.organization_name || basicData.grantee || 'Unknown Grantee',
+        total_amount: financial?.total_grant_amount || basicData.total_amount || 0,
+        start_date: contractDetails.start_date || basicData.start_date,
+        end_date: contractDetails.end_date || basicData.end_date,
+        purpose: contractDetails.purpose || basicData.purpose,
+        status: basicData.status || 'processed',
+        investment_id: basicData.investment_id,
+        project_id: basicData.project_id,
+        grant_id: basicData.grant_id,
+        comprehensive_data: {
+          contract_details: contractDetails,
+          parties: parties,
+          financial_details: financial,
+          deliverables: deliverables,
+          terms_conditions: terms,
+          compliance: compliance,
+          summary: summary,
+          extended_data: compData.extended_data || {}
+        }
+      };
+      
+      console.log('Normalized contract data:', normalized);
+      return normalized;
+    }
+    
+    // Return basic data if no comprehensive_data
+    return {
+      ...basicData,
+      contract_id: contractId,
+      filename: filename,
+      grant_name: basicData.grant_name || filename,
+      grantor: basicData.grantor || 'Unknown Grantor',
+      grantee: basicData.grantee || 'Unknown Grantee',
+      total_amount: basicData.total_amount || 0,
+      status: basicData.status || 'processed',
+      comprehensive_data: {}
+    };
+  };
+
   const fetchBasicContractData = async (contractId) => {
     try {
-      const basicUrl = API_CONFIG.ENDPOINTS.CONTRACT_BY_ID(contractId);
-      const response = await fetch(basicUrl);
+      const token = localStorage.getItem('token');
+      const headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
+      // Try the basic contract endpoint
+      const basicUrl = `${API_CONFIG.BASE_URL}/api/contracts/${contractId}`;
+      console.log('Trying basic endpoint:', basicUrl);
+      
+      const response = await fetch(basicUrl, { headers });
       
       if (response.ok) {
         const basicData = await response.json();
-        setContractData({
-          contract_id: contractId,
-          filename: basicData.filename || 'Unknown',
-          basic_data: basicData,
-          comprehensive_data: basicData.comprehensive_data || {}
-        });
+        console.log('Basic data fetched:', basicData);
+        
+        const normalizedData = normalizeContractData(basicData);
+        setContractData(normalizedData);
+      } else {
+        console.log('Basic endpoint failed:', response.status);
+        
+        // Try to fetch from all contracts list
+        await fetchFromAllContracts(contractId);
       }
     } catch (error) {
       console.error('Fallback fetch failed:', error);
+      await fetchFromAllContracts(contractId);
+    }
+  };
+
+  const fetchFromAllContracts = async (contractId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
+      // Fetch all contracts and find the specific one
+      const allContractsUrl = `${API_CONFIG.BASE_URL}/api/contracts/`;
+      console.log('Trying all contracts endpoint:', allContractsUrl);
+      
+      const response = await fetch(allContractsUrl, { headers });
+      
+      if (response.ok) {
+        const allContracts = await response.json();
+        console.log('All contracts fetched:', allContracts.length);
+        
+        // Find the contract with matching ID
+        const foundContract = allContracts.find(contract => {
+          const contractIdNum = parseInt(contractId);
+          return contract.id === contractIdNum;
+        });
+        
+        if (foundContract) {
+          console.log('Contract found in all contracts list:', foundContract);
+          const normalizedData = normalizeContractData(foundContract);
+          setContractData(normalizedData);
+        } else {
+          console.log('Contract not found in all contracts list');
+          setContractData(null);
+        }
+      } else {
+        console.log('All contracts endpoint failed:', response.status);
+        setContractData(null);
+      }
+    } catch (error) {
+      console.error('Error fetching from all contracts:', error);
       setContractData(null);
     }
   };
@@ -123,6 +293,16 @@ function ContractDetailsPage() {
       currency: 'USD',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0
+    }).format(amount);
+  };
+
+  const formatCurrencyWithDecimals = (amount) => {
+    if (!amount && amount !== 0) return '-';
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
     }).format(amount);
   };
 
@@ -153,7 +333,7 @@ function ContractDetailsPage() {
     if (type === 'date' && value) {
       displayValue = formatDate(value);
     } else if (type === 'currency' && (value || value === 0)) {
-      displayValue = formatCurrency(value);
+      displayValue = formatCurrencyWithDecimals(value);
     } else if (type === 'array' && Array.isArray(value)) {
       if (value.length === 0) return null;
       return (
@@ -185,40 +365,21 @@ function ContractDetailsPage() {
     );
   };
 
-  const renderTable = (title, headers, data, icon = null) => {
-    if (!data || data.length === 0) return null;
-    
-    return (
-      <div className="data-table">
-        <table>
-          <thead>
-            <tr>
-              {headers.map((header, idx) => (
-                <th key={idx}>{header}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {data.map((row, rowIdx) => (
-              <tr key={rowIdx}>
-                {headers.map((header, colIdx) => (
-                  <td key={colIdx}>
-                    {row[header.toLowerCase().replace(/\s+/g, '_')] || row[colIdx] || 'N/A'}
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    );
+  const getContractDisplayId = (contract) => {
+    if (!contract) return 'Unknown';
+    if (contract.investment_id) return `INV-${contract.investment_id}`;
+    if (contract.project_id) return `PRJ-${contract.project_id}`;
+    if (contract.grant_id) return `GRANT-${contract.grant_id}`;
+    return `CONT-${contract.contract_id || contract.id || 'Unknown'}`;
   };
 
   if (loading) {
     return (
       <div className="loading-page">
         <div className="loading-content">
-          <div className="loading-spinner"></div>
+          <div className="loading-spinner">
+            <Loader2 size={48} className="spinning" />
+          </div>
           <h3>Loading Contract Details</h3>
           <p>Analyzing comprehensive contract data...</p>
         </div>
@@ -226,17 +387,35 @@ function ContractDetailsPage() {
     );
   }
 
-  if (!id || isNaN(parseInt(id))) {
+  // Check if id is undefined or invalid
+  if (!id) {
     return (
       <div className="error-page">
         <div className="error-content">
-          <AlertCircle className="error-icon" />
-          <h2>Invalid Contract ID</h2>
-          <p>No valid contract ID was provided in the URL.</p>
-          {/* <button className="btn-primary" onClick={() => navigate('/dashboard')}>
+          <AlertCircle className="error-icon" size={48} />
+          <h2>Contract ID Missing</h2>
+          <p>No contract ID was provided in the URL.</p>
+          <button className="btn-primary" onClick={() => navigate('/contracts')}>
             <ArrowLeft size={16} />
-            Back to Dashboard
-          </button> */}
+            Back to Contracts
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const contractId = parseInt(id);
+  if (isNaN(contractId) || contractId <= 0) {
+    return (
+      <div className="error-page">
+        <div className="error-content">
+          <AlertCircle className="error-icon" size={48} />
+          <h2>Invalid Contract ID</h2>
+          <p>The contract ID "{id}" is not valid.</p>
+          <button className="btn-primary" onClick={() => navigate('/contracts')}>
+            <ArrowLeft size={16} />
+            Back to Contracts
+          </button>
         </div>
       </div>
     );
@@ -246,20 +425,26 @@ function ContractDetailsPage() {
     return (
       <div className="error-page">
         <div className="error-content">
-          <FileText className="error-icon" />
+          <FileText className="error-icon" size={48} />
           <h2>Contract Not Found</h2>
-          <p>The contract with ID {id} could not be found.</p>
-          {/* <button className="btn-primary" onClick={() => navigate('/dashboard')}>
-            <ArrowLeft size={16} />
-            Back to Dashboard
-          </button> */}
+          <p>The contract with ID {contractId} could not be found.</p>
+          <div className="error-actions">
+            <button className="btn-primary" onClick={() => navigate('/contracts')}>
+              <ArrowLeft size={16} />
+              Back to Contracts
+            </button>
+            <button className="btn-secondary" onClick={() => fetchContractData(contractId)}>
+              <RefreshCw size={16} />
+              Try Again
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
   // Extract comprehensive data
-  const compData = contractData.comprehensive_data || contractData;
+  const compData = contractData.comprehensive_data || {};
   const contractDetails = compData.contract_details || {};
   const parties = compData.parties || {};
   const financial = compData.financial_details || {};
@@ -269,8 +454,9 @@ function ContractDetailsPage() {
   const summary = compData.summary || {};
 
   // Calculate metrics
+  const totalAmount = contractData.total_amount || financial?.total_grant_amount || 0;
   const metrics = {
-    totalAmount: financial?.total_grant_amount || 0,
+    totalAmount: totalAmount,
     duration: contractDetails.duration || 'N/A',
     deliverablesCount: deliverables?.items?.length || 0,
     installmentsCount: financial?.payment_schedule?.installments?.length || 0,
@@ -283,10 +469,10 @@ function ContractDetailsPage() {
       {/* Header Section */}
       <div className="contract-header">
         <div className="header-top">
-          {/* <button className="btn-back" onClick={() => navigate('/dashboard')}>
+          <button className="btn-back" onClick={() => navigate('/contracts')}>
             <ArrowLeft size={20} />
-            <span>Back to Dashboard</span>
-          </button> */}
+            <span>Back to Contracts</span>
+          </button>
           
           <div className="header-actions-right">
             <button 
@@ -319,7 +505,7 @@ function ContractDetailsPage() {
 
         <div className="contract-title-section">
           <div className="title-left">
-            <h1>{contractDetails.grant_name || parties.grantor?.organization_name || contractData.filename}</h1>
+            <h1>{contractData.grant_name || contractData.filename}</h1>
             <div className="contract-tags">
               {contractData.investment_id && (
                 <span className="tag investment-tag">
@@ -362,54 +548,36 @@ function ContractDetailsPage() {
       {/* Metrics Overview */}
       <div className="metrics-overview">
         <div className="metric-card">
-          {/* <div className="metric-icon financial">
-            <DollarSign size={24} />
-          </div> */}
           <div className="metric-content">
             <span className="metric-value">{formatCurrency(metrics.totalAmount)}</span>
             <span className="metric-label">Total Value</span>
           </div>
         </div>
         <div className="metric-card">
-          {/* <div className="metric-icon duration">
-            <Clock size={24} />
-          </div> */}
           <div className="metric-content">
             <span className="metric-value">{metrics.duration}</span>
             <span className="metric-label">Duration</span>
           </div>
         </div>
         <div className="metric-card">
-          {/* <div className="metric-icon deliverables">
-            <Target size={24} />
-          </div> */}
           <div className="metric-content">
             <span className="metric-value">{metrics.deliverablesCount}</span>
             <span className="metric-label">Deliverables</span>
           </div>
         </div>
         <div className="metric-card">
-          {/* <div className="metric-icon installments">
-            <FileBarChart size={24} />
-          </div> */}
           <div className="metric-content">
             <span className="metric-value">{metrics.installmentsCount}</span>
             <span className="metric-label">Installments</span>
           </div>
         </div>
         <div className="metric-card">
-          {/* <div className="metric-icon timeline">
-            <Calendar size={24} />
-          </div> */}
           <div className="metric-content">
             <span className="metric-value">{metrics.daysRemaining}d</span>
             <span className="metric-label">Days Remaining</span>
           </div>
         </div>
         <div className="metric-card">
-          {/* <div className="metric-icon risk">
-            <AlertCircle size={24} />
-          </div> */}
           <div className="metric-content">
             <span className="metric-value">{metrics.riskLevel}</span>
             <span className="metric-label">Risk Level</span>
@@ -422,9 +590,6 @@ function ContractDetailsPage() {
         {/* Comprehensive AI Analysis Section */}
         <div className="section-card">
           <div className="section-header">
-            {/* <div className="section-icon">
-              <TrendingUp size={20} />
-            </div> */}
             <h3>Comprehensive Analysis</h3>
             <div className="section-actions">
               <button className="btn-expand-all" onClick={() => {
@@ -477,16 +642,16 @@ function ContractDetailsPage() {
             {expandedSections.contractDetails && (
               <div className="expandable-content">
                 <div className="fields-grid">
-                  {renderField('Contract Name', contractDetails.grant_name, <FileText size={16} />)}
-                  {renderField('Contract Number', contractDetails.contract_number, <FileText size={16} />)}
+                  {renderField('Contract Name', contractData.grant_name, <FileText size={16} />)}
+                  {renderField('Contract Number', contractData.contract_number, <FileText size={16} />)}
                   {renderField('Grant Reference', contractDetails.grant_reference, <Award size={16} />)}
                   {renderField('Agreement Type', contractDetails.agreement_type, <FileText size={16} />)}
                   {renderField('Effective Date', contractDetails.effective_date, <Calendar size={16} />, 'date')}
                   {renderField('Signature Date', contractDetails.signature_date, <Calendar size={16} />, 'date')}
-                  {renderField('Start Date', contractDetails.start_date, <Calendar size={16} />, 'date')}
-                  {renderField('End Date', contractDetails.end_date, <Calendar size={16} />, 'date')}
+                  {renderField('Start Date', contractDetails.start_date || contractData.start_date, <Calendar size={16} />, 'date')}
+                  {renderField('End Date', contractDetails.end_date || contractData.end_date, <Calendar size={16} />, 'date')}
                   {renderField('Duration', contractDetails.duration, <Clock size={16} />)}
-                  {renderField('Purpose', contractDetails.purpose, <Target size={16} />)}
+                  {renderField('Purpose', contractDetails.purpose || contractData.purpose, <Target size={16} />)}
                   {renderField('Geographic Scope', contractDetails.geographic_scope, <MapPin size={16} />)}
                   {renderField('Risk Management', contractDetails.risk_management, <AlertCircle size={16} />)}
                 </div>
@@ -532,10 +697,10 @@ function ContractDetailsPage() {
             {expandedSections.financial && (
               <div className="expandable-content">
                 <div className="fields-grid">
-                  {renderField('Total Grant Amount', financial?.total_grant_amount, <DollarSign size={16} />, 'currency')}
-                  {renderField('Currency', financial?.currency, <DollarSign size={16} />)}
-                  {renderField('Payment Terms', financial?.payment_terms, <FileText size={16} />)}
-                  {renderField('Financial Reporting Requirements', financial?.financial_reporting_requirements, <FileBarChart size={16} />)}
+                  {renderField('Total Grant Amount', totalAmount, <DollarSign size={16} />, 'currency')}
+                  {renderField('Currency', financial.currency, <DollarSign size={16} />)}
+                  {renderField('Payment Terms', financial.payment_terms, <FileText size={16} />)}
+                  {renderField('Financial Reporting Requirements', financial.financial_reporting_requirements, <FileBarChart size={16} />)}
                 </div>
 
                 {/* Payment Schedule */}
@@ -800,6 +965,17 @@ function ContractDetailsPage() {
           </div>
         </div>
       </div>
+      
+      {/* Project Manager Actions Section - ADDED HERE */}
+      {user && user.role === "project_manager" && contractData && (
+        <div className="workflow-section">
+          <ProjectManagerActions 
+            contract={contractData}
+            user={user}
+            onActionComplete={() => fetchContractData(contractId)}
+          />
+        </div>
+      )}
     </div>
   );
 }

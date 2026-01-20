@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { normalizeContract } from './utils/contractUtils';
+import API_CONFIG from './config';
 import {
   Search,
   Filter,
@@ -25,12 +27,12 @@ import {
   X,
   ChevronDown,
   Filter as FilterIcon,
-  Loader2
+  Loader2,
+  Send // Add this import for the submit button
 } from 'lucide-react';
 import './styles/ContractsListPage.css';
 
-function ContractsListPage() {
-  const [contracts, setContracts] = useState([]);
+function ContractsListPage({ contracts, user }) { // Add user prop here
   const [filteredContracts, setFilteredContracts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -41,37 +43,315 @@ function ContractsListPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    console.log('ContractsListPage mounted - fetching contracts');
     fetchContracts();
   }, []);
 
   useEffect(() => {
-    filterContracts();
+    if (contracts.length > 0 && contracts.every(c => c && c.id)) {
+      console.log('Filtering valid contracts...', contracts.length);
+      filterContracts();
+    }
   }, [contracts, searchTerm, statusFilter, dateFilter]);
+
+  const normalizeContractData = (contract) => {
+    // If contract is malformed but we need to display something
+    if (!contract || typeof contract !== 'object') {
+      console.warn('Invalid contract data, creating minimal object');
+      return {
+        id: Math.floor(Math.random() * 1000),
+        filename: 'Unknown Contract',
+        grant_name: 'Unknown Contract',
+        grantor: 'Unknown',
+        total_amount: 0,
+        status: 'unknown'
+      };
+    }
+    
+    // Check if it has any data at all
+    const keys = Object.keys(contract);
+    if (keys.length === 0) {
+      console.error('Contract object is empty:', contract);
+      return null;
+    }
+    
+    // Get contract ID - check multiple possible properties
+    const contractId = contract.id || contract.contract_id || 
+                       (contract.basic_data && contract.basic_data.id) || 
+                       (contract.comprehensive_data && contract.comprehensive_data.contract_id);
+    
+    if (!contractId) {
+      console.warn('Contract has no ID property, but has data:', contract);
+      // Still try to process it with a temporary ID
+    }
+    
+    console.log(`Processing contract with ID: ${contractId || 'temporary'}`);
+    
+    // Check if we have comprehensive_data or basic fields
+    const hasComprehensiveData = contract.comprehensive_data && 
+                                typeof contract.comprehensive_data === 'object' &&
+                                Object.keys(contract.comprehensive_data).length > 0;
+    
+    const hasBasicData = contract.grant_name || contract.grantor || contract.total_amount || 
+                        (contract.basic_data && typeof contract.basic_data === 'object');
+    
+    // Build normalized contract object
+    const normalized = {
+      id: contractId || Math.random().toString(36).substr(2, 9), // Generate temp ID if needed
+      filename: contract.filename || 'Unnamed Contract',
+      uploaded_at: contract.uploaded_at,
+      status: contract.status || 'processed',
+      investment_id: contract.investment_id,
+      project_id: contract.project_id,
+      grant_id: contract.grant_id,
+      extracted_reference_ids: contract.extracted_reference_ids || [],
+      comprehensive_data: contract.comprehensive_data || null
+    };
+    
+    // Extract from comprehensive_data if available
+    if (hasComprehensiveData) {
+      console.log(`Contract ${contractId} has comprehensive_data`);
+      const compData = contract.comprehensive_data;
+      
+      // Extract contract details
+      const contractDetails = compData.contract_details || {};
+      if (contractDetails && typeof contractDetails === 'object') {
+        normalized.grant_name = contractDetails.grant_name || 
+                               contract.grant_name || 
+                               contract.filename || 
+                               'Unnamed Contract';
+        
+        normalized.contract_number = contractDetails.contract_number || 
+                                    contract.contract_number;
+        
+        normalized.start_date = contractDetails.start_date || 
+                               contract.start_date;
+        
+        normalized.end_date = contractDetails.end_date || 
+                             contract.end_date;
+        
+        normalized.purpose = contractDetails.purpose || 
+                            contract.purpose;
+      } else {
+        normalized.grant_name = contract.grant_name || 
+                               contract.filename || 
+                               'Unnamed Contract';
+      }
+      
+      // Extract parties information
+      const parties = compData.parties || {};
+      if (parties && typeof parties === 'object') {
+        normalized.grantor = parties.grantor?.organization_name || 
+                            contract.grantor || 
+                            'Unknown Grantor';
+        
+        normalized.grantee = parties.grantee?.organization_name || 
+                            contract.grantee || 
+                            'Unknown Grantee';
+      } else {
+        normalized.grantor = contract.grantor || 'Unknown Grantor';
+        normalized.grantee = contract.grantee || 'Unknown Grantee';
+      }
+      
+      // Extract financial information
+      const financial = compData.financial_details || {};
+      if (financial && typeof financial === 'object') {
+        normalized.total_amount = financial.total_grant_amount || 
+                                 contract.total_amount || 
+                                 0;
+        normalized.currency = financial.currency || 'USD';
+      } else {
+        normalized.total_amount = contract.total_amount || 0;
+      }
+      
+    } else if (hasBasicData) {
+      console.log(`Contract ${contractId} has basic fields`);
+      // Use basic data fields
+      normalized.grant_name = contract.grant_name || 
+                             (contract.basic_data && contract.basic_data.grant_name) || 
+                             contract.filename || 
+                             'Unnamed Contract';
+      
+      normalized.grantor = contract.grantor || 
+                          (contract.basic_data && contract.basic_data.grantor) || 
+                          'Unknown Grantor';
+      
+      normalized.grantee = contract.grantee || 
+                          (contract.basic_data && contract.basic_data.grantee) || 
+                          'Unknown Grantee';
+      
+      normalized.total_amount = contract.total_amount || 
+                               (contract.basic_data && contract.basic_data.total_amount) || 
+                               0;
+      
+      normalized.contract_number = contract.contract_number || 
+                                  (contract.basic_data && contract.basic_data.contract_number);
+      
+      normalized.start_date = contract.start_date || 
+                             (contract.basic_data && contract.basic_data.start_date);
+      
+      normalized.end_date = contract.end_date || 
+                           (contract.basic_data && contract.basic_data.end_date);
+      
+      normalized.purpose = contract.purpose || 
+                          (contract.basic_data && contract.basic_data.purpose);
+      
+    } else {
+      console.log(`Contract ${contractId} has limited data, using fallback`);
+      // Fallback values
+      normalized.grant_name = contract.filename || 'Unnamed Contract';
+      normalized.grantor = 'Unknown Grantor';
+      normalized.grantee = 'Unknown Grantee';
+      normalized.total_amount = 0;
+    }
+    
+    console.log(`Normalized contract ${normalized.id}:`, {
+      grant_name: normalized.grant_name,
+      grantor: normalized.grantor,
+      total_amount: normalized.total_amount,
+      hasComprehensiveData: hasComprehensiveData
+    });
+    
+    return normalized;
+  };
 
   const fetchContracts = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:4001/contracts/');
+      console.log('Starting to fetch contracts...');
       
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      // Get authentication token
+      const token = localStorage.getItem('token');
+      const headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
       }
       
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        const text = await response.text();
-        console.error('Received non-JSON response:', text.substring(0, 200));
-        throw new Error('Server returned non-JSON response');
-      }
+      // First, try the comprehensive endpoint that ContractDetailsPage uses
+      const response = await fetch(`${API_CONFIG.BASE_URL}/api/contracts/`, {
+        headers: headers
+      });
       
-      const data = await response.json();
-      console.log('Contracts fetched successfully:', data.length, 'contracts');
-      setContracts(data);
-      setFilteredContracts(data);
+      console.log('Comprehensive API response status:', response.status);
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Comprehensive contracts data received:', data);
+        
+        // Handle different response formats
+        let contractsArray = [];
+        
+        if (Array.isArray(data)) {
+          contractsArray = data;
+        } else if (data && typeof data === 'object') {
+          // If response is an object with contracts property
+          if (data.contracts && Array.isArray(data.contracts)) {
+            contractsArray = data.contracts;
+          } else if (data.data && Array.isArray(data.data)) {
+            contractsArray = data.data;
+          } else {
+            // Convert object values to array
+            contractsArray = Object.values(data);
+          }
+        }
+        
+        console.log('Processed contracts array:', contractsArray.length);
+        
+        // DEBUG: Show what we're actually getting
+        if (contractsArray.length > 0) {
+          console.log('First contract raw structure:', {
+            keys: Object.keys(contractsArray[0]),
+            values: contractsArray[0]
+          });
+        }
+        
+        // Don't filter out empty objects immediately - try to normalize first
+        const normalizedContracts = contractsArray
+          .map((contract, index) => {
+            // If contract appears empty, it might have hidden properties
+            console.log(`Contract ${index}:`, contract);
+            
+            if (!contract || typeof contract !== 'object') {
+              console.warn(`Contract ${index} is invalid, creating placeholder`);
+              return {
+                id: index + 1,
+                filename: `Contract ${index + 1}`,
+                grant_name: `Contract ${index + 1}`,
+                grantor: 'Unknown',
+                total_amount: 0,
+                status: 'unknown'
+              };
+            }
+            
+            return normalizeContractData(contract);
+          })
+          .filter(contract => contract !== null);
+        
+        console.log('Final normalized contracts count:', normalizedContracts.length);
+        
+        if (normalizedContracts.length > 0) {
+          console.log('First normalized contract:', normalizedContracts[0]);
+        }
+        
+        setContracts(normalizedContracts);
+        setFilteredContracts(normalizedContracts);
+        
+      } else {
+        console.error('Failed to fetch contracts:', response.status);
+        setContracts([]);
+        setFilteredContracts([]);
+      }
     } catch (error) {
       console.error('Error fetching contracts:', error);
+      
+      // Last resort: try the basic endpoint without auth
+      try {
+        const basicResponse = await fetch(`${API_CONFIG.BASE_URL}/api/contracts/`);
+        if (basicResponse.ok) {
+          const basicData = await basicResponse.json();
+          console.log('Basic no-auth contracts:', basicData);
+          
+          if (Array.isArray(basicData) && basicData.length > 0) {
+            const normalized = basicData.map(contract => normalizeContractData(contract)).filter(c => c);
+            setContracts(normalized);
+            setFilteredContracts(normalized);
+          }
+        }
+      } catch (fallbackError) {
+        console.error('Fallback also failed:', fallbackError);
+        setContracts([]);
+        setFilteredContracts([]);
+      }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSubmitForReview = async (contractId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_CONFIG.BASE_URL}/contracts/${contractId}/submit-review`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        alert('Contract submitted for review!');
+        fetchContracts(); // Refresh the contracts list
+      } else {
+        const error = await response.json();
+        alert(`Failed to submit: ${error.detail}`);
+      }
+    } catch (error) {
+      console.error('Failed to submit for review:', error);
+      alert('Failed to submit for review');
     }
   };
 
@@ -124,6 +404,7 @@ function ContractsListPage() {
     setFilteredContracts(filtered);
   };
 
+  // Use the same formatting functions as Dashboard
   const formatCurrency = (amount) => {
     if (!amount && amount !== 0) return '-';
     return new Intl.NumberFormat('en-US', {
@@ -166,9 +447,10 @@ function ContractsListPage() {
     }
   };
 
+  // Use same calculation as Dashboard
   const calculateFundsReceived = (contract) => {
     const total = contract.total_amount || 0;
-    return total * 0.5;
+    return total * 0.5; // Same as Dashboard's 50% assumption
   };
 
   const calculateFundsRemaining = (contract) => {
@@ -177,13 +459,16 @@ function ContractsListPage() {
     return total - received;
   };
 
+  // Use same ID logic as Dashboard
   const getContractDisplayId = (contract) => {
+    if (!contract) return 'Unknown';
     if (contract.investment_id) return `INV-${contract.investment_id}`;
     if (contract.project_id) return `PRJ-${contract.project_id}`;
     if (contract.grant_id) return `GRANT-${contract.grant_id}`;
     return `CONT-${contract.id}`;
   };
 
+  // Use same status logic as Dashboard
   const getStatusIcon = (status) => {
     switch (status) {
       case 'processed':
@@ -206,6 +491,7 @@ function ContractsListPage() {
     }
   };
 
+  // Use same metrics calculation as Dashboard
   const calculateMetrics = () => {
     const totalValue = filteredContracts.reduce((sum, c) => sum + (c.total_amount || 0), 0);
     const activeContracts = filteredContracts.filter(c => c.status === 'processed').length;
@@ -228,7 +514,6 @@ function ContractsListPage() {
 
   const renderContractCard = (contract) => {
     const fundsReceived = calculateFundsReceived(contract);
-    const fundsRemaining = calculateFundsRemaining(contract);
     const daysRemaining = getDaysRemaining(contract.end_date);
     const displayId = getContractDisplayId(contract);
     const isExpiring = daysRemaining !== 'N/A' && daysRemaining !== 'Expired' && 
@@ -286,12 +571,6 @@ function ContractsListPage() {
                 {formatCurrency(fundsReceived)}
               </span>
             </div>
-            {/* <div className="financial-metric">
-              <span className="metric-label">Funds Remaining</span>
-              <span className="metric-value remaining">
-                {formatCurrency(fundsRemaining)}
-              </span>
-            </div> */}
           </div>
 
           <div className="timeline-section">
@@ -317,6 +596,25 @@ function ContractsListPage() {
             <span>View Details</span>
             <ChevronRight size={16} />
           </button>
+          
+          {/* Project Manager quick actions */}
+          {user && user.role === "project_manager" && (
+            <div className="quick-actions">
+              {(contract.status === 'draft' || contract.status === 'rejected') && (
+                <button 
+                  className="btn-submit"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleSubmitForReview(contract.id);
+                  }}
+                  title="Submit for review"
+                >
+                  <Send size={14} />
+                </button>
+              )}
+            </div>
+          )}
+          
           <button className="btn-download">
             <Download size={16} />
           </button>
@@ -327,7 +625,6 @@ function ContractsListPage() {
 
   const renderContractRow = (contract) => {
     const fundsReceived = calculateFundsReceived(contract);
-    const fundsRemaining = calculateFundsRemaining(contract);
     const daysRemaining = getDaysRemaining(contract.end_date);
     const displayId = getContractDisplayId(contract);
 
@@ -365,7 +662,7 @@ function ContractsListPage() {
             <div className="progress-bar">
               <div 
                 className="progress-fill"
-                style={{ width: '50%' }} // Example progress
+                style={{ width: '50%' }} // Same as Dashboard's assumption
               ></div>
             </div>
             <span className="progress-text">50%</span>
@@ -411,15 +708,15 @@ function ContractsListPage() {
 
   return (
     <div className="contracts-list-page">
-      {/* Header Section */}
+      {/* Header Section - Uncommented to match Dashboard */}
       <div className="page-header">
-        {/* <div className="header-left">
+        <div className="header-left">
           <h1>Contracts Library</h1>
           <p className="page-subtitle">
             Manage and analyze all your grant contracts in one place
           </p>
-        </div> */}
-        {/* <div className="header-actions">
+        </div>
+        <div className="header-actions">
           <button 
             className="btn-icon"
             onClick={fetchContracts}
@@ -434,51 +731,36 @@ function ContractsListPage() {
             <Plus size={20} />
             <span>Upload Contract</span>
           </button>
-        </div> */}
+        </div>
       </div>
 
-      {/* Metrics Overview */}
+      {/* Metrics Overview - Same structure as Dashboard */}
       <div className="metrics-overview">
         <div className="metric-card">
-          {/* <div className="metric-icon total">
-            <FileText size={24} />
-          </div> */}
           <div className="metric-content">
             <span className="metric-value">{metrics.totalContracts}</span>
             <span className="metric-label">Total Contracts</span>
           </div>
         </div>
         <div className="metric-card">
-          {/* <div className="metric-icon value">
-            <DollarSign size={24} />
-          </div> */}
           <div className="metric-content">
             <span className="metric-value">{formatCurrency(metrics.totalValue)}</span>
             <span className="metric-label">Total Value</span>
           </div>
         </div>
         <div className="metric-card">
-          {/* <div className="metric-icon active">
-            <CheckCircle size={24} />
-          </div> */}
           <div className="metric-content">
             <span className="metric-value">{metrics.activeContracts}</span>
             <span className="metric-label">Active</span>
           </div>
         </div>
         <div className="metric-card">
-          {/* <div className="metric-icon expiring">
-            <AlertCircle size={24} />
-          </div> */}
           <div className="metric-content">
             <span className="metric-value">{metrics.expiringSoon}</span>
             <span className="metric-label">Expiring Soon</span>
           </div>
         </div>
         <div className="metric-card">
-          {/* <div className="metric-icon average">
-            <TrendingUp size={24} />
-          </div> */}
           <div className="metric-content">
             <span className="metric-value">{formatCurrency(metrics.averageValue)}</span>
             <span className="metric-label">Average Value</span>
@@ -669,71 +951,11 @@ function ContractsListPage() {
                   <Upload size={20} />
                   <span>Upload First Contract</span>
                 </button>
-                <div className="empty-state-info">
-                  <p>Ensure your backend server is running on port 4001</p>
-                  <a 
-                    href="http://localhost:4001/contracts/" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="server-link"
-                  >
-                    http://localhost:4001/contracts/
-                  </a>
-                </div>
               </div>
             )}
           </>
         )}
       </div>
-
-      {/* Quick Stats */}
-      {!loading && filteredContracts.length > 0 && (
-        <div className="quick-stats">
-          {/* <div className="stats-card">
-            <h4>Quick Insights</h4>
-            <div className="stats-content">
-              <div className="stat-item">
-                <span className="stat-label">Total Value</span>
-                <span className="stat-value">{formatCurrency(metrics.totalValue)}</span>
-              </div>
-              <div className="stat-item">
-                <span className="stat-label">Active Contracts</span>
-                <span className="stat-value">{metrics.activeContracts}</span>
-              </div>
-              <div className="stat-item">
-                <span className="stat-label">Expiring Soon</span>
-                <span className="stat-value">{metrics.expiringSoon}</span>
-              </div>
-              <div className="stat-item">
-                <span className="stat-label">Average Value</span>
-                <span className="stat-value">{formatCurrency(metrics.averageValue)}</span>
-              </div>
-            </div>
-          </div> */}
-
-          {/* <div className="action-suggestions">
-            <h4>Quick Actions</h4>
-            <div className="suggestions-grid">
-              <button className="suggestion-btn">
-                <BarChart3 size={20} />
-                <span>Generate Report</span>
-              </button>
-              <button className="suggestion-btn">
-                <Users size={20} />
-                <span>Export Contacts</span>
-              </button>
-              <button className="suggestion-btn">
-                <Target size={20} />
-                <span>View Milestones</span>
-              </button>
-              <button className="suggestion-btn">
-                <Shield size={20} />
-                <span>Risk Analysis</span>
-              </button>
-            </div>
-          </div> */}
-        </div>
-      )}
     </div>
   );
 }

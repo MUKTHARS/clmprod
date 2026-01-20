@@ -109,6 +109,78 @@ def check_permission(user: User, contract_id: int, required_permission: str, db:
     
     return permission is not None
 
+def get_user_permissions(user: User) -> Dict[str, bool]:
+    """Get all permissions for a user based on their role"""
+    if user.role == "director":
+        return {
+            "can_upload": True,
+            "can_view_all": True,
+            "can_edit_all": True,
+            "can_delete_all": True,
+            "can_review": True,
+            "can_approve": True,
+            "can_manage_users": True,
+            "can_view_activity_logs": True,
+            "can_export": True,
+            "can_manage_settings": True,
+            "can_view_dashboard": True,
+            "can_view_contracts": True,
+            "can_view_analytics": True,
+            "can_view_reports": True,
+            "can_view_risk": True,
+            "can_view_organizations": True,
+            "can_view_grants": True,
+            "can_view_approvals": True,
+            "can_view_knowledge": True,
+            "can_view_help": True
+        }
+    elif user.role == "program_manager":
+        return {
+            "can_upload": False,
+            "can_view_all": True,
+            "can_edit_all": False,
+            "can_delete_all": False,
+            "can_review": True,
+            "can_approve": False,
+            "can_manage_users": False,
+            "can_view_activity_logs": False,
+            "can_export": True,
+            "can_manage_settings": False,
+            "can_view_dashboard": False,
+            "can_view_contracts": True,
+            "can_view_analytics": True,
+            "can_view_reports": True,
+            "can_view_risk": True,
+            "can_view_organizations": False,
+            "can_view_grants": True,
+            "can_view_approvals": False,
+            "can_view_knowledge": True,
+            "can_view_help": True
+        }
+    else:  # project_manager
+        return {
+            "can_upload": True,
+            "can_view_all": False,
+            "can_edit_all": False,
+            "can_delete_all": False,
+            "can_review": False,
+            "can_approve": False,
+            "can_manage_users": False,
+            "can_view_activity_logs": False,
+            "can_export": True,
+            "can_manage_settings": False,
+            "can_view_dashboard": True,
+            "can_view_contracts": True,
+            "can_view_analytics": False,
+            "can_view_reports": False,
+            "can_view_risk": False,
+            "can_view_organizations": False,
+            "can_view_grants": False,
+            "can_view_approvals": False,
+            "can_view_knowledge": True,
+            "can_view_help": True
+        }
+
 def log_activity(db: Session, user_id: int, activity_type: str, contract_id: Optional[int] = None, details: Optional[dict] = None, request: Optional[Request] = None):
     """Log user activity"""
     from app.auth_models import ActivityLog
