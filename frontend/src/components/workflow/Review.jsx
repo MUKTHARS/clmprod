@@ -21,7 +21,8 @@ import {
   X
 } from 'lucide-react';
 import API_CONFIG from '../../config';
-
+import './Review.css'; 
+import './Workflow.css';
 function Review() {
   const [contracts, setContracts] = useState([]);
   const [loading, setLoading] = useState(true);

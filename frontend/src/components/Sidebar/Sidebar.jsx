@@ -66,7 +66,7 @@ const Sidebar = ({ user, onLogout }) => {
         icon: LayoutDashboard, 
         path: '/dashboard', 
         permission: 'can_view_dashboard',
-        roles: ['project_manager', 'director']
+        roles: ['project_manager', 'director', 'program_manager']
       },
       { 
         id: 'contracts', 
@@ -199,6 +199,7 @@ const Sidebar = ({ user, onLogout }) => {
         permission: 'can_approve',
         roles: ['director']
       },
+
       { 
         id: 'exports', 
         label: 'Exports', 
@@ -214,9 +215,20 @@ const Sidebar = ({ user, onLogout }) => {
         path: '/advanced-search', 
         permission: 'can_view_contracts',
         roles: ['project_manager', 'program_manager', 'director']
-      }
+      },
+      { 
+  id: 'director-decisions', 
+  label: 'Director Decisions', 
+  icon: Shield, 
+  path: '/program-manager/director-decisions', 
+  permission: 'can_review',
+  roles: ['program_manager'],
+  badge: true // Shows count of decisions
+}
     ];
-
+if (user?.role === 'director') {
+    return allItems;
+  }
     // Filter items based on user permissions
     return allItems.filter(item => {
       // Check if user has the required permission
@@ -249,6 +261,22 @@ const Sidebar = ({ user, onLogout }) => {
         console.error('Failed to fetch review count:', error);
       }
     }
+    if (itemId === 'director-decisions') {
+  try {
+    const response = await fetch(`${API_CONFIG.BASE_URL}/api/contracts/program-manager/reviewed-by-director?limit=1`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      return data.total || data.summary?.total || 0;
+    }
+  } catch (error) {
+    console.error('Failed to fetch director decisions count:', error);
+  }
+}
     
     if (itemId === 'approvals') {
       try {

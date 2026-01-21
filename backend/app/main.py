@@ -274,8 +274,16 @@ def get_user_permissions_dict(user: User) -> Dict[str, bool]:
             "can_resubmit_after_changes": True,
             "can_fix_metadata": True,
             "can_respond_to_comments": True,
-            "can_view_all_versions": True
+            "can_view_all_versions": True,
+            "can_lock_contract": True, 
+            "can_view_final_version": True,  
+            "can_view_reviewer_comments": True, 
+            "can_view_risk_acceptance": True,  
+            "can_view_business_sign_off": True,  
+            "can_view_contract_metadata": True, 
+            "can_view_complete_history": True  
         }
+        return permissions
     elif user.role == "program_manager":
         return {
             "can_upload": False,
@@ -1243,21 +1251,30 @@ async def get_all_contracts(
     print(f"Current user: {current_user.username}, Role: {current_user.role}, ID: {current_user.id}")
     
     try:
-        # STRICT role-based filtering
+        # STRICT role-based filtering - FIXED VERSION
+        query = db.query(models.Contract)
+        
         if current_user.role == "director":
             print("Director: Fetching all contracts")
-            query = db.query(models.Contract)
+            # Director can see all contracts
+            pass
         elif current_user.role == "program_manager":
-            print("Program Manager: Fetching contracts under review")
-            query = db.query(models.Contract).filter(
+            print("Program Manager: Fetching contracts for review")
+            # Program Manager can see contracts that are:
+            # - Under review
+            # - Reviewed 
+            # - Rejected (to see their own reviews)
+            # - Draft (if they need to see anything submitted for review)
+            query = query.filter(
                 (models.Contract.status == "under_review") | 
                 (models.Contract.status == "reviewed") |
-                (models.Contract.status == "approved") |
+                (models.Contract.status == "rejected") |
                 (models.Contract.status == "draft")
             )
         else:  # project_manager
             print(f"Project Manager: Fetching ONLY contracts created by user ID {current_user.id}")
-            query = db.query(models.Contract).filter(
+            # Project Manager can only see contracts they created
+            query = query.filter(
                 models.Contract.created_by == current_user.id
             )
         
@@ -1337,6 +1354,76 @@ async def get_all_contracts(
         print(f"Error details: {error_details}")
         # Return empty array instead of error for frontend compatibility
         return []
+
+@app.get("/api/contracts/{contract_id}/program-manager-reviews")
+async def get_program_manager_reviews_for_pm(
+    contract_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get program manager reviews for a contract - Project Manager (creator) only
+    """
+    # Get the contract
+    contract = db.query(models.Contract).filter(models.Contract.id == contract_id).first()
+    if not contract:
+        raise HTTPException(status_code=404, detail="Contract not found")
+    
+    # Check if user is the contract creator
+    if contract.created_by != current_user.id and current_user.role != "director":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the contract creator or director can view program manager reviews"
+        )
+    
+    # Get all review comments for this contract
+    review_comments = db.query(ReviewComment).filter(
+        ReviewComment.contract_id == contract_id
+    ).order_by(ReviewComment.created_at.desc()).all()
+    
+    # Get review summary from comprehensive data
+    review_summary = contract.comprehensive_data.get("program_manager_review", {}) if contract.comprehensive_data else {}
+    
+    # Format review comments
+    formatted_comments = []
+    for comment in review_comments:
+        user = db.query(User).filter(User.id == comment.user_id).first()
+        formatted_comments.append({
+            "id": comment.id,
+            "comment": comment.comment,
+            "comment_type": comment.comment_type,
+            "flagged_risk": comment.flagged_risk,
+            "flagged_issue": comment.flagged_issue,
+            "change_request": comment.change_request,
+            "recommendation": comment.recommendation,
+            "status": comment.status,
+            "created_at": comment.created_at.isoformat(),
+            "user_name": user.full_name if user else user.username,
+            "user_role": user.role if user else "unknown",
+            "resolution_response": comment.resolution_response,
+            "resolved_at": comment.resolved_at.isoformat() if comment.resolved_at else None
+        })
+    
+    # Calculate statistics
+    stats = {
+        "total_comments": len(review_comments),
+        "open_comments": len([c for c in review_comments if c.status == "open"]),
+        "risk_comments": len([c for c in review_comments if c.flagged_risk]),
+        "issue_comments": len([c for c in review_comments if c.flagged_issue]),
+        "change_requests": len([c for c in review_comments if c.change_request]),
+        "approve_recommendations": len([c for c in review_comments if c.recommendation == "approve"]),
+        "reject_recommendations": len([c for c in review_comments if c.recommendation == "reject"]),
+        "modify_recommendations": len([c for c in review_comments if c.recommendation == "modify"])
+    }
+    
+    return {
+        "contract_id": contract_id,
+        "contract_status": contract.status,
+        "review_summary": review_summary,
+        "statistics": stats,
+        "comments": formatted_comments,
+        "change_requests": contract.comprehensive_data.get("change_requests", []) if contract.comprehensive_data else []
+    }
 
 @app.get("/api/contracts/{contract_id}")
 async def get_contract(
@@ -2388,13 +2475,30 @@ async def submit_contract_review(
         # Store old status
         old_status = contract.status
         
-        # Update contract based on recommendation
+        # CRITICAL FIX: Make sure status is updated in the database
         if review_data.overall_recommendation == "approve":
             contract.status = "reviewed"
+            print(f"DEBUG: Setting contract {contract_id} status to 'reviewed' for Director approval")
+            
         elif review_data.overall_recommendation == "reject":
             contract.status = "rejected"
+            print(f"DEBUG: Setting contract {contract_id} status to 'rejected'")
+            
         elif review_data.overall_recommendation == "modify":
             contract.status = "rejected"  # Set to rejected for modifications
+            print(f"DEBUG: Setting contract {contract_id} status to 'rejected' (modify)")
+        
+        # IMPORTANT: Also update review_comments field
+        if not contract.review_comments:
+            contract.review_comments = ""
+        
+        review_summary_text = f"Program Manager Review by {current_user.full_name or current_user.username} on {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}:\n"
+        review_summary_text += f"Recommendation: {review_data.overall_recommendation}\n"
+        
+        if review_data.review_summary:
+            review_summary_text += f"Summary: {review_data.review_summary}\n"
+        
+        contract.review_comments = review_summary_text
         
         # Store review summary in comprehensive data
         if not contract.comprehensive_data:
@@ -2449,7 +2553,48 @@ async def submit_contract_review(
         if contract.status == "rejected" and review_data.change_requests:
             contract.comprehensive_data["change_requests"] = review_data.change_requests
         
+        # DEBUG: Print status change
+        print(f"DEBUG: Contract {contract_id} status changed from '{old_status}' to '{contract.status}'")
+        print(f"DEBUG: Review summary added: {len(review_summary_text)} characters")
+        
+        # Force commit and refresh
         db.commit()
+        db.refresh(contract)
+        
+        # Verify the status was saved
+        print(f"DEBUG: After commit - Contract {contract_id} status: {contract.status}")
+        
+        # IMPORTANT: Add notification tracking for Director
+        if review_data.overall_recommendation == "approve":
+            if not contract.comprehensive_data:
+                contract.comprehensive_data = {}
+            
+            # Mark for Director approval
+            director_approval_tracking = {
+                "pending_director_approval": True,
+                "forwarded_by_program_manager": current_user.id,
+                "forwarded_by_name": current_user.full_name or current_user.username,
+                "forwarded_at": datetime.utcnow().isoformat(),
+                "program_manager_recommendation": "approve"
+            }
+            
+            contract.comprehensive_data["director_approval_tracking"] = director_approval_tracking
+            
+            # Add to review history that it was forwarded
+            if "review_history" not in contract.comprehensive_data:
+                contract.comprehensive_data["review_history"] = []
+            
+            contract.comprehensive_data["review_history"].append({
+                "action": "forwarded_to_director",
+                "timestamp": datetime.utcnow().isoformat(),
+                "forwarded_by": current_user.id,
+                "forwarded_by_name": current_user.full_name or current_user.username,
+                "status_before": "under_review",
+                "status_after": "reviewed"
+            })
+            
+            db.commit()
+            print(f"DEBUG: Contract {contract_id} marked for Director approval")
         
         # Log activity
         log_activity(
@@ -2464,7 +2609,8 @@ async def submit_contract_review(
                 "recommendation": review_data.overall_recommendation,
                 "has_summary": bool(review_data.review_summary),
                 "change_requests_count": len(review_data.change_requests or []),
-                "key_issues_count": len(review_data.key_issues or [])
+                "key_issues_count": len(review_data.key_issues or []),
+                "forwarded_to_director": review_data.overall_recommendation == "approve"
             }, 
             request=request
         )
@@ -2473,12 +2619,133 @@ async def submit_contract_review(
             "message": f"Review submitted successfully. Contract marked as {contract.status}.",
             "contract_id": contract_id,
             "status": contract.status,
-            "recommendation": review_data.overall_recommendation
+            "recommendation": review_data.overall_recommendation,
+            "forwarded_to_director": review_data.overall_recommendation == "approve",
+            "contract": {
+                "id": contract.id,
+                "status": contract.status,
+                "grant_name": contract.grant_name,
+                "review_comments": contract.review_comments
+            }
         }
         
     except Exception as e:
         db.rollback()
+        print(f"ERROR: Failed to submit review for contract {contract_id}: {str(e)}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to submit review: {str(e)}")
+
+
+@app.get("/api/contracts/program-manager/reviewed-by-director")
+async def get_program_manager_reviewed_contracts(
+    skip: int = 0,
+    limit: int = 100,
+    status: Optional[str] = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get contracts reviewed by Program Manager that have Director decisions - Program Manager only"""
+    if current_user.role != "program_manager":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only Program Managers can view their reviewed contracts"
+        )
+    
+    # First, get all contracts where this Program Manager added review comments
+    reviewed_contracts_subquery = db.query(ReviewComment.contract_id).filter(
+        ReviewComment.user_id == current_user.id
+    ).distinct().subquery()
+    
+    # Main query for contracts this Program Manager reviewed
+    query = db.query(models.Contract).filter(
+        models.Contract.id.in_(reviewed_contracts_subquery),
+        models.Contract.status.in_(["approved", "rejected"])  # Only show finalized contracts
+    )
+    
+    # Apply status filter if provided
+    if status:
+        query = query.filter(models.Contract.status == status)
+    
+    # Count total
+    total_count = query.count()
+    
+    # Apply pagination and ordering
+    contracts = query.order_by(
+        models.Contract.uploaded_at.desc()
+    ).offset(skip).limit(limit).all()
+    
+    # Format response
+    formatted_contracts = []
+    for contract in contracts:
+        # Get Program Manager's review from this user
+        program_manager_review = db.query(ReviewComment).filter(
+            ReviewComment.contract_id == contract.id,
+            ReviewComment.user_id == current_user.id
+        ).order_by(ReviewComment.created_at.desc()).first()
+        
+        # Get Director's decision
+        director_decision = None
+        if contract.comprehensive_data and contract.comprehensive_data.get("director_final_approval"):
+            director_decision = contract.comprehensive_data["director_final_approval"]
+        
+        # Get comprehensive data
+        comp_data = contract.comprehensive_data or {}
+        pm_review_data = comp_data.get("program_manager_review", {})
+        
+        formatted_contracts.append({
+            "id": contract.id,
+            "grant_name": contract.grant_name,
+            "filename": contract.filename,
+            "grantor": contract.grantor,
+            "grantee": contract.grantee,
+            "total_amount": contract.total_amount,
+            "start_date": contract.start_date,
+            "end_date": contract.end_date,
+            "status": contract.status,
+            "uploaded_at": contract.uploaded_at.isoformat() if contract.uploaded_at else None,
+            "created_by": contract.created_by,
+            
+            # Program Manager's review data
+            "program_manager_review": pm_review_data,
+            "program_manager_recommendation": pm_review_data.get("overall_recommendation", "pending"),
+            "program_manager_reviewed_at": pm_review_data.get("reviewed_at"),
+            "program_manager_review_summary": pm_review_data.get("review_summary"),
+            
+            # Director's decision
+            "director_decision": director_decision,
+            "director_decision_status": director_decision.get("final_decision") if director_decision else None,
+            "director_decision_comments": director_decision.get("approval_comments") if director_decision else None,
+            "director_decided_at": director_decision.get("approved_at") if director_decision else None,
+            "director_name": director_decision.get("approved_by_name") if director_decision else None,
+            
+            # Additional info
+            "is_locked": director_decision.get("contract_locked") if director_decision else False,
+            "risk_accepted": director_decision.get("risk_accepted") if director_decision else False,
+            "business_sign_off": director_decision.get("business_sign_off") if director_decision else False,
+            
+            # Review stats
+            "total_review_comments": db.query(ReviewComment).filter(
+                ReviewComment.contract_id == contract.id
+            ).count(),
+            "user_review_comments": db.query(ReviewComment).filter(
+                ReviewComment.contract_id == contract.id,
+                ReviewComment.user_id == current_user.id
+            ).count()
+        })
+    
+    return {
+        "contracts": formatted_contracts,
+        "total": total_count,
+        "skip": skip,
+        "limit": limit,
+        "summary": {
+            "approved": len([c for c in formatted_contracts if c["status"] == "approved"]),
+            "rejected": len([c for c in formatted_contracts if c["status"] == "rejected"]),
+            "total_reviewed": total_count
+        }
+    }
+
 
 @app.get("/api/contracts/{contract_id}/review-comments")
 async def get_review_comments(
@@ -2712,6 +2979,445 @@ async def get_review_summary(
         "comments": formatted_comments[:10],  # Return top 10 comments
         "change_requests": contract.comprehensive_data.get("change_requests", []) if contract.comprehensive_data else []
     }
+
+@app.post("/api/contracts/{contract_id}/director/final-approval")
+async def director_final_approval(
+    contract_id: int,
+    approval_data: Dict[str, Any],
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    request: Request = None
+):
+    """Final approval by Director - Can approve, reject, or lock contract"""
+    # Only directors can perform final approval
+    if current_user.role != "director":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only Directors can give final approval"
+        )
+    
+    # Get the contract
+    contract = db.query(models.Contract).filter(models.Contract.id == contract_id).first()
+    if not contract:
+        raise HTTPException(status_code=404, detail="Contract not found")
+    
+    # Check if contract is in reviewed status
+    if contract.status != "reviewed":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Contract must be reviewed first. Current status: {contract.status}"
+        )
+    
+    try:
+        decision = approval_data.get("decision")
+        comments = approval_data.get("comments", "")
+        lock_contract = approval_data.get("lock_contract", False)
+        risk_accepted = approval_data.get("risk_accepted", False)
+        business_sign_off = approval_data.get("business_sign_off", False)
+        
+        if decision not in ["approve", "reject"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Decision must be 'approve' or 'reject'"
+            )
+        
+        # Update contract status
+        old_status = contract.status
+        if decision == "approve":
+            contract.status = "approved"
+        elif decision == "reject":
+            contract.status = "rejected"
+        
+        # Update comprehensive data with director's decision
+        if not contract.comprehensive_data:
+            contract.comprehensive_data = {}
+        
+        # Store director approval data
+        director_approval = {
+            "final_decision": decision,
+            "approval_comments": comments,
+            "approved_by": current_user.id,
+            "approved_by_name": current_user.full_name or current_user.username,
+            "approved_at": datetime.utcnow().isoformat(),
+            "risk_accepted": risk_accepted,
+            "business_sign_off": business_sign_off,
+            "contract_locked": lock_contract,
+            "lock_timestamp": datetime.utcnow().isoformat() if lock_contract else None
+        }
+        
+        contract.comprehensive_data["director_final_approval"] = director_approval
+        
+        # If contract is locked, add lock information
+        if lock_contract:
+            contract.comprehensive_data["locked_by"] = current_user.id
+            contract.comprehensive_data["locked_by_name"] = current_user.full_name or current_user.username
+            contract.comprehensive_data["locked_at"] = datetime.utcnow().isoformat()
+        
+        # Add to comprehensive data history
+        approval_history = contract.comprehensive_data.get("approval_history", [])
+        approval_history.append({
+            "action": "director_final_approval",
+            "by_user_id": current_user.id,
+            "by_user_name": current_user.full_name or current_user.username,
+            "timestamp": datetime.utcnow().isoformat(),
+            "decision": decision,
+            "comments": comments,
+            "old_status": old_status,
+            "new_status": contract.status,
+            "risk_accepted": risk_accepted,
+            "business_sign_off": business_sign_off,
+            "contract_locked": lock_contract
+        })
+        
+        contract.comprehensive_data["approval_history"] = approval_history
+        
+        db.commit()
+        
+        # Log activity
+        log_activity(
+            db, 
+            current_user.id, 
+            "final_approval", 
+            contract_id=contract_id, 
+            details={
+                "contract_id": contract_id,
+                "decision": decision,
+                "old_status": old_status,
+                "new_status": contract.status,
+                "risk_accepted": risk_accepted,
+                "business_sign_off": business_sign_off,
+                "contract_locked": lock_contract
+            }, 
+            request=request
+        )
+        
+        return {
+            "message": f"Contract {decision}d by Director",
+            "contract_id": contract_id,
+            "status": contract.status,
+            "locked": lock_contract,
+            "approval_data": director_approval
+        }
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to process final approval: {str(e)}")
+
+@app.get("/api/contracts/{contract_id}/director/view-complete")
+async def director_view_complete_contract(
+    contract_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get complete contract information including all reviews, comments, and history - Director only"""
+    # Only directors can view complete information
+    if current_user.role != "director":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only Directors can view complete contract information"
+        )
+    
+    # Get the contract
+    contract = db.query(models.Contract).filter(models.Contract.id == contract_id).first()
+    if not contract:
+        raise HTTPException(status_code=404, detail="Contract not found")
+    
+    # Get all review comments
+    review_comments = db.query(ReviewComment).filter(
+        ReviewComment.contract_id == contract_id
+    ).order_by(ReviewComment.created_at.desc()).all()
+    
+    # Get all versions
+    versions = db.query(models.ContractVersion).filter(
+        models.ContractVersion.contract_id == contract_id
+    ).order_by(models.ContractVersion.version_number.desc()).all()
+    
+    # Get all activity logs
+    activity_logs = db.query(ActivityLog).filter(
+        ActivityLog.contract_id == contract_id
+    ).order_by(ActivityLog.created_at.desc()).all()
+    
+    # Get comprehensive data
+    comp_data = contract.comprehensive_data or {}
+    
+    # Format review comments
+    formatted_comments = []
+    for comment in review_comments:
+        user = db.query(User).filter(User.id == comment.user_id).first()
+        formatted_comments.append({
+            "id": comment.id,
+            "comment": comment.comment,
+            "comment_type": comment.comment_type,
+            "flagged_risk": comment.flagged_risk,
+            "flagged_issue": comment.flagged_issue,
+            "change_request": comment.change_request,
+            "recommendation": comment.recommendation,
+            "status": comment.status,
+            "created_at": comment.created_at.isoformat(),
+            "user_name": user.full_name if user else user.username,
+            "user_role": user.role if user else "unknown",
+            "resolution_response": comment.resolution_response,
+            "resolved_at": comment.resolved_at.isoformat() if comment.resolved_at else None
+        })
+    
+    # Format versions
+    formatted_versions = []
+    for version in versions:
+        creator = db.query(User).filter(User.id == version.created_by).first()
+        formatted_versions.append({
+            "id": version.id,
+            "version_number": version.version_number,
+            "created_at": version.created_at.isoformat(),
+            "changes_description": version.changes_description,
+            "version_type": version.version_type,
+            "created_by": version.created_by,
+            "creator_name": creator.full_name if creator else creator.username,
+            "contract_data": version.contract_data
+        })
+    
+    # Format activity logs
+    formatted_activities = []
+    for activity in activity_logs:
+        user = db.query(User).filter(User.id == activity.user_id).first()
+        formatted_activities.append({
+            "id": activity.id,
+            "activity_type": activity.activity_type,
+            "created_at": activity.created_at.isoformat(),
+            "details": activity.details,
+            "user_name": user.full_name if user else user.username,
+            "user_role": user.role if user else "unknown"
+        })
+    
+    return {
+        "contract_id": contract_id,
+        "basic_info": {
+            "filename": contract.filename,
+            "grant_name": contract.grant_name,
+            "grantor": contract.grantor,
+            "grantee": contract.grantee,
+            "total_amount": contract.total_amount,
+            "start_date": contract.start_date,
+            "end_date": contract.end_date,
+            "status": contract.status,
+            "created_by": contract.created_by,
+            "version": contract.version
+        },
+        "comprehensive_data": comp_data,
+        "review_comments": formatted_comments,
+        "versions": formatted_versions,
+        "activity_logs": formatted_activities,
+        "program_manager_review": comp_data.get("program_manager_review", {}),
+        "director_approval": comp_data.get("director_final_approval", {}),
+        "is_locked": comp_data.get("locked_by") is not None,
+        "locked_info": {
+            "locked_by": comp_data.get("locked_by"),
+            "locked_by_name": comp_data.get("locked_by_name"),
+            "locked_at": comp_data.get("locked_at")
+        } if comp_data.get("locked_by") else None
+    }
+
+@app.get("/api/contracts/director/dashboard")
+async def get_director_dashboard_contracts(
+    skip: int = 0,
+    limit: int = 100,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get all contracts for Director dashboard - Director only"""
+    if current_user.role != "director":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only Directors can view dashboard"
+        )
+    
+    # Director can see ALL contracts
+    query = db.query(models.Contract)
+    
+    # Apply ordering
+    contracts = query.order_by(
+        models.Contract.uploaded_at.desc()
+    ).offset(skip).limit(limit).all()
+    
+    # Format response
+    contracts_dict = []
+    for contract in contracts:
+        # Helper function to safely format dates
+        def format_date(date_value):
+            if date_value and hasattr(date_value, 'isoformat'):
+                return date_value.isoformat()
+            return date_value
+        
+        # Build the contract dictionary
+        contract_dict = {
+            "id": contract.id,
+            "filename": contract.filename or "Unknown",
+            "uploaded_at": format_date(contract.uploaded_at),
+            "status": contract.status or "draft",
+            "investment_id": contract.investment_id,
+            "project_id": contract.project_id,
+            "grant_id": contract.grant_id,
+            "extracted_reference_ids": contract.extracted_reference_ids or [],
+            "comprehensive_data": contract.comprehensive_data or {},
+            "contract_number": contract.contract_number,
+            "grant_name": contract.grant_name or "Unnamed Contract",
+            "grantor": contract.grantor or "Unknown Grantor",
+            "grantee": contract.grantee or "Unknown Grantee",
+            "total_amount": float(contract.total_amount) if contract.total_amount else 0.0,
+            "start_date": format_date(contract.start_date),
+            "end_date": format_date(contract.end_date),
+            "purpose": contract.purpose,
+            "payment_schedule": contract.payment_schedule,
+            "terms_conditions": contract.terms_conditions,
+            "chroma_id": contract.chroma_id,
+            "created_by": contract.created_by,
+            "version": contract.version or 1,
+            "review_comments": contract.review_comments,
+            "basic_data": {
+                "id": contract.id,
+                "contract_number": contract.contract_number,
+                "grant_name": contract.grant_name or "Unnamed Contract",
+                "grantor": contract.grantor or "Unknown Grantor",
+                "grantee": contract.grantee or "Unknown Grantee",
+                "total_amount": float(contract.total_amount) if contract.total_amount else 0.0,
+                "start_date": format_date(contract.start_date),
+                "end_date": format_date(contract.end_date),
+                "purpose": contract.purpose,
+                "status": contract.status or "draft",
+                "version": contract.version or 1,
+                "created_by": contract.created_by
+            }
+        }
+        
+        contracts_dict.append(contract_dict)
+    
+    return contracts_dict
+
+@app.get("/api/debug/contract/{contract_id}/status")
+async def debug_contract_status(
+    contract_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Debug endpoint to check contract status and review data"""
+    contract = db.query(models.Contract).filter(models.Contract.id == contract_id).first()
+    if not contract:
+        return {"error": "Contract not found"}
+    
+    return {
+        "contract_id": contract.id,
+        "status": contract.status,
+        "review_comments": contract.review_comments,
+        "comprehensive_data": contract.comprehensive_data,
+        "has_program_manager_review": bool(contract.comprehensive_data and contract.comprehensive_data.get("program_manager_review")),
+        "program_manager_review": contract.comprehensive_data.get("program_manager_review") if contract.comprehensive_data else None,
+        "forwarded_to_director": contract.status == "reviewed"
+    }
+
+
+@app.get("/api/contracts/for-director-approval")
+async def get_contracts_for_director_approval(
+    skip: int = 0,
+    limit: int = 100,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get all contracts pending director approval - Director only"""
+    if current_user.role != "director":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only Directors can view contracts for approval"
+        )
+    
+    query = db.query(models.Contract).filter(
+        models.Contract.status == "reviewed"
+    )
+    
+    # Count total
+    total_count = query.count()
+
+    # Get all contracts with status 'reviewed' (ready for director approval)
+    contracts = db.query(models.Contract).filter(
+        models.Contract.status == "reviewed"
+    ).order_by(models.Contract.uploaded_at.desc()).offset(skip).limit(limit).all()
+    
+    # Format response
+    formatted_contracts = []
+    for contract in contracts:
+        # Get program manager review info
+        pm_review = contract.comprehensive_data.get("program_manager_review", {}) if contract.comprehensive_data else {}
+        director_tracking = contract.comprehensive_data.get("director_approval_tracking", {}) if contract.comprehensive_data else {}
+        
+        # Get who forwarded this contract
+        forwarded_by = director_tracking.get("forwarded_by_name", "Unknown Program Manager")
+        forwarded_at = director_tracking.get("forwarded_at")
+
+        formatted_contracts.append({
+            "id": contract.id,
+            "grant_name": contract.grant_name,
+            "filename": contract.filename,
+            "grantor": contract.grantor,
+            "grantee": contract.grantee,
+            "total_amount": contract.total_amount,
+            "start_date": contract.start_date,
+            "end_date": contract.end_date,
+            "status": contract.status,
+            "uploaded_at": contract.uploaded_at.isoformat(),
+            "program_manager_review": pm_review,
+            "has_review": bool(pm_review),
+            "review_recommendation": pm_review.get("overall_recommendation", "pending"),
+            "forwarded_by": forwarded_by,
+            "forwarded_at": forwarded_at,
+            "days_since_review": calculate_days_since_review(forwarded_at) if forwarded_at else None,
+            "priority": determine_priority(pm_review, contract.total_amount)
+
+        })
+    
+    return {
+        "contracts": formatted_contracts,
+        "total": total_count,
+        "skip": skip,
+        "limit": limit
+    }
+def calculate_days_since_review(forwarded_at):
+    """Calculate how many days since the contract was forwarded"""
+    try:
+        if not forwarded_at:
+            return None
+        review_date = datetime.fromisoformat(forwarded_at.replace('Z', '+00:00'))
+        now = datetime.utcnow()
+        days_diff = (now - review_date).days
+        return days_diff
+    except:
+        return None
+
+
+def determine_priority(pm_review, total_amount):
+    """Determine priority level for director review"""
+    if not pm_review:
+        return "medium"
+    
+    recommendation = pm_review.get("overall_recommendation", "")
+    
+    # High priority if:
+    # 1. High risk assessment
+    # 2. Large amount (> $1M)
+    # 3. Urgent issues flagged
+    risk_level = pm_review.get("risk_assessment", {}).get("overall_risk", "medium")
+    
+    priority = "medium"
+    
+    if risk_level == "high":
+        priority = "high"
+    elif total_amount and total_amount > 1000000:  # Over $1M
+        priority = "high"
+    elif pm_review.get("key_issues") and len(pm_review.get("key_issues", [])) > 0:
+        priority = "high"
+    elif recommendation == "approve":
+        priority = "medium"
+    elif recommendation in ["reject", "modify"]:
+        priority = "low"
+    
+    return priority
 
 
 

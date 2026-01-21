@@ -28,10 +28,20 @@ import {
   BarChart3,
   FileCheck,
   Loader2,
-  RefreshCw
+  RefreshCw,
+  ArrowLeft,
+  BookOpen,
+  ClipboardCheck,
+  ListChecks,
+  AlertTriangle,
+  Award,
+  ShieldAlert,
+  ThumbsUp,
+  ThumbsDown,
+  FileWarning
 } from 'lucide-react';
 import API_CONFIG from '../../config';
-import './Workflow.css';
+import './ProgramManagerReview.css';
 
 function ProgramManagerReview() {
   const { contractId } = useParams();
@@ -57,6 +67,7 @@ function ProgramManagerReview() {
   });
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     if (contractId) {
@@ -68,6 +79,7 @@ function ProgramManagerReview() {
   const fetchContractData = async () => {
     try {
       setLoading(true);
+      setError('');
       const token = localStorage.getItem('token');
       const response = await fetch(`${API_CONFIG.BASE_URL}/api/contracts/${contractId}`, {
         headers: {
@@ -79,9 +91,13 @@ function ProgramManagerReview() {
       if (response.ok) {
         const data = await response.json();
         setContract(data);
+      } else {
+        const errorData = await response.json();
+        setError(errorData.detail || 'Failed to fetch contract');
       }
     } catch (error) {
       console.error('Failed to fetch contract:', error);
+      setError('Network error. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -203,12 +219,47 @@ function ProgramManagerReview() {
 
   const formatDate = (dateString) => {
     if (!dateString) return 'Not specified';
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+    try {
+      return new Date(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    } catch (error) {
+      return dateString;
+    }
   };
+
+  const getForwardingNotice = () => {
+    if (reviewSummary.overall_recommendation === 'approve') {
+      return {
+        title: 'Ready for Director Approval',
+        message: 'This contract will be forwarded to the Director for final approval after submission.',
+        icon: Shield,
+        color: '#16a34a',
+        bgColor: '#dcfce7'
+      };
+    } else if (reviewSummary.overall_recommendation === 'reject') {
+      return {
+        title: 'Return to Project Manager',
+        message: 'This contract will be returned to the Project Manager with rejection feedback.',
+        icon: XCircle,
+        color: '#dc2626',
+        bgColor: '#fee2e2'
+      };
+    } else if (reviewSummary.overall_recommendation === 'modify') {
+      return {
+        title: 'Request Modifications',
+        message: 'This contract will be returned to the Project Manager with modification requests.',
+        icon: Edit,
+        color: '#d97706',
+        bgColor: '#fef3c7'
+      };
+    }
+    return null;
+  };
+
+  const forwardingNotice = getForwardingNotice();
 
   if (loading) {
     return (
@@ -217,6 +268,21 @@ function ProgramManagerReview() {
           <Loader2 size={48} className="spinning" />
           <h3>Loading Contract for Review</h3>
           <p>Preparing review interface...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="error-page">
+        <div className="error-content">
+          <AlertCircle size={48} />
+          <h2>Error Loading Contract</h2>
+          <p>{error}</p>
+          <button className="btn-primary" onClick={() => navigate('/my-reviews')}>
+            Back to Reviews
+          </button>
         </div>
       </div>
     );
@@ -243,33 +309,44 @@ function ProgramManagerReview() {
   const parties = compData.parties || {};
   const financial = compData.financial_details || {};
 
+  // Calculate statistics for comments
+  const commentStats = {
+    total: comments.length,
+    open: comments.filter(c => c.status === 'open').length,
+    risks: comments.filter(c => c.flagged_risk).length,
+    issues: comments.filter(c => c.flagged_issue).length
+  };
+
   return (
     <div className="program-manager-review">
       {/* Header */}
       <div className="review-header">
         <div className="header-left">
           <button className="btn-back" onClick={() => navigate('/my-reviews')}>
-            ← Back to Reviews
+            <ArrowLeft size={20} />
+            Back to Reviews
           </button>
-          <h1>Review Contract</h1>
-          <div className="contract-info-header">
-            <h2>{contract.grant_name || contract.filename}</h2>
-            <div className="contract-meta-header">
-              <span className="meta-item">
-                <Building size={14} />
-                {contract.grantor || 'Unknown Grantor'}
-              </span>
-              <span className="meta-item">
-                <DollarSign size={14} />
-                {formatCurrency(contract.total_amount)}
-              </span>
-              <span className="meta-item">
-                <Calendar size={14} />
-                {formatDate(contract.start_date)} - {formatDate(contract.end_date)}
-              </span>
-              <span className={`status-badge ${contract.status}`}>
-                {contract.status}
-              </span>
+          <div className="header-content">
+            <h1>Review Contract</h1>
+            <div className="contract-info-header">
+              <h2>{contract.grant_name || contract.filename}</h2>
+              <div className="contract-meta-header">
+                <span className="meta-item">
+                  <Building size={14} />
+                  {contract.grantor || 'Unknown Grantor'}
+                </span>
+                <span className="meta-item">
+                  <DollarSign size={14} />
+                  {formatCurrency(contract.total_amount)}
+                </span>
+                <span className="meta-item">
+                  <Calendar size={14} />
+                  {formatDate(contract.start_date)} - {formatDate(contract.end_date)}
+                </span>
+                <span className={`status-badge ${contract.status}`}>
+                  {contract.status}
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -285,6 +362,46 @@ function ProgramManagerReview() {
             <Download size={16} />
             Export
           </button>
+        </div>
+      </div>
+
+      {/* Review Stats */}
+      <div className="review-stats">
+        <div className="stat-item">
+          <div className="stat-icon">
+            <MessageSquare size={18} />
+          </div>
+          <div className="stat-content">
+            <span className="stat-value">{commentStats.total}</span>
+            <span className="stat-label">Total Comments</span>
+          </div>
+        </div>
+        <div className="stat-item">
+          <div className="stat-icon">
+            <AlertCircle size={18} />
+          </div>
+          <div className="stat-content">
+            <span className="stat-value">{commentStats.risks}</span>
+            <span className="stat-label">Risks Flagged</span>
+          </div>
+        </div>
+        <div className="stat-item">
+          <div className="stat-icon">
+            <Flag size={18} />
+          </div>
+          <div className="stat-content">
+            <span className="stat-value">{commentStats.issues}</span>
+            <span className="stat-label">Issues Flagged</span>
+          </div>
+        </div>
+        <div className="stat-item">
+          <div className="stat-icon">
+            <Clock size={18} />
+          </div>
+          <div className="stat-content">
+            <span className="stat-value">{commentStats.open}</span>
+            <span className="stat-label">Open Items</span>
+          </div>
         </div>
       </div>
 
@@ -335,6 +452,7 @@ function ProgramManagerReview() {
                     <option value="financial">Financial Review</option>
                     <option value="compliance">Compliance Check</option>
                     <option value="risk">Risk Assessment</option>
+                    <option value="legal">Legal Review</option>
                   </select>
                 </div>
               </div>
@@ -342,8 +460,9 @@ function ProgramManagerReview() {
               <textarea
                 value={newComment.comment}
                 onChange={(e) => setNewComment({...newComment, comment: e.target.value})}
-                placeholder="Enter your review comment here..."
+                placeholder="Enter your review comment here... Be specific about any issues, risks, or required changes."
                 rows={4}
+                className="comment-textarea"
               />
               
               <div className="comment-options">
@@ -410,57 +529,90 @@ function ProgramManagerReview() {
 
             {/* Comments List */}
             <div className="comments-list">
-              <h4>Previous Comments ({comments.length})</h4>
+              <div className="list-header">
+                <h4>Review Comments ({comments.length})</h4>
+                <div className="sort-options">
+                  <span>Sort by: Newest</span>
+                  <ChevronDown size={14} />
+                </div>
+              </div>
               {comments.length === 0 ? (
                 <div className="empty-comments">
                   <MessageSquare size={32} />
-                  <p>No comments yet. Be the first to add a review comment.</p>
+                  <h5>No comments yet</h5>
+                  <p>Be the first to add a review comment</p>
                 </div>
               ) : (
                 <div className="comments-container">
-                  {comments.map((comment) => (
-                    <div key={comment.id} className={`comment-card ${comment.status}`}>
-                      <div className="comment-header">
-                        <div className="commenter-info">
-                          <User size={14} />
-                          <span className="commenter-name">{comment.user_name}</span>
-                          <span className="commenter-role">{comment.user_role}</span>
-                          <span className="comment-date">
-                            {new Date(comment.created_at).toLocaleDateString()}
-                          </span>
+                  {comments.map((comment) => {
+                    const Icon = comment.comment_type === 'risk' ? AlertCircle :
+                                comment.comment_type === 'financial' ? DollarSign :
+                                comment.comment_type === 'compliance' ? Shield :
+                                comment.comment_type === 'legal' ? FileText :
+                                MessageSquare;
+                    
+                    return (
+                      <div key={comment.id} className={`comment-card ${comment.status}`}>
+                        <div className="comment-header">
+                          <div className="commenter-info">
+                            <div className="commenter-avatar">
+                              <User size={14} />
+                            </div>
+                            <div className="commenter-details">
+                              <span className="commenter-name">{comment.user_name}</span>
+                              <span className="commenter-role">{comment.user_role}</span>
+                              <span className="comment-date">
+                                {new Date(comment.created_at).toLocaleDateString()}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="comment-badges">
+                            <div className="comment-type-badge">
+                              <Icon size={12} />
+                              <span>{comment.comment_type}</span>
+                            </div>
+                            {comment.flagged_risk && (
+                              <span className="badge risk">
+                                <Flag size={10} />
+                                <span>Risk</span>
+                              </span>
+                            )}
+                            {comment.flagged_issue && (
+                              <span className="badge issue">
+                                <AlertCircle size={10} />
+                                <span>Issue</span>
+                              </span>
+                            )}
+                            {comment.recommendation && (
+                              <span className={`badge recommendation ${comment.recommendation}`}>
+                                {comment.recommendation === 'approve' && <ThumbsUp size={10} />}
+                                {comment.recommendation === 'reject' && <ThumbsDown size={10} />}
+                                {comment.recommendation === 'modify' && <Edit size={10} />}
+                                <span>
+                                  {comment.recommendation === 'approve' ? 'Approve' : 
+                                   comment.recommendation === 'reject' ? 'Reject' : 'Modify'}
+                                </span>
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        <div className="comment-badges">
-                          {comment.flagged_risk && (
-                            <span className="badge risk">
-                              <Flag size={12} />
-                              Risk
-                            </span>
-                          )}
-                          {comment.flagged_issue && (
-                            <span className="badge issue">
-                              <AlertCircle size={12} />
-                              Issue
-                            </span>
-                          )}
-                          {comment.recommendation && (
-                            <span className={`badge recommendation ${comment.recommendation}`}>
-                              {comment.recommendation === 'approve' ? '✓ Approve' : 
-                               comment.recommendation === 'reject' ? '✗ Reject' : '↻ Modify'}
-                            </span>
+                        <div className="comment-body">
+                          <p>{comment.comment}</p>
+                        </div>
+                        <div className="comment-footer">
+                          <div className="comment-status">
+                            <span className={`status-dot ${comment.status}`} />
+                            <span className="status-text">{comment.status}</span>
+                          </div>
+                          {comment.resolution_response && (
+                            <div className="comment-resolution">
+                              <strong>Resolution:</strong> {comment.resolution_response}
+                            </div>
                           )}
                         </div>
                       </div>
-                      <div className="comment-body">
-                        <p>{comment.comment}</p>
-                      </div>
-                      <div className="comment-footer">
-                        <span className="comment-type">{comment.comment_type}</span>
-                        <span className={`comment-status ${comment.status}`}>
-                          {comment.status}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -474,49 +626,105 @@ function ProgramManagerReview() {
               <p>Provide your overall assessment and recommendation</p>
             </div>
 
+            {/* Forwarding Notice */}
+            {forwardingNotice && (
+              <div 
+                className="forwarding-notice"
+                style={{ 
+                  backgroundColor: forwardingNotice.bgColor,
+                  borderLeftColor: forwardingNotice.color
+                }}
+              >
+                <div className="notice-icon">
+                  <forwardingNotice.icon size={20} color={forwardingNotice.color} />
+                </div>
+                <div className="notice-content">
+                  <h5>{forwardingNotice.title}</h5>
+                  <p>{forwardingNotice.message}</p>
+                </div>
+              </div>
+            )}
+
             <div className="summary-form">
               <div className="form-group">
                 <label>Review Summary *</label>
+                <div className="input-help">
+                  <BookOpen size={14} />
+                  <span>Provide a comprehensive summary of your review</span>
+                </div>
                 <textarea
                   value={reviewSummary.review_summary}
                   onChange={(e) => setReviewSummary({...reviewSummary, review_summary: e.target.value})}
-                  placeholder="Provide a comprehensive summary of your review..."
+                  placeholder="Summarize your key findings, observations, and overall assessment..."
                   rows={6}
+                  className="summary-textarea"
                 />
               </div>
 
               <div className="form-group">
                 <label>Overall Recommendation *</label>
+                <div className="input-help">
+                  <FileCheck size={14} />
+                  <span>Select the final recommendation for this contract</span>
+                </div>
                 <div className="recommendation-options">
                   <button
                     className={`recommendation-btn ${reviewSummary.overall_recommendation === 'approve' ? 'selected' : ''}`}
                     onClick={() => setReviewSummary({...reviewSummary, overall_recommendation: 'approve'})}
                   >
-                    <CheckCircle size={20} />
-                    <span>Approve</span>
-                    <small>Contract is ready for final approval</small>
+                    <div className="recommendation-icon">
+                      <ThumbsUp size={20} />
+                    </div>
+                    <div className="recommendation-content">
+                      <span className="recommendation-title">Approve</span>
+                      <span className="recommendation-description">
+                        Contract is ready for final approval
+                        <br />
+                        <small>Will be forwarded to Director</small>
+                      </span>
+                    </div>
                   </button>
                   <button
                     className={`recommendation-btn ${reviewSummary.overall_recommendation === 'modify' ? 'selected' : ''}`}
                     onClick={() => setReviewSummary({...reviewSummary, overall_recommendation: 'modify'})}
                   >
-                    <Edit size={20} />
-                    <span>Request Modifications</span>
-                    <small>Needs changes before approval</small>
+                    <div className="recommendation-icon">
+                      <Edit size={20} />
+                    </div>
+                    <div className="recommendation-content">
+                      <span className="recommendation-title">Request Modifications</span>
+                      <span className="recommendation-description">
+                        Needs changes before approval
+                        <br />
+                        <small>Will be returned to Project Manager</small>
+                      </span>
+                    </div>
                   </button>
                   <button
                     className={`recommendation-btn ${reviewSummary.overall_recommendation === 'reject' ? 'selected' : ''}`}
                     onClick={() => setReviewSummary({...reviewSummary, overall_recommendation: 'reject'})}
                   >
-                    <XCircle size={20} />
-                    <span>Reject</span>
-                    <small>Contract cannot be approved</small>
+                    <div className="recommendation-icon">
+                      <ThumbsDown size={20} />
+                    </div>
+                    <div className="recommendation-content">
+                      <span className="recommendation-title">Reject</span>
+                      <span className="recommendation-description">
+                        Contract cannot be approved
+                        <br />
+                        <small>Will be returned to Project Manager</small>
+                      </span>
+                    </div>
                   </button>
                 </div>
               </div>
 
               <div className="form-group">
                 <label>Key Issues</label>
+                <div className="input-help">
+                  <AlertTriangle size={14} />
+                  <span>List the main issues identified during review</span>
+                </div>
                 <div className="issues-list">
                   {reviewSummary.key_issues.map((issue, index) => (
                     <div key={index} className="issue-item">
@@ -529,8 +737,10 @@ function ProgramManagerReview() {
                           setReviewSummary({...reviewSummary, key_issues: newIssues});
                         }}
                         placeholder="Describe key issue..."
+                        className="issue-input"
                       />
                       <button
+                        className="btn-remove"
                         onClick={() => {
                           const newIssues = reviewSummary.key_issues.filter((_, i) => i !== index);
                           setReviewSummary({...reviewSummary, key_issues: newIssues});
@@ -549,6 +759,34 @@ function ProgramManagerReview() {
                   >
                     + Add Key Issue
                   </button>
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label>Risk Assessment</label>
+                <div className="input-help">
+                  <ShieldAlert size={14} />
+                  <span>Document any risks identified</span>
+                </div>
+                <div className="risk-assessment">
+                  <textarea
+                    value={JSON.stringify(reviewSummary.risk_assessment, null, 2)}
+                    onChange={(e) => {
+                      try {
+                        const parsed = JSON.parse(e.target.value);
+                        setReviewSummary({...reviewSummary, risk_assessment: parsed});
+                      } catch {
+                        // Keep as is if invalid JSON
+                      }
+                    }}
+                    placeholder='{
+  "financial_risk": "Low",
+  "compliance_risk": "Medium",
+  "operational_risk": "Low"
+}'
+                    rows={4}
+                    className="risk-textarea"
+                  />
                 </div>
               </div>
 
@@ -587,7 +825,10 @@ function ProgramManagerReview() {
 
             <div className="contract-review-details">
               <div className="review-section">
-                <h4>Basic Information</h4>
+                <h4>
+                  <FileText size={18} />
+                  Basic Information
+                </h4>
                 <div className="details-grid">
                   <div className="detail-item">
                     <strong>Contract Name:</strong>
@@ -598,22 +839,27 @@ function ProgramManagerReview() {
                     <span>{contract.contract_number || 'Not specified'}</span>
                   </div>
                   <div className="detail-item">
-                    <strong>Grantor:</strong>
-                    <span>{contract.grantor || 'Not specified'}</span>
+                    <strong>Contract Status:</strong>
+                    <span className={`status-indicator ${contract.status}`}>
+                      {contract.status}
+                    </span>
                   </div>
                   <div className="detail-item">
-                    <strong>Grantee:</strong>
-                    <span>{contract.grantee || 'Not specified'}</span>
+                    <strong>Created By:</strong>
+                    <span>{contract.created_by || 'Unknown'}</span>
                   </div>
                 </div>
               </div>
 
               <div className="review-section">
-                <h4>Financial Details</h4>
+                <h4>
+                  <DollarSign size={18} />
+                  Financial Details
+                </h4>
                 <div className="details-grid">
                   <div className="detail-item">
                     <strong>Total Amount:</strong>
-                    <span>{formatCurrency(contract.total_amount)}</span>
+                    <span className="amount-value">{formatCurrency(contract.total_amount)}</span>
                   </div>
                   <div className="detail-item">
                     <strong>Start Date:</strong>
@@ -625,28 +871,81 @@ function ProgramManagerReview() {
                   </div>
                   <div className="detail-item">
                     <strong>Purpose:</strong>
-                    <span>{contract.purpose || 'Not specified'}</span>
+                    <span className="purpose-text">{contract.purpose || 'Not specified'}</span>
                   </div>
                 </div>
               </div>
 
               <div className="review-section">
-                <h4>Parties Information</h4>
+                <h4>
+                  <Building size={18} />
+                  Parties Information
+                </h4>
                 <div className="parties-grid">
                   <div className="party-card">
-                    <h5>Grantor</h5>
-                    <p><strong>Organization:</strong> {parties.grantor?.organization_name || 'Not specified'}</p>
-                    <p><strong>Contact:</strong> {parties.grantor?.contact_person || 'Not specified'}</p>
-                    <p><strong>Email:</strong> {parties.grantor?.email || 'Not specified'}</p>
+                    <div className="party-header">
+                      <Shield size={16} />
+                      <h5>Grantor</h5>
+                    </div>
+                    <div className="party-details">
+                      <p><strong>Organization:</strong> {parties.grantor?.organization_name || 'Not specified'}</p>
+                      <p><strong>Contact:</strong> {parties.grantor?.contact_person || 'Not specified'}</p>
+                      <p><strong>Email:</strong> {parties.grantor?.email || 'Not specified'}</p>
+                      <p><strong>Address:</strong> {parties.grantor?.address || 'Not specified'}</p>
+                    </div>
                   </div>
                   <div className="party-card">
-                    <h5>Grantee</h5>
-                    <p><strong>Organization:</strong> {parties.grantee?.organization_name || 'Not specified'}</p>
-                    <p><strong>Contact:</strong> {parties.grantee?.contact_person || 'Not specified'}</p>
-                    <p><strong>Email:</strong> {parties.grantee?.email || 'Not specified'}</p>
+                    <div className="party-header">
+                      <User size={16} />
+                      <h5>Grantee</h5>
+                    </div>
+                    <div className="party-details">
+                      <p><strong>Organization:</strong> {parties.grantee?.organization_name || 'Not specified'}</p>
+                      <p><strong>Contact:</strong> {parties.grantee?.contact_person || 'Not specified'}</p>
+                      <p><strong>Email:</strong> {parties.grantee?.email || 'Not specified'}</p>
+                      <p><strong>Address:</strong> {parties.grantee?.address || 'Not specified'}</p>
+                    </div>
                   </div>
                 </div>
               </div>
+
+              {/* Comprehensive Data Preview */}
+              {compData && Object.keys(compData).length > 0 && (
+                <div className="review-section">
+                  <h4>
+                    <BarChart3 size={18} />
+                    Comprehensive Data Preview
+                  </h4>
+                  <div className="comprehensive-preview">
+                    <div className="preview-grid">
+                      {compData.contract_details && (
+                        <div className="preview-item">
+                          <strong>Contract Details:</strong>
+                          <span>{Object.keys(compData.contract_details).length} fields extracted</span>
+                        </div>
+                      )}
+                      {compData.financial_details && (
+                        <div className="preview-item">
+                          <strong>Financial Details:</strong>
+                          <span>{Object.keys(compData.financial_details).length} fields extracted</span>
+                        </div>
+                      )}
+                      {compData.terms_conditions && (
+                        <div className="preview-item">
+                          <strong>Terms & Conditions:</strong>
+                          <span>{Object.keys(compData.terms_conditions).length} items extracted</span>
+                        </div>
+                      )}
+                      {compData.deliverables && (
+                        <div className="preview-item">
+                          <strong>Deliverables:</strong>
+                          <span>{compData.deliverables?.items?.length || 0} items</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -664,7 +963,11 @@ function ProgramManagerReview() {
             </div>
             
             <div className="modal-body">
-              <p>Are you sure you want to submit your review with the following recommendation?</p>
+              <div className="confirmation-message">
+                <FileCheck size={32} />
+                <h4>Ready to submit your review?</h4>
+                <p>Your review will be submitted with the following recommendation:</p>
+              </div>
               
               <div className="submission-summary">
                 <div className="summary-item">
@@ -683,6 +986,30 @@ function ProgramManagerReview() {
                   <strong>Key Issues:</strong>
                   <span>{reviewSummary.key_issues.length}</span>
                 </div>
+                <div className="summary-item">
+                  <strong>Review Summary:</strong>
+                  <span className="summary-text">
+                    {reviewSummary.review_summary.substring(0, 100)}...
+                  </span>
+                </div>
+              </div>
+              
+              <div className="forwarding-notice-modal">
+                {forwardingNotice && (
+                  <>
+                    <div className="notice-header">
+                      <forwardingNotice.icon size={18} />
+                      <h5>Next Steps</h5>
+                    </div>
+                    <p>{forwardingNotice.message}</p>
+                    {reviewSummary.overall_recommendation === 'approve' && (
+                      <div className="director-notice">
+                        <Shield size={14} />
+                        <span>The Director will be notified and can provide final approval.</span>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
               
               <div className="warning-message">
