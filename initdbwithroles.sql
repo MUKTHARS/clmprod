@@ -201,3 +201,28 @@ CREATE INDEX idx_contract_versions_created_by ON contract_versions(created_by);
 ALTER TABLE contracts ADD COLUMN IF NOT EXISTS version INTEGER DEFAULT 1;
 
 
+
+
+-- Create review_comments table
+CREATE TABLE IF NOT EXISTS review_comments (
+    id SERIAL PRIMARY KEY,
+    contract_id INTEGER NOT NULL REFERENCES contracts(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    comment_type VARCHAR(50) NOT NULL,
+    comment TEXT NOT NULL,
+    status VARCHAR(20) DEFAULT 'open',
+    flagged_risk BOOLEAN DEFAULT FALSE,
+    flagged_issue BOOLEAN DEFAULT FALSE,
+    change_request JSONB,
+    recommendation VARCHAR(20),
+    resolution_response TEXT,
+    resolved_by INTEGER REFERENCES users(id),
+    resolved_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create indexes for performance
+CREATE INDEX idx_review_comments_contract_id ON review_comments(contract_id);
+CREATE INDEX idx_review_comments_user_id ON review_comments(user_id);
+CREATE INDEX idx_review_comments_status ON review_comments(status);
+CREATE INDEX idx_review_comments_flagged ON review_comments(flagged_risk, flagged_issue);

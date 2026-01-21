@@ -189,7 +189,60 @@ function ProjectManagerActions({ contract, onActionComplete, user }) {
     }
     setShowVersions(!showVersions);
   };
-
+{(contract.status === 'rejected' || contract.status === 'under_review') && (
+  <div className="review-feedback-section">
+    <h3>
+      <MessageSquare size={20} />
+      Program Manager Review
+    </h3>
+    
+    {contract.comprehensive_data?.program_manager_review && (
+      <div className="review-summary-card">
+        <div className="summary-header">
+          <h4>Review Summary</h4>
+          <span className={`recommendation-badge ${contract.comprehensive_data.program_manager_review.overall_recommendation}`}>
+            {contract.comprehensive_data.program_manager_review.overall_recommendation}
+          </span>
+        </div>
+        <div className="summary-content">
+          <p>{contract.comprehensive_data.program_manager_review.review_summary}</p>
+        </div>
+        
+        {contract.comprehensive_data.program_manager_review.change_requests?.length > 0 && (
+          <div className="change-requests">
+            <h5>Change Requests:</h5>
+            <ul>
+              {contract.comprehensive_data.program_manager_review.change_requests.map((req, idx) => (
+                <li key={idx}>{req}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+        
+        {contract.comprehensive_data.program_manager_review.key_issues?.length > 0 && (
+          <div className="key-issues">
+            <h5>Key Issues:</h5>
+            <ul>
+              {contract.comprehensive_data.program_manager_review.key_issues.map((issue, idx) => (
+                <li key={idx}>{issue}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+    )}
+    
+    <div className="comment-actions">
+      <button 
+        className="btn-secondary"
+        onClick={fetchReviewComments}
+      >
+        <RefreshCw size={16} />
+        Refresh Comments
+      </button>
+    </div>
+  </div>
+)}
   const getVersionTypeIcon = (type) => {
     switch (type) {
       case 'review_submission': return <Send size={14} />;
