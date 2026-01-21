@@ -321,3 +321,5 @@ CREATE INDEX idx_review_comments_parent ON review_comments(parent_comment_id);
 UPDATE review_comments 
 SET thread_id = CONCAT('thread_', id::text) 
 WHERE thread_id IS NULL;
+
+ALTER TABLE users ADD COLUMN password_hash VARCHAR(255) NOT NULL DEFAULT '';

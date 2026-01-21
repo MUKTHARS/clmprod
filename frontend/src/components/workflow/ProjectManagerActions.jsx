@@ -28,7 +28,8 @@ import {
   FileWarning
 } from 'lucide-react';
 import API_CONFIG from '../../config';
-import { Workflow } from 'lucide-react';
+// import { Workflow } from 'lucide-react';
+import './ProjectManagerActions.css';
 function ProjectManagerActions({ contract, user, onActionComplete }) {
   const [loading, setLoading] = useState(false);
   const [activeAction, setActiveAction] = useState(null);
