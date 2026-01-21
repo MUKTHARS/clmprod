@@ -60,3 +60,26 @@ class ContractPermission(Base):
     contract = relationship("Contract")
     user = relationship("User", foreign_keys=[user_id])
     granter = relationship("User", foreign_keys=[granted_by])
+
+
+class ReviewComment(Base):
+    __tablename__ = "review_comments"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    contract_id = Column(Integer, ForeignKey("contracts.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    comment_type = Column(String, nullable=False)  # 'review', 'risk', 'issue', 'change_request'
+    comment = Column(Text, nullable=False)
+    status = Column(String, default="open")  # 'open', 'resolved', 'closed'
+    flagged_risk = Column(Boolean, default=False)
+    flagged_issue = Column(Boolean, default=False)
+    change_request = Column(JSONB, nullable=True)
+    recommendation = Column(String)  # 'approve', 'reject', 'modify'
+    resolution_response = Column(Text)
+    resolved_by = Column(Integer, ForeignKey("users.id"))
+    resolved_at = Column(DateTime(timezone=True))
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    contract = relationship("Contract")
+    user = relationship("User", foreign_keys=[user_id])
+    resolver = relationship("User", foreign_keys=[resolved_by])    

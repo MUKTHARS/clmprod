@@ -83,126 +83,149 @@ function ContractDetailsPage({ user = null }) {
   }, [id]);
 
   const fetchContractData = async (contractId) => {
-    console.log('Fetching contract data for ID:', contractId);
+  console.log('Fetching contract data for ID:', contractId);
+  
+  try {
+    setLoading(true);
     
-    try {
-      setLoading(true);
+    // Get the authentication token
+    const token = localStorage.getItem('token');
+    const headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    };
+    
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    // First try the comprehensive endpoint
+    const comprehensiveUrl = `${API_CONFIG.BASE_URL}/api/contracts/${contractId}/comprehensive`;
+    console.log('Trying comprehensive endpoint:', comprehensiveUrl);
+    
+    let response = await fetch(comprehensiveUrl, { headers });
+    
+    if (response.ok) {
+      const data = await response.json();
+      console.log('Comprehensive data fetched:', data);
       
-      // Get the authentication token
-      const token = localStorage.getItem('token');
-      const headers = {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      };
-      
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
+      // Check if we got valid data
+      if (!data || (data.error && data.error.includes('not found'))) {
+        console.log('Contract not found in comprehensive endpoint, trying basic');
+        await fetchBasicContractData(contractId);
+        return;
       }
       
-      // First try the comprehensive endpoint
-      const comprehensiveUrl = `${API_CONFIG.BASE_URL}/api/contracts/${contractId}/comprehensive`;
-      console.log('Trying comprehensive endpoint:', comprehensiveUrl);
-      
-      let response = await fetch(comprehensiveUrl, { headers });
-      
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Comprehensive data fetched:', data);
-        
-        // Normalize the data
-        const normalizedData = normalizeContractData(data);
+      // Normalize the data
+      const normalizedData = normalizeContractData(data);
+      if (normalizedData) {
         setContractData(normalizedData);
       } else {
-        console.log('Comprehensive endpoint failed:', response.status);
-        
-        // Try the basic contract endpoint
+        console.log('Normalized data is null, trying basic endpoint');
         await fetchBasicContractData(contractId);
       }
-    } catch (error) {
-      console.error('Error fetching comprehensive data:', error);
+    } else if (response.status === 404) {
+      console.log('Contract not found (404), trying basic endpoint');
       await fetchBasicContractData(contractId);
-    } finally {
-      setLoading(false);
+    } else {
+      console.log('Comprehensive endpoint failed:', response.status);
+      await fetchBasicContractData(contractId);
     }
-  };
+  } catch (error) {
+    console.error('Error fetching comprehensive data:', error);
+    await fetchBasicContractData(contractId);
+  } finally {
+    setLoading(false);
+  }
+};
 
-  const normalizeContractData = (apiResponse) => {
-    if (!apiResponse) return null;
+const normalizeContractData = (apiResponse) => {
+  if (!apiResponse) {
+    console.error('API response is null or undefined');
+    return null;
+  }
+  
+  console.log('Normalizing API response:', apiResponse);
+  
+  // The API might return different structures
+  let contractId = apiResponse.contract_id || apiResponse.id;
+  let basicData = apiResponse.basic_data || {};
+  let compData = apiResponse.comprehensive_data || apiResponse;
+  let filename = apiResponse.filename || 'Unknown';
+  
+  // If the response is directly a contract object
+  if (apiResponse.id && !apiResponse.contract_id && !apiResponse.basic_data) {
+    contractId = apiResponse.id;
+    filename = apiResponse.filename || 'Unknown';
+    basicData = apiResponse;
+    compData = apiResponse.comprehensive_data || {};
+  }
+  
+  // Extract from comprehensive_data if available
+  if (compData && typeof compData === 'object') {
+    console.log('Extracting from comprehensive_data:', Object.keys(compData));
     
-    console.log('Normalizing API response:', apiResponse);
+    const contractDetails = compData.contract_details || {};
+    const parties = compData.parties || {};
+    const financial = compData.financial_details || {};
+    const deliverables = compData.deliverables || {};
+    const terms = compData.terms_conditions || {};
+    const compliance = compData.compliance || {};
+    const summary = compData.summary || {};
     
-    // The API might return different structures
-    let contractId = apiResponse.contract_id || apiResponse.id;
-    let basicData = apiResponse.basic_data || {};
-    let compData = apiResponse.comprehensive_data || apiResponse;
-    let filename = apiResponse.filename || 'Unknown';
+    // Check if this is a reviewed contract with program_manager_review
+    const programManagerReview = compData.program_manager_review || {};
     
-    // If the response is directly a contract object
-    if (apiResponse.id && !apiResponse.contract_id && !apiResponse.basic_data) {
-      contractId = apiResponse.id;
-      filename = apiResponse.filename || 'Unknown';
-      basicData = apiResponse;
-      compData = apiResponse.comprehensive_data || {};
-    }
-    
-    // Extract from comprehensive_data if available
-    if (compData && typeof compData === 'object') {
-      console.log('Extracting from comprehensive_data:', Object.keys(compData));
-      
-      const contractDetails = compData.contract_details || {};
-      const parties = compData.parties || {};
-      const financial = compData.financial_details || {};
-      const deliverables = compData.deliverables || {};
-      const terms = compData.terms_conditions || {};
-      const compliance = compData.compliance || {};
-      const summary = compData.summary || {};
-      
-      // Merge with basic data
-      const normalized = {
-        ...basicData,
-        contract_id: contractId,
-        filename: filename,
-        grant_name: contractDetails.grant_name || basicData.grant_name || filename,
-        contract_number: contractDetails.contract_number || basicData.contract_number,
-        grantor: parties.grantor?.organization_name || basicData.grantor || 'Unknown Grantor',
-        grantee: parties.grantee?.organization_name || basicData.grantee || 'Unknown Grantee',
-        total_amount: financial?.total_grant_amount || basicData.total_amount || 0,
-        start_date: contractDetails.start_date || basicData.start_date,
-        end_date: contractDetails.end_date || basicData.end_date,
-        purpose: contractDetails.purpose || basicData.purpose,
-        status: basicData.status || 'processed',
-        investment_id: basicData.investment_id,
-        project_id: basicData.project_id,
-        grant_id: basicData.grant_id,
-        comprehensive_data: {
-          contract_details: contractDetails,
-          parties: parties,
-          financial_details: financial,
-          deliverables: deliverables,
-          terms_conditions: terms,
-          compliance: compliance,
-          summary: summary,
-          extended_data: compData.extended_data || {}
-        }
-      };
-      
-      console.log('Normalized contract data:', normalized);
-      return normalized;
-    }
-    
-    // Return basic data if no comprehensive_data
-    return {
+    // Merge with basic data
+    const normalized = {
       ...basicData,
       contract_id: contractId,
       filename: filename,
-      grant_name: basicData.grant_name || filename,
-      grantor: basicData.grantor || 'Unknown Grantor',
-      grantee: basicData.grantee || 'Unknown Grantee',
-      total_amount: basicData.total_amount || 0,
-      status: basicData.status || 'processed',
-      comprehensive_data: {}
+      grant_name: contractDetails.grant_name || basicData.grant_name || filename,
+      contract_number: contractDetails.contract_number || basicData.contract_number,
+      grantor: parties.grantor?.organization_name || basicData.grantor || 'Unknown Grantor',
+      grantee: parties.grantee?.organization_name || basicData.grantee || 'Unknown Grantee',
+      total_amount: financial?.total_grant_amount || basicData.total_amount || 0,
+      start_date: contractDetails.start_date || basicData.start_date,
+      end_date: contractDetails.end_date || basicData.end_date,
+      purpose: contractDetails.purpose || basicData.purpose,
+      status: basicData.status || programManagerReview.overall_recommendation || 'processed',
+      investment_id: basicData.investment_id,
+      project_id: basicData.project_id,
+      grant_id: basicData.grant_id,
+      comprehensive_data: {
+        contract_details: contractDetails,
+        parties: parties,
+        financial_details: financial,
+        deliverables: deliverables,
+        terms_conditions: terms,
+        compliance: compliance,
+        summary: summary,
+        program_manager_review: programManagerReview,
+        extended_data: compData.extended_data || {}
+      }
     };
+    
+    console.log('Normalized contract data:', normalized);
+    return normalized;
+  }
+  
+  // Return basic data if no comprehensive_data
+  const normalizedBasic = {
+    ...basicData,
+    contract_id: contractId,
+    filename: filename,
+    grant_name: basicData.grant_name || filename,
+    grantor: basicData.grantor || 'Unknown Grantor',
+    grantee: basicData.grantee || 'Unknown Grantee',
+    total_amount: basicData.total_amount || 0,
+    status: basicData.status || 'processed',
+    comprehensive_data: {}
   };
+  
+  console.log('Returning basic normalized data:', normalizedBasic);
+  return normalizedBasic;
+};
 
   const fetchBasicContractData = async (contractId) => {
     try {
@@ -239,52 +262,76 @@ function ContractDetailsPage({ user = null }) {
       await fetchFromAllContracts(contractId);
     }
   };
-
+const getContractStatus = (contract) => {
+  if (!contract) return 'unknown';
+  
+  // First try to get status from basic data
+  if (contract.status) {
+    return contract.status;
+  }
+  
+  // Check if there's a program manager review
+  if (contract.comprehensive_data?.program_manager_review?.overall_recommendation) {
+    const recommendation = contract.comprehensive_data.program_manager_review.overall_recommendation;
+    if (recommendation === 'approve') return 'reviewed';
+    if (recommendation === 'reject') return 'rejected';
+    if (recommendation === 'modify') return 'rejected';
+  }
+  
+  // Default status
+  return 'processed';
+};
   const fetchFromAllContracts = async (contractId) => {
-    try {
-      const token = localStorage.getItem('token');
-      const headers = {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      };
+  try {
+    const token = localStorage.getItem('token');
+    const headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    };
+    
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    // Fetch all contracts and find the specific one
+    const allContractsUrl = `${API_CONFIG.BASE_URL}/api/contracts/`;
+    console.log('Trying all contracts endpoint:', allContractsUrl);
+    
+    const response = await fetch(allContractsUrl, { headers });
+    
+    if (response.ok) {
+      const allContracts = await response.json();
+      console.log('All contracts fetched:', allContracts.length);
       
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
+      // Find the contract with matching ID
+      const foundContract = allContracts.find(contract => {
+        if (!contract) return false;
+        const contractIdNum = parseInt(contractId);
+        return contract.id === contractIdNum;
+      });
       
-      // Fetch all contracts and find the specific one
-      const allContractsUrl = `${API_CONFIG.BASE_URL}/api/contracts/`;
-      console.log('Trying all contracts endpoint:', allContractsUrl);
-      
-      const response = await fetch(allContractsUrl, { headers });
-      
-      if (response.ok) {
-        const allContracts = await response.json();
-        console.log('All contracts fetched:', allContracts.length);
-        
-        // Find the contract with matching ID
-        const foundContract = allContracts.find(contract => {
-          const contractIdNum = parseInt(contractId);
-          return contract.id === contractIdNum;
-        });
-        
-        if (foundContract) {
-          console.log('Contract found in all contracts list:', foundContract);
-          const normalizedData = normalizeContractData(foundContract);
+      if (foundContract) {
+        console.log('Contract found in all contracts list:', foundContract);
+        const normalizedData = normalizeContractData(foundContract);
+        if (normalizedData) {
           setContractData(normalizedData);
         } else {
-          console.log('Contract not found in all contracts list');
+          console.log('Failed to normalize contract data');
           setContractData(null);
         }
       } else {
-        console.log('All contracts endpoint failed:', response.status);
+        console.log('Contract not found in all contracts list');
         setContractData(null);
       }
-    } catch (error) {
-      console.error('Error fetching from all contracts:', error);
+    } else {
+      console.log('All contracts endpoint failed:', response.status);
       setContractData(null);
     }
-  };
+  } catch (error) {
+    console.error('Error fetching from all contracts:', error);
+    setContractData(null);
+  }
+};
 
   const formatCurrency = (amount) => {
     if (!amount && amount !== 0) return '-';

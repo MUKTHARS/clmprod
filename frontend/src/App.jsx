@@ -10,13 +10,19 @@ import Login from './components/Auth/Login';
 import PrivateRoute from './components/Auth/PrivateRoute';
 import API_CONFIG from './config';
 import './styles/App.css';
+import Review from './components/workflow/Review';
+import ProgramManagerReview from './components/workflow/ProgramManagerReview';
+import ProgramManagerDashboard from './pages/ProgramManagerDashboard';
 // import ContractReview from './components/Workflow/ContractReview';
 import ContractApproval from './components/Workflow/ContractApproval';
 // import AdvancedSearch from './components/AdvancedSearch/AdvancedSearch';
 // import ActivityLogs from './components/Activity/ActivityLogs';
 import ContractReview from './components/workflow/ContractReview';
 import ProjectManagerActions from './components/workflow/ProjectManagerActions';
-import ProjectManagerDashboard from './pages/ProjectManagerDashboard'; // ADD THIS IMPORT
+import ProjectManagerDashboard from './pages/ProjectManagerDashboard';
+import ViewProgramManagerReviews from './components/workflow/ViewProgramManagerReviews';
+import DirectorApproval from './components/workflow/DirectorApproval';
+import ProgramManagerDirectorDecisions from './components/workflow/ProgramManagerDirectorDecisions';
 
 function App() {
   const [contracts, setContracts] = useState([]);
@@ -36,64 +42,64 @@ function App() {
     }
   }, []);
 
-const fetchContracts = async () => {
-  try {
-    setLoading(true);
-    const token = localStorage.getItem('token');
-    const userData = localStorage.getItem('user');
-    
-    console.log('Fetching contracts...', { token: !!token, user: userData });
-    
-    if (!token || !userData) {
-      console.log('No token or user data, skipping fetch');
-      return;
-    }
-    
-    // IMPORTANT: Add trailing slash to match backend endpoint
-    const response = await fetch(`${API_CONFIG.BASE_URL}/api/contracts/`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
+  const fetchContracts = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('token');
+      const userData = localStorage.getItem('user');
+      
+      console.log('Fetching contracts...', { token: !!token, user: userData });
+      
+      if (!token || !userData) {
+        console.log('No token or user data, skipping fetch');
+        return;
       }
-    });
-    
-    console.log('Response status:', response.status);
-    console.log('Response headers:', response.headers);
-    
-    if (response.ok) {
-      const data = await response.json();
-      console.log('Contracts fetched successfully:', data);
-      setContracts(data || []);
-    } else if (response.status === 401) {
-      console.log('Unauthorized, logging out');
-      handleLogout();
-    } else if (response.status === 405) {
-      console.log('405 Method Not Allowed - trying without trailing slash');
-      // Try without trailing slash as fallback
-      const fallbackResponse = await fetch(`${API_CONFIG.BASE_URL}/api/contracts`, {
+      
+      // IMPORTANT: Add trailing slash to match backend endpoint
+      const response = await fetch(`${API_CONFIG.BASE_URL}/api/contracts/`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
         }
       });
       
-      if (fallbackResponse.ok) {
-        const fallbackData = await fallbackResponse.json();
-        setContracts(fallbackData || []);
+      console.log('Response status:', response.status);
+      console.log('Response headers:', response.headers);
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Contracts fetched successfully:', data);
+        setContracts(data || []);
+      } else if (response.status === 401) {
+        console.log('Unauthorized, logging out');
+        handleLogout();
+      } else if (response.status === 405) {
+        console.log('405 Method Not Allowed - trying without trailing slash');
+        // Try without trailing slash as fallback
+        const fallbackResponse = await fetch(`${API_CONFIG.BASE_URL}/api/contracts`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (fallbackResponse.ok) {
+          const fallbackData = await fallbackResponse.json();
+          setContracts(fallbackData || []);
+        }
+      } else {
+        console.error('Failed to fetch contracts:', response.status);
       }
-    } else {
-      console.error('Failed to fetch contracts:', response.status);
+    } catch (error) {
+      console.error('Network error fetching contracts:', error);
+      // Don't logout on network errors
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    console.error('Network error fetching contracts:', error);
-    // Don't logout on network errors
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   const handleLogin = (userData, token) => {
     localStorage.setItem('token', token);
@@ -174,6 +180,86 @@ const fetchContracts = async () => {
                       </PrivateRoute>
                     } 
                   />
+                  
+                  {/* Program Manager Routes - MOVED INSIDE AUTHENTICATED BLOCK */}
+                  <Route 
+                    path="/review" 
+                    element={
+                      <PrivateRoute user={user} requiredRole="program_manager">
+                        <Review />
+                      </PrivateRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/review-contract/:contractId" 
+                    element={
+                      <PrivateRoute user={user} requiredRole="program_manager">
+                        <ProgramManagerReview />
+                      </PrivateRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/my-reviews" 
+                    element={
+                      <PrivateRoute user={user} requiredRole="program_manager">
+                        <ProgramManagerDashboard />
+                      </PrivateRoute>
+                    } 
+                  />
+                  
+                  {/* Director Routes */}
+                  <Route 
+                    path="/approvals" 
+                    element={
+                      <PrivateRoute user={user} requiredRole="director">
+                        <DirectorApproval />
+                      </PrivateRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/pending-approvals" 
+                    element={
+                      <PrivateRoute user={user} requiredRole="director">
+                        <DirectorApproval />
+                      </PrivateRoute>
+                    } 
+                  />
+                  
+                  {/* Old review routes (keep for compatibility) */}
+                  <Route 
+                    path="/review-old" 
+                    element={
+                      <PrivateRoute user={user} requiredRole="program_manager">
+                        <ContractReview />
+                      </PrivateRoute>
+                    } 
+                  />
+
+                  <Route 
+  path="/program-manager/director-decisions" 
+  element={
+    <PrivateRoute user={user} requiredRole="program_manager">
+      <ProgramManagerDirectorDecisions />
+    </PrivateRoute>
+  } 
+/>
+<Route 
+    path="/director-approval" 
+    element={
+      <PrivateRoute user={user} requiredRole="director">
+        <DirectorApproval />
+      </PrivateRoute>
+    } 
+  />
+                  <Route 
+  path="/contracts/:contractId/reviews" 
+  element={
+    <PrivateRoute user={user} requiredRole="project_manager">
+      <ViewProgramManagerReviews />
+    </PrivateRoute>
+  } 
+/>
+                  
                   <Route path="/login" element={<Navigate to="/dashboard" />} />
                   <Route path="/" element={<Navigate to="/dashboard" />} />
                 </Routes>
@@ -186,62 +272,6 @@ const fetchContracts = async () => {
           <Routes>
             <Route path="/login" element={<Login onLogin={handleLogin} />} />
             <Route path="*" element={<Navigate to="/login" />} />
-            <Route 
-              path="/review" 
-              element={
-                <PrivateRoute user={user} requiredRole="program_manager">
-                  <ContractReview />
-                </PrivateRoute>
-              } 
-            />
-            <Route 
-              path="/approvals" 
-              element={
-                <PrivateRoute user={user} requiredRole="director">
-                  <ContractApproval />
-                </PrivateRoute>
-              } 
-            />
-            <Route 
-              path="/my-reviews" 
-              element={
-                <PrivateRoute user={user} requiredRole="program_manager">
-                  <ContractReview />
-                </PrivateRoute>
-              } 
-            />
-            <Route 
-              path="/pending-approvals" 
-              element={
-                <PrivateRoute user={user} requiredRole="director">
-                  <ContractApproval />
-                </PrivateRoute>
-              } 
-            />
-            {/* <Route 
-              path="/advanced-search" 
-              element={
-                <PrivateRoute user={user}>
-                  <AdvancedSearch />
-                </PrivateRoute>
-              } 
-            /> */}
-            {/* <Route 
-              path="/activity" 
-              element={
-                <PrivateRoute user={user} requiredRole="director">
-                  <ActivityLogs />
-                </PrivateRoute>
-              } 
-            /> */}
-            {/* <Route 
-              path="/exports" 
-              element={
-                <PrivateRoute user={user}>
-                  <Exports />
-                </PrivateRoute>
-              } 
-            /> */}
           </Routes>
         )}
       </div>

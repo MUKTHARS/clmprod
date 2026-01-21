@@ -94,6 +94,25 @@ class RespondToCommentsRequest(BaseModel):
 class SubmitForReviewRequest(BaseModel):
     notes: Optional[str] = None
 
+
+class ReviewCommentSchema(BaseModel):
+    id: int
+    contract_id: int
+    comment: str
+    comment_type: str
+    flagged_risk: bool
+    flagged_issue: bool
+    change_request: Optional[dict] = None
+    recommendation: Optional[str] = None
+    status: str
+    created_at: datetime
+    user_name: str
+    user_role: str
+    
+    class Config:
+        from_attributes = True
+
+
 # from pydantic import BaseModel
 # from typing import Optional, Dict, Any, List
 # from datetime import datetime
