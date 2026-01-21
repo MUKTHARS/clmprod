@@ -123,7 +123,7 @@ def get_user_permissions(user: User) -> Dict[str, bool]:
             "can_view_activity_logs": True,
             "can_export": True,
             "can_manage_settings": True,
-            "can_view_dashboard": True,
+            "can_view_dashboard": True,  # Changed from False to True
             "can_view_contracts": True,
             "can_view_analytics": True,
             "can_view_reports": True,
@@ -146,7 +146,7 @@ def get_user_permissions(user: User) -> Dict[str, bool]:
             "can_view_activity_logs": False,
             "can_export": True,
             "can_manage_settings": False,
-            "can_view_dashboard": False,
+            "can_view_dashboard": True,  # Changed from False to True
             "can_view_contracts": True,
             "can_view_analytics": True,
             "can_view_reports": True,
@@ -181,6 +181,7 @@ def get_user_permissions(user: User) -> Dict[str, bool]:
             "can_view_help": True
         }
 
+        
 def log_activity(db: Session, user_id: int, activity_type: str, contract_id: Optional[int] = None, details: Optional[dict] = None, request: Optional[Request] = None):
     """Log user activity"""
     from app.auth_models import ActivityLog

@@ -25,7 +25,7 @@ import {
   Download
 } from 'lucide-react';
 import './Sidebar.css';
-
+import API_CONFIG from '../../config';
 const Sidebar = ({ user, onLogout }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -57,188 +57,143 @@ const Sidebar = ({ user, onLogout }) => {
     }
   }, [user]);
 
-  // Menu items based on permissions
-  const getMenuItems = () => {
-    const allItems = [
-      { 
-        id: 'dashboard', 
-        label: 'Dashboard', 
-        icon: LayoutDashboard, 
-        path: '/dashboard', 
-        permission: 'can_view_dashboard',
-        roles: ['project_manager', 'director', 'program_manager']
-      },
-      { 
-        id: 'contracts', 
-        label: 'Contracts', 
-        icon: FileText, 
-        path: '/contracts', 
-        permission: 'can_view_contracts',
-        roles: ['project_manager', 'program_manager', 'director']
-      },
-      { 
-        id: 'upload', 
-        label: 'Upload', 
-        icon: Upload, 
-        path: '/upload', 
-        permission: 'can_upload',
-        roles: ['project_manager', 'director']
-      },
-      { 
-        id: 'review', 
-        label: 'Review', 
-        icon: FileCheck, 
-        path: '/review', 
-        permission: 'can_review',
-        roles: ['program_manager'],
-        badge: true // Shows pending review count
-      },
-      { 
-        id: 'analytics', 
-        label: 'Analytics', 
-        icon: PieChart, 
-        path: '/analytics', 
-        permission: 'can_view_analytics',
-        roles: ['director', 'program_manager']
-      },
-      { 
-        id: 'reports', 
-        label: 'Reports', 
-        icon: FileBarChart, 
-        path: '/reports', 
-        permission: 'can_view_reports',
-        roles: ['director', 'program_manager']
-      },
-      { 
-        id: 'risk', 
-        label: 'Risk Analysis', 
-        icon: ShieldCheck, 
-        path: '/risk', 
-        permission: 'can_view_risk',
-        roles: ['director', 'program_manager']
-      },
-      { 
-        id: 'organizations', 
-        label: 'Organizations', 
-        icon: Building, 
-        path: '/organizations', 
-        permission: 'can_view_organizations',
-        roles: ['director']
-      },
-      { 
-        id: 'grants', 
-        label: 'Grants', 
-        icon: Wallet, 
-        path: '/grants', 
-        permission: 'can_view_grants',
-        roles: ['director', 'program_manager']
-      },
-      { 
-        id: 'approvals', 
-        label: 'Approvals', 
-        icon: Shield, 
-        path: '/approvals', 
-        permission: 'can_approve',
-        roles: ['director'],
-        badge: true // Shows pending approvals count
-      },
-      { 
-        id: 'users', 
-        label: 'Users', 
-        icon: Users, 
-        path: '/users', 
-        permission: 'can_manage_users',
-        roles: ['director']
-      },
-      { 
-        id: 'activity', 
-        label: 'Activity Logs', 
-        icon: History, 
-        path: '/activity', 
-        permission: 'can_view_activity_logs',
-        roles: ['director']
-      },
-      { 
-        id: 'knowledge', 
-        label: 'Knowledge Base', 
-        icon: BookOpen, 
-        path: '/knowledge', 
-        permission: 'can_view_knowledge',
-        roles: ['project_manager', 'program_manager', 'director']
-      },
-      { 
-        id: 'help', 
-        label: 'Help', 
-        icon: HelpCircle, 
-        path: '/help', 
-        permission: 'can_view_help',
-        roles: ['project_manager', 'program_manager', 'director']
-      },
-      { 
-        id: 'settings', 
-        label: 'Settings', 
-        icon: Settings, 
-        path: '/settings', 
-        permission: 'can_manage_settings',
-        roles: ['director']
-      },
-      // New workflow-specific items
-      { 
-        id: 'my-reviews', 
-        label: 'My Reviews', 
-        icon: MessageSquare, 
-        path: '/my-reviews', 
-        permission: 'can_review',
-        roles: ['program_manager']
-      },
-      { 
-        id: 'pending-approvals', 
-        label: 'Pending Approvals', 
-        icon: ShieldCheck, 
-        path: '/pending-approvals', 
-        permission: 'can_approve',
-        roles: ['director']
-      },
+const getMenuItems = () => {
+  const allItems = [
+    // COMMON ITEMS FOR ALL USERS
+    { 
+      id: 'dashboard', 
+      label: 'Dashboard', 
+      icon: LayoutDashboard, 
+      path: '/dashboard', 
+      permission: 'can_view_dashboard',
+      roles: ['project_manager', 'director', 'program_manager']  // All roles should have this
+    },
+    { 
+      id: 'contracts', 
+      label: 'Contracts', 
+      icon: FileText, 
+      path: '/contracts', 
+      permission: 'can_view_contracts',
+      roles: ['project_manager', 'program_manager', 'director']
+    },
+    { 
+      id: 'upload', 
+      label: 'Upload', 
+      icon: Upload, 
+      path: '/upload', 
+      permission: 'can_upload',
+      roles: ['project_manager', 'director']
+    },
+    
+    // PROGRAM MANAGER SPECIFIC ITEMS
+    { 
+      id: 'review', 
+      label: 'Review', 
+      icon: FileCheck, 
+      path: '/review', 
+      permission: 'can_review',
+      roles: ['program_manager'],
+      badge: true
+    },
+    // { 
+    //   id: 'my-reviews', 
+    //   label: 'My Reviews', 
+    //   icon: MessageSquare, 
+    //   path: '/my-reviews', 
+    //   permission: 'can_review',
+    //   roles: ['program_manager']
+    // },
+    { 
+      id: 'director-decisions', 
+      label: 'Director Decisions', 
+      icon: Shield, 
+      path: '/program-manager/director-decisions', 
+      permission: 'can_review',
+      roles: ['program_manager'],
+      badge: true
+    },
+    
+    // DIRECTOR SPECIFIC ITEMS
+    { 
+      id: 'approvals', 
+      label: 'Approvals', 
+      icon: Shield, 
+      path: '/approvals', 
+      permission: 'can_approve',
+      roles: ['director'],
+      badge: true
+    },
+    // { 
+    //   id: 'pending-approvals', 
+    //   label: 'Pending Approvals', 
+    //   icon: ShieldCheck, 
+    //   path: '/pending-approvals', 
+    //   permission: 'can_approve',
+    //   roles: ['director']
+    // },
+    { 
+      id: 'users', 
+      label: 'Users', 
+      icon: Users, 
+      path: '/users', 
+      permission: 'can_manage_users',
+      roles: ['director']
+    },
+  ];
 
-      { 
-        id: 'exports', 
-        label: 'Exports', 
-        icon: Download, 
-        path: '/exports', 
-        permission: 'can_export',
-        roles: ['project_manager', 'program_manager', 'director']
-      },
-      { 
-        id: 'advanced-search', 
-        label: 'Advanced Search', 
-        icon: Filter, 
-        path: '/advanced-search', 
-        permission: 'can_view_contracts',
-        roles: ['project_manager', 'program_manager', 'director']
-      },
-      { 
-  id: 'director-decisions', 
-  label: 'Director Decisions', 
-  icon: Shield, 
-  path: '/program-manager/director-decisions', 
-  permission: 'can_review',
-  roles: ['program_manager'],
-  badge: true // Shows count of decisions
-}
-    ];
-if (user?.role === 'director') {
-    return allItems;
+  const userRole = user?.role || '';
+  
+  if (!userRole) {
+    return [];
   }
-    // Filter items based on user permissions
-    return allItems.filter(item => {
-      // Check if user has the required permission
-      if (permissions[item.permission] !== undefined) {
-        return permissions[item.permission];
+  
+  // Always show dashboard, contracts for all roles
+  // Upload only for project_manager and director
+  // Other items based on role
+  return allItems.filter(item => {
+    // Dashboard is always visible to all roles
+    if (item.id === 'dashboard') {
+      return true;
+    }
+    
+    // Contracts is always visible to all roles
+    if (item.id === 'contracts') {
+      return true;
+    }
+    
+    // Upload is for project_manager and director
+    if (item.id === 'upload') {
+      return userRole === 'project_manager' || userRole === 'director';
+    }
+    
+    // Show role-specific items
+    return item.roles.includes(userRole);
+  });
+};
+
+// Also, update the useEffect for badge counts to only show for current role:
+useEffect(() => {
+  const fetchBadgeCounts = async () => {
+    const menuItems = getMenuItems();
+    const counts = {};
+    
+    // Only fetch counts for items that are visible to current user
+    for (const item of menuItems) {
+      if (item.badge) {
+        const count = await getPendingCounts(item.id);
+        if (count > 0) {
+          counts[item.id] = count;
+        }
       }
-      // Fallback to role-based filtering
-      return item.roles.includes(user?.role || '');
-    });
+    }
+    
+    setBadgeCounts(counts);
   };
+  
+  if (user) {
+    fetchBadgeCounts();
+  }
+}, [user]);
 
   // Get pending counts for badges
   const getPendingCounts = async (itemId) => {

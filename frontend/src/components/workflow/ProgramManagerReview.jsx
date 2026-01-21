@@ -316,9 +316,9 @@ function ProgramManagerReview() {
           <AlertCircle size={48} />
           <h2>Error Loading Contract</h2>
           <p>{error}</p>
-          <button className="btn-primary" onClick={() => navigate('/my-reviews')}>
+          {/* <button className="btn-primary" onClick={() => navigate('/my-reviews')}>
             Back to Reviews
-          </button>
+          </button> */}
         </div>
       </div>
     );
@@ -331,9 +331,9 @@ function ProgramManagerReview() {
           <AlertCircle size={48} />
           <h2>Contract Not Found</h2>
           <p>The contract you're trying to review could not be found.</p>
-          <button className="btn-primary" onClick={() => navigate('/my-reviews')}>
+          {/* <button className="btn-primary" onClick={() => navigate('/my-reviews')}>
             Back to Reviews
-          </button>
+          </button> */}
         </div>
       </div>
     );
@@ -358,12 +358,12 @@ function ProgramManagerReview() {
       {/* Header */}
       <div className="review-header">
         <div className="header-left">
-          <button className="btn-back" onClick={() => navigate('/my-reviews')}>
+          {/* <button className="btn-back" onClick={() => navigate('/my-reviews')}>
             <ArrowLeft size={20} />
             Back to Reviews
-          </button>
+          </button> */}
           <div className="header-content">
-            <h1>Review Contract</h1>
+            {/* <h1>Review Contract</h1> */}
             <div className="contract-info-header">
               <h2>{contract.grant_name || contract.filename}</h2>
               <div className="contract-meta-header">
@@ -404,36 +404,36 @@ function ProgramManagerReview() {
       {/* Review Stats */}
       <div className="review-stats">
         <div className="stat-item">
-          <div className="stat-icon">
+          {/* <div className="stat-icon">
             <MessageSquare size={18} />
-          </div>
+          </div> */}
           <div className="stat-content">
             <span className="stat-value">{commentStats.total}</span>
             <span className="stat-label">Total Comments</span>
           </div>
         </div>
         <div className="stat-item">
-          <div className="stat-icon">
+          {/* <div className="stat-icon">
             <AlertCircle size={18} />
-          </div>
+          </div> */}
           <div className="stat-content">
             <span className="stat-value">{commentStats.risks}</span>
             <span className="stat-label">Risks Flagged</span>
           </div>
         </div>
         <div className="stat-item">
-          <div className="stat-icon">
+          {/* <div className="stat-icon">
             <Flag size={18} />
-          </div>
+          </div> */}
           <div className="stat-content">
             <span className="stat-value">{commentStats.issues}</span>
             <span className="stat-label">Issues Flagged</span>
           </div>
         </div>
         <div className="stat-item">
-          <div className="stat-icon">
+          {/* <div className="stat-icon">
             <Clock size={18} />
-          </div>
+          </div> */}
           <div className="stat-content">
             <span className="stat-value">{commentStats.open}</span>
             <span className="stat-label">Open Items</span>

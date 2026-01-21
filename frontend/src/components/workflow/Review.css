@@ -1,4 +1,4 @@
-/* Review Page CSS */
+/* Review Page CSS - Program Manager Dashboard */
 .review-page {
   padding: 2rem;
   max-width: 100%;
@@ -26,12 +26,57 @@
   font-size: 1.1rem;
 }
 
+/* Stats Overview */
+.stats-overview {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.stat-card {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.stat-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.stat-value {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #2563eb;
+  margin-bottom: 0.5rem;
+}
+
+.stat-label {
+  color: #6b7280;
+  font-size: 0.875rem;
+  text-align: center;
+}
+
+/* Review Controls */
 .review-controls {
   display: flex;
   gap: 1rem;
   margin-bottom: 2rem;
   align-items: center;
   flex-wrap: wrap;
+  background: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .search-container {
@@ -66,6 +111,7 @@
 .status-filters {
   display: flex;
   gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .status-filter-btn {
@@ -116,6 +162,7 @@
   cursor: not-allowed;
 }
 
+/* Contracts Section */
 .contracts-section {
   background: white;
   border-radius: 12px;
@@ -145,11 +192,13 @@
   padding: 1.5rem;
   transition: all 0.2s ease;
   background: white;
+  cursor: pointer;
 }
 
 .contract-card:hover {
   border-color: #d1d5db;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
 }
 
 .card-header {
@@ -239,6 +288,10 @@
   margin-bottom: 1rem;
 }
 
+.contract-id .contract-number {
+  color: #9ca3af;
+}
+
 .contract-details {
   display: flex;
   flex-direction: column;
@@ -254,16 +307,25 @@
   font-size: 0.875rem;
 }
 
+.contract-purpose {
+  margin-top: 1rem;
+}
+
 .contract-purpose p {
   color: #6b7280;
   font-size: 0.875rem;
   line-height: 1.5;
   margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .card-footer {
   display: flex;
   gap: 0.5rem;
+  justify-content: flex-end;
 }
 
 .btn-view, .btn-review, .btn-download {
@@ -277,6 +339,7 @@
   gap: 0.5rem;
   transition: all 0.2s;
   border: none;
+  text-decoration: none;
 }
 
 .btn-view {
@@ -308,24 +371,25 @@
   border-color: #9ca3af;
 }
 
-/* Loading State */
-.loading-state {
+/* Loading and Empty States */
+.loading-page {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 4rem;
+  min-height: 60vh;
   text-align: center;
 }
 
-.loading-state .spinner {
-  animation: spin 1s linear infinite;
-  color: #3b82f6;
+.loading-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
 }
 
-.loading-state p {
-  color: #6b7280;
-  margin-top: 1rem;
+.spinning {
+  animation: spin 1s linear infinite;
 }
 
 @keyframes spin {
@@ -335,4 +399,106 @@
   to {
     transform: rotate(360deg);
   }
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  text-align: center;
+  color: #6b7280;
+}
+
+.empty-state svg {
+  color: #9ca3af;
+  margin-bottom: 1.5rem;
+  opacity: 0.5;
+}
+
+.empty-state h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: #374151;
+}
+
+.empty-state p {
+  margin-bottom: 1.5rem;
+  max-width: 400px;
+  line-height: 1.5;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .contracts-grid {
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .review-page {
+    padding: 1rem;
+  }
+  
+  .stats-overview {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .review-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .search-container {
+    min-width: 100%;
+  }
+  
+  .status-filters {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .contracts-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .contract-card {
+    padding: 1.25rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .stats-overview {
+    grid-template-columns: 1fr;
+  }
+  
+  .card-footer {
+    flex-direction: column;
+  }
+  
+  .btn-view, .btn-review, .btn-download {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* Ensure proper spacing */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
 }

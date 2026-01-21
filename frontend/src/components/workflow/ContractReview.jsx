@@ -92,7 +92,7 @@ function ContractReview() {
     <div className="workflow-container">
       <div className="workflow-header">
         <h1>Contract Review</h1>
-        <p>Review and provide feedback on submitted contracts</p>
+        {/* <p>Review and provide feedback on submitted contracts</p> */}
       </div>
 
       <div className="workflow-content">

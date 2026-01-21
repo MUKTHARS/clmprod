@@ -226,3 +226,98 @@ CREATE INDEX idx_review_comments_contract_id ON review_comments(contract_id);
 CREATE INDEX idx_review_comments_user_id ON review_comments(user_id);
 CREATE INDEX idx_review_comments_status ON review_comments(status);
 CREATE INDEX idx_review_comments_flagged ON review_comments(flagged_risk, flagged_issue);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+-- Add to your initdbwithroles.sql or run separately
+
+-- Update review_comments table to support Jira-like features
+ALTER TABLE review_comments 
+ADD COLUMN IF NOT EXISTS parent_comment_id INTEGER REFERENCES review_comments(id),
+ADD COLUMN IF NOT EXISTS thread_id VARCHAR(50),
+ADD COLUMN IF NOT EXISTS is_resolution BOOLEAN DEFAULT FALSE,
+ADD COLUMN IF NOT EXISTS resolved_at TIMESTAMP WITH TIME ZONE,
+ADD COLUMN IF NOT EXISTS resolved_by INTEGER REFERENCES users(id),
+ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'open';
+
+-- Create comment_tags table
+CREATE TABLE IF NOT EXISTS comment_tags (
+    id SERIAL PRIMARY KEY,
+    comment_id INTEGER NOT NULL REFERENCES review_comments(id) ON DELETE CASCADE,
+    tag_type VARCHAR(50) NOT NULL,
+    tag_value VARCHAR(100) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    created_by INTEGER REFERENCES users(id)
+);
+
+-- Create comment_reactions table
+CREATE TABLE IF NOT EXISTS comment_reactions (
+    id SERIAL PRIMARY KEY,
+    comment_id INTEGER NOT NULL REFERENCES review_comments(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    reaction_type VARCHAR(20) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(comment_id, user_id, reaction_type)
+);
+
+-- Create comment_attachments table
+CREATE TABLE IF NOT EXISTS comment_attachments (
+    id SERIAL PRIMARY KEY,
+    comment_id INTEGER NOT NULL REFERENCES review_comments(id) ON DELETE CASCADE,
+    filename VARCHAR(255) NOT NULL,
+    file_path VARCHAR(500) NOT NULL,
+    file_size INTEGER,
+    mime_type VARCHAR(100),
+    uploaded_by INTEGER REFERENCES users(id),
+    uploaded_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create comment_mentions table
+CREATE TABLE IF NOT EXISTS comment_mentions (
+    id SERIAL PRIMARY KEY,
+    comment_id INTEGER NOT NULL REFERENCES review_comments(id) ON DELETE CASCADE,
+    mentioned_user_id INTEGER NOT NULL REFERENCES users(id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    notified BOOLEAN DEFAULT FALSE
+);
+
+-- Create indexes for performance
+CREATE INDEX idx_comment_tags_comment_id ON comment_tags(comment_id);
+CREATE INDEX idx_comment_reactions_comment_id ON comment_reactions(comment_id);
+CREATE INDEX idx_comment_attachments_comment_id ON comment_attachments(comment_id);
+CREATE INDEX idx_comment_mentions_comment_id ON comment_mentions(comment_id);
+CREATE INDEX idx_review_comments_thread ON review_comments(thread_id);
+CREATE INDEX idx_review_comments_parent ON review_comments(parent_comment_id);
+
+-- Update the existing review_comments to add thread_id if not exists
+UPDATE review_comments 
+SET thread_id = CONCAT('thread_', id::text) 
+WHERE thread_id IS NULL;

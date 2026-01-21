@@ -540,3 +540,38 @@ textarea:focus {
 .director-stat-value.low {
   color: #10b981;
 }
+
+.main-content {
+  flex: 1;
+  margin-left: 240px; /* Sidebar width */
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.content-area {
+  flex: 1;
+  padding: 1.5rem;
+  overflow-y: auto;
+  background-color: #f9fafb;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .sidebar {
+    width: 64px;
+  }
+  
+  .main-content {
+    margin-left: 64px;
+  }
+}
+
+/* Ensure sidebar doesn't show on login page */
+.login-page .sidebar {
+  display: none;
+}
+
+.login-page .main-content {
+  margin-left: 0;
+}
