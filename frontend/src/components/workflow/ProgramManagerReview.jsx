@@ -38,7 +38,8 @@ import {
   ShieldAlert,
   ThumbsUp,
   ThumbsDown,
-  FileWarning
+  FileWarning,
+  Info
 } from 'lucide-react';
 import API_CONFIG from '../../config';
 import './ProgramManagerReview.css';
@@ -68,6 +69,24 @@ function ProgramManagerReview() {
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  // Generate unique key for each comment to avoid duplicate keys
+  const generateCommentKey = (comment) => {
+    // Use id + timestamp to ensure uniqueness
+    if (comment.id && comment.created_at) {
+      return `${comment.id}_${comment.created_at}`;
+    }
+    // Fallback for comments without id
+    if (comment.id) {
+      return `comment_${comment.id}`;
+    }
+    // Fallback for comments with timestamp only
+    if (comment.created_at) {
+      return `comment_${comment.created_at}`;
+    }
+    // Final fallback - generate random key (should rarely happen)
+    return `comment_${Math.random().toString(36).substr(2, 9)}`;
+  };
 
   useEffect(() => {
     if (contractId) {
@@ -115,7 +134,24 @@ function ProgramManagerReview() {
 
       if (response.ok) {
         const data = await response.json();
-        setComments(data.comments || []);
+        
+        // Debug: Check for duplicate IDs
+        const commentIds = data.comments?.map(c => c.id) || [];
+        const duplicateIds = commentIds.filter((id, index) => commentIds.indexOf(id) !== index);
+        
+        if (duplicateIds.length > 0) {
+          console.warn('Found duplicate comment IDs:', duplicateIds);
+          
+          // Remove duplicates by creating unique IDs
+          const uniqueComments = (data.comments || []).map((comment, index) => ({
+            ...comment,
+            uniqueId: generateCommentKey(comment)
+          }));
+          
+          setComments(uniqueComments);
+        } else {
+          setComments(data.comments || []);
+        }
       }
     } catch (error) {
       console.error('Failed to fetch comments:', error);
@@ -545,44 +581,71 @@ function ProgramManagerReview() {
               ) : (
                 <div className="comments-container">
                   {comments.map((comment) => {
-                    const Icon = comment.comment_type === 'risk' ? AlertCircle :
+                    // Check if this is a Project Manager comment
+                    const isProjectManager = comment.user_role === "project_manager";
+                    const isPmNote = comment.comment_type && (
+                      comment.comment_type.includes('project_manager') || 
+                      comment.comment_type === 'project_manager_note' || 
+                      comment.comment_type === 'project_manager_submission'
+                    );
+                    
+                    // Choose icon based on comment type
+                    const Icon = isPmNote ? User :
+                                comment.comment_type === 'risk' ? AlertCircle :
                                 comment.comment_type === 'financial' ? DollarSign :
                                 comment.comment_type === 'compliance' ? Shield :
                                 comment.comment_type === 'legal' ? FileText :
                                 MessageSquare;
                     
+                    // Use unique key instead of just comment.id
+                    const uniqueKey = comment.uniqueId || generateCommentKey(comment);
+                    
                     return (
-                      <div key={comment.id} className={`comment-card ${comment.status}`}>
+                      <div key={uniqueKey} className={`comment-card ${comment.status} ${isProjectManager ? 'project-manager-comment' : ''}`}>
                         <div className="comment-header">
                           <div className="commenter-info">
                             <div className="commenter-avatar">
                               <User size={14} />
                             </div>
                             <div className="commenter-details">
-                              <span className="commenter-name">{comment.user_name}</span>
-                              <span className="commenter-role">{comment.user_role}</span>
+                              <span className="commenter-name">{comment.user_name || 'Unknown User'}</span>
+                              <span className={`commenter-role ${comment.user_role}`}>
+                                {comment.user_role === "project_manager" ? "Project Manager" : 
+                                 comment.user_role === "program_manager" ? "Program Manager" : 
+                                 comment.user_role === "director" ? "Director" : 
+                                 comment.user_role || "Unknown Role"}
+                              </span>
                               <span className="comment-date">
-                                {new Date(comment.created_at).toLocaleDateString()}
+                                {comment.created_at ? new Date(comment.created_at).toLocaleDateString() : 'Unknown date'}
                               </span>
                             </div>
                           </div>
                           <div className="comment-badges">
-                            <div className="comment-type-badge">
+                            <div className={`comment-type-badge ${comment.comment_type}`}>
                               <Icon size={12} />
-                              <span>{comment.comment_type}</span>
+                              <span>
+                                {comment.comment_type === 'project_manager_note' ? 'PM Note' :
+                                 comment.comment_type === 'project_manager_submission' ? 'PM Submission' :
+                                 comment.comment_type === 'review' ? 'Review' :
+                                 comment.comment_type === 'compliance' ? 'Compliance' :
+                                 comment.comment_type || 'General'}
+                              </span>
                             </div>
+                            
                             {comment.flagged_risk && (
                               <span className="badge risk">
                                 <Flag size={10} />
                                 <span>Risk</span>
                               </span>
                             )}
+                            
                             {comment.flagged_issue && (
                               <span className="badge issue">
                                 <AlertCircle size={10} />
                                 <span>Issue</span>
                               </span>
                             )}
+                            
                             {comment.recommendation && (
                               <span className={`badge recommendation ${comment.recommendation}`}>
                                 {comment.recommendation === 'approve' && <ThumbsUp size={10} />}
@@ -596,14 +659,25 @@ function ProgramManagerReview() {
                             )}
                           </div>
                         </div>
+                        
                         <div className="comment-body">
                           <p>{comment.comment}</p>
+                          
+                          {/* Show special label for PM comments */}
+                          {isProjectManager && (
+                            <div className="pm-comment-label">
+                              <Info size={12} />
+                              <span>Comment from the Project Manager who created this contract</span>
+                            </div>
+                          )}
                         </div>
+                        
                         <div className="comment-footer">
                           <div className="comment-status">
                             <span className={`status-dot ${comment.status}`} />
                             <span className="status-text">{comment.status}</span>
                           </div>
+                          
                           {comment.resolution_response && (
                             <div className="comment-resolution">
                               <strong>Resolution:</strong> {comment.resolution_response}
@@ -686,7 +760,8 @@ function ProgramManagerReview() {
                   </button>
                   <button
                     className={`recommendation-btn ${reviewSummary.overall_recommendation === 'modify' ? 'selected' : ''}`}
-                    onClick={() => setReviewSummary({...reviewSummary, overall_recommendation: 'modify'})}
+                    // onClick={() => setReviewSummary({...reviewSummary, overall_recommendation: 'modify')}
+                  onClick={() => setReviewSummary({...reviewSummary, overall_recommendation: 'modify'})}
                   >
                     <div className="recommendation-icon">
                       <Edit size={20} />
@@ -727,7 +802,7 @@ function ProgramManagerReview() {
                 </div>
                 <div className="issues-list">
                   {reviewSummary.key_issues.map((issue, index) => (
-                    <div key={index} className="issue-item">
+                    <div key={`issue_${index}_${Date.now()}`} className="issue-item">
                       <input
                         type="text"
                         value={issue}

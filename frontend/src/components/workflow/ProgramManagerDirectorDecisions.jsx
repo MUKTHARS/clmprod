@@ -22,7 +22,10 @@ import {
   BarChart3,
   MessageSquare,
   Clock,
-  Award
+  Award,
+  ExternalLink,
+  ShieldCheck,
+  FileCheck
 } from 'lucide-react';
 import API_CONFIG from '../../config';
 
@@ -31,6 +34,9 @@ function ProgramManagerDirectorDecisions() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [selectedReview, setSelectedReview] = useState(null); // ADDED THIS
+  const [showReviewModal, setShowReviewModal] = useState(false); // ADDED THIS
+  const [directorReviewLoading, setDirectorReviewLoading] = useState(false); // ADDED THIS
   const [stats, setStats] = useState({
     approved: 0,
     rejected: 0,
@@ -61,6 +67,33 @@ function ProgramManagerDirectorDecisions() {
       console.error('Failed to fetch director decisions:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const viewDirectorReview = async (contractId) => {
+    try {
+      setDirectorReviewLoading(true);
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_CONFIG.BASE_URL}/api/contracts/${contractId}/program-manager/director-review`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (response.ok) {
+        const reviewData = await response.json();
+        console.log('Director review details:', reviewData);
+        setSelectedReview(reviewData);
+        setShowReviewModal(true);
+      } else {
+        const errorData = await response.json();
+        alert(`Error: ${errorData.detail || 'Failed to load director review'}`);
+      }
+    } catch (error) {
+      console.error('Failed to fetch director review:', error);
+      alert('Failed to load director review details');
+    } finally {
+      setDirectorReviewLoading(false);
     }
   };
 
@@ -111,6 +144,15 @@ function ProgramManagerDirectorDecisions() {
     
     return true;
   });
+
+  const getRecommendationColor = (recommendation) => {
+    switch (recommendation) {
+      case 'approve': return '#16a34a';
+      case 'reject': return '#dc2626';
+      case 'modify': return '#d97706';
+      default: return '#6b7280';
+    }
+  };
 
   if (loading) {
     return (
@@ -169,7 +211,7 @@ function ProgramManagerDirectorDecisions() {
         <div className="stat-card">
           <div className="stat-content">
             <span className="stat-value">
-              {contracts.filter(c => c.director_decision).length}
+              {contracts.filter(c => c.director_decision_comments).length}
             </span>
             <span className="stat-label">With Comments</span>
           </div>
@@ -217,7 +259,7 @@ function ProgramManagerDirectorDecisions() {
           </div>
         ) : (
           <div className="contracts-grid">
-            {filteredContracts.map(contract => (
+            {filteredContracts.map((contract) => (
               <div key={contract.id} className="decision-card">
                 {/* Header with status */}
                 <div className="card-header">
@@ -269,13 +311,19 @@ function ProgramManagerDirectorDecisions() {
                     <div className="comparison-row">
                       <div className="comparison-item">
                         <span className="comparison-label">Your Recommendation:</span>
-                        <span className={`recommendation-badge ${contract.program_manager_recommendation}`}>
+                        <span 
+                          className="recommendation-badge"
+                          style={{ backgroundColor: getRecommendationColor(contract.program_manager_recommendation) }}
+                        >
                           {contract.program_manager_recommendation}
                         </span>
                       </div>
                       <div className="comparison-item">
                         <span className="comparison-label">Director Decision:</span>
-                        <span className={`decision-badge ${contract.director_decision_status}`}>
+                        <span 
+                          className="decision-badge"
+                          style={{ backgroundColor: getRecommendationColor(contract.director_decision_status) }}
+                        >
                           {contract.director_decision_status}
                         </span>
                       </div>
@@ -297,21 +345,23 @@ function ProgramManagerDirectorDecisions() {
                     </div>
                   </div>
 
-                  {/* Director Comments */}
+                  {/* Director Comments Preview */}
                   {contract.director_decision_comments && (
-                    <div className="director-comments">
+                    <div className="director-comments-preview">
                       <h4>Director's Comments:</h4>
-                      <div className="comments-box">
-                        <p>{contract.director_decision_comments}</p>
-                        <div className="comments-footer">
-                          <span className="comment-author">
-                            <User size={12} />
-                            {contract.director_name || 'Director'}
-                          </span>
-                          <span className="comment-date">
-                            {formatDate(contract.director_decided_at)}
-                          </span>
-                        </div>
+                      <div className="comments-preview-box">
+                        <p>{contract.director_decision_comments.length > 100 
+                          ? `${contract.director_decision_comments.substring(0, 100)}...` 
+                          : contract.director_decision_comments}
+                        </p>
+                        <button 
+                          className="btn-view-more"
+                          onClick={() => viewDirectorReview(contract.id)}
+                          disabled={directorReviewLoading}
+                        >
+                          {directorReviewLoading ? 'Loading...' : 'View Full Review'}
+                          <ExternalLink size={12} />
+                        </button>
                       </div>
                     </div>
                   )}
@@ -351,10 +401,15 @@ function ProgramManagerDirectorDecisions() {
                   
                   <button 
                     className="btn-secondary"
-                    onClick={() => navigate(`/contracts/${contract.id}/reviews`)}
+                    onClick={() => viewDirectorReview(contract.id)}
+                    disabled={directorReviewLoading}
                   >
-                    <MessageSquare size={16} />
-                    View Reviews
+                    {directorReviewLoading ? (
+                      <Loader2 size={14} className="spinning" />
+                    ) : (
+                      <FileCheck size={14} />
+                    )}
+                    View Director Review
                   </button>
                 </div>
               </div>
@@ -363,470 +418,204 @@ function ProgramManagerDirectorDecisions() {
         )}
       </div>
 
-      {/* Add CSS styles */}
-      <style jsx>{`
-        .program-manager-decisions {
-          padding: 2rem;
-          max-width: 100%;
-          min-height: 100vh;
-          background: #f9fafb;
-        }
-        
-        .decisions-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          margin-bottom: 2rem;
-        }
-        
-        .header-left h1 {
-          font-size: 2rem;
-          font-weight: 700;
-          margin-bottom: 0.5rem;
-          color: #1f2937;
-        }
-        
-        .page-subtitle {
-          color: #6b7280;
-          font-size: 1.1rem;
-        }
-        
-        .stats-overview {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-          gap: 1.5rem;
-          margin-bottom: 2rem;
-        }
-        
-        .stat-card {
-          background: white;
-          border-radius: 12px;
-          padding: 1.5rem;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        }
-        
-        .stat-content {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-        }
-        
-        .stat-value {
-          font-size: 2.5rem;
-          font-weight: 700;
-          color: #2563eb;
-          margin-bottom: 0.5rem;
-        }
-        
-        .stat-label {
-          color: #6b7280;
-          font-size: 0.875rem;
-          text-align: center;
-        }
-        
-        .search-filters {
-          display: flex;
-          gap: 1rem;
-          margin-bottom: 2rem;
-          align-items: center;
-        }
-        
-        .search-container {
-          flex: 1;
-          position: relative;
-        }
-        
-        .search-icon {
-          position: absolute;
-          left: 1rem;
-          top: 50%;
-          transform: translateY(-50%);
-          color: #9ca3af;
-        }
-        
-        .search-input {
-          width: 100%;
-          padding: 0.75rem 1rem 0.75rem 3rem;
-          border: 1px solid #d1d5db;
-          border-radius: 8px;
-          font-size: 0.875rem;
-          transition: border-color 0.2s;
-        }
-        
-        .search-input:focus {
-          outline: none;
-          border-color: #3b82f6;
-          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-        }
-        
-        .filter-container {
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-          padding: 0.75rem 1rem;
-          background: white;
-          border: 1px solid #d1d5db;
-          border-radius: 8px;
-          color: #6b7280;
-        }
-        
-        .filter-select {
-          border: none;
-          background: none;
-          color: #374151;
-          font-size: 0.875rem;
-          cursor: pointer;
-          outline: none;
-        }
-        
-        .contracts-section {
-          background: white;
-          border-radius: 12px;
-          padding: 2rem;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        }
-        
-        .section-header h2 {
-          font-size: 1.5rem;
-          margin-bottom: 1.5rem;
-          color: #1f2937;
-        }
-        
-        .contracts-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-          gap: 1.5rem;
-        }
-        
-        .decision-card {
-          border: 1px solid #e5e7eb;
-          border-radius: 12px;
-          overflow: hidden;
-          transition: all 0.3s ease;
-        }
-        
-        .decision-card:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-          border-color: #d1d5db;
-        }
-        
-        .card-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 1.25rem;
-          background: #f9fafb;
-          border-bottom: 1px solid #e5e7eb;
-        }
-        
-        .status-badge {
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-          padding: 0.5rem 1rem;
-          border-radius: 9999px;
-          font-size: 0.875rem;
-          font-weight: 500;
-        }
-        
-        .status-badge.approved {
-          background: #dcfce7;
-          color: #166534;
-        }
-        
-        .status-badge.rejected {
-          background: #fee2e2;
-          color: #991b1b;
-        }
-        
-        .card-meta {
-          display: flex;
-          gap: 0.75rem;
-        }
-        
-        .meta-item {
-          display: flex;
-          align-items: center;
-          gap: 0.25rem;
-          color: #6b7280;
-          font-size: 0.75rem;
-        }
-        
-        .card-content {
-          padding: 1.5rem;
-        }
-        
-        .contract-icon {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          width: 48px;
-          height: 48px;
-          background: #eff6ff;
-          border-radius: 12px;
-          margin-bottom: 1rem;
-          color: #3b82f6;
-        }
-        
-        .contract-name {
-          font-size: 1.25rem;
-          font-weight: 600;
-          margin-bottom: 1rem;
-          color: #1f2937;
-        }
-        
-        .contract-meta {
-          display: flex;
-          gap: 1rem;
-          margin-bottom: 1.5rem;
-        }
-        
-        .contract-meta .meta-item {
-          font-size: 0.875rem;
-          color: #4b5563;
-        }
-        
-        .decision-comparison {
-          background: #f9fafb;
-          border-radius: 8px;
-          padding: 1.25rem;
-          margin-bottom: 1.5rem;
-        }
-        
-        .comparison-row {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 1rem;
-          margin-bottom: 1rem;
-        }
-        
-        .comparison-item {
-          display: flex;
-          flex-direction: column;
-          gap: 0.5rem;
-        }
-        
-        .comparison-label {
-          font-size: 0.75rem;
-          color: #6b7280;
-          font-weight: 500;
-        }
-        
-        .recommendation-badge,
-        .decision-badge {
-          padding: 0.5rem;
-          border-radius: 6px;
-          font-size: 0.875rem;
-          font-weight: 500;
-          text-align: center;
-          text-transform: capitalize;
-        }
-        
-        .recommendation-badge.approve,
-        .decision-badge.approve {
-          background: #dcfce7;
-          color: #166534;
-        }
-        
-        .recommendation-badge.reject,
-        .decision-badge.reject {
-          background: #fee2e2;
-          color: #991b1b;
-        }
-        
-        .recommendation-badge.modify {
-          background: #fef3c7;
-          color: #92400e;
-        }
-        
-        .outcome-indicator {
-          padding: 0.75rem;
-          border-radius: 6px;
-          font-size: 0.875rem;
-        }
-        
-        .outcome-match {
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-          color: #059669;
-          background: #f0fdf4;
-          padding: 0.5rem;
-          border-radius: 6px;
-        }
-        
-        .outcome-mismatch {
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-          color: #d97706;
-          background: #fffbeb;
-          padding: 0.5rem;
-          border-radius: 6px;
-        }
-        
-        .director-comments {
-          margin-bottom: 1.5rem;
-        }
-        
-        .director-comments h4 {
-          font-size: 0.875rem;
-          font-weight: 600;
-          margin-bottom: 0.75rem;
-          color: #374151;
-        }
-        
-        .comments-box {
-          background: white;
-          border: 1px solid #e5e7eb;
-          border-radius: 8px;
-          padding: 1rem;
-        }
-        
-        .comments-box p {
-          color: #4b5563;
-          font-size: 0.875rem;
-          line-height: 1.5;
-          margin-bottom: 1rem;
-        }
-        
-        .comments-footer {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding-top: 0.75rem;
-          border-top: 1px solid #f3f4f6;
-        }
-        
-        .comment-author {
-          display: flex;
-          align-items: center;
-          gap: 0.25rem;
-          font-size: 0.75rem;
-          color: #6b7280;
-        }
-        
-        .comment-date {
-          font-size: 0.75rem;
-          color: #9ca3af;
-        }
-        
-        .additional-info {
-          display: flex;
-          gap: 1rem;
-          margin-bottom: 1.5rem;
-        }
-        
-        .info-item {
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-          padding: 0.5rem 0.75rem;
-          background: #f3f4f6;
-          border-radius: 6px;
-          font-size: 0.75rem;
-          color: #4b5563;
-        }
-        
-        .card-footer {
-          display: flex;
-          gap: 1rem;
-          padding: 1.5rem;
-          background: #f9fafb;
-          border-top: 1px solid #e5e7eb;
-        }
-        
-        .btn-primary,
-        .btn-secondary {
-          flex: 1;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 0.5rem;
-          padding: 0.75rem;
-          border-radius: 8px;
-          font-weight: 500;
-          cursor: pointer;
-          transition: all 0.2s;
-          border: none;
-          font-size: 0.875rem;
-        }
-        
-        .btn-primary {
-          background: #3b82f6;
-          color: white;
-        }
-        
-        .btn-primary:hover {
-          background: #2563eb;
-        }
-        
-        .btn-secondary {
-          background: white;
-          color: #374151;
-          border: 1px solid #d1d5db;
-        }
-        
-        .btn-secondary:hover {
-          background: #f3f4f6;
-          border-color: #9ca3af;
-        }
-        
-        .empty-state {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          padding: 3rem;
-          text-align: center;
-          color: #6b7280;
-        }
-        
-        .empty-state svg {
-          color: #9ca3af;
-          margin-bottom: 1rem;
-        }
-        
-        .empty-state h3 {
-          font-size: 1.25rem;
-          margin-bottom: 0.5rem;
-          color: #374151;
-        }
-        
-        .empty-state p {
-          margin-bottom: 1.5rem;
-        }
-        
-        .loading-page {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          min-height: 70vh;
-          text-align: center;
-        }
-        
-        .loading-content {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 1rem;
-        }
-        
-        .spinning {
-          animation: spin 1s linear infinite;
-        }
-        
-        @keyframes spin {
-          from {
-            transform: rotate(0deg);
-          }
-          to {
-            transform: rotate(360deg);
-          }
-        }
-      `}</style>
+      {/* Director Review Modal */}
+      {showReviewModal && selectedReview && (
+        <div className="modal-overlay">
+          <div className="modal-content director-review-modal">
+            <div className="modal-header">
+              <h3>Director Review Details</h3>
+              <button 
+                className="modal-close"
+                onClick={() => {
+                  setShowReviewModal(false);
+                  setSelectedReview(null);
+                }}
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="modal-body">
+              <div className="review-header">
+                <div className="contract-info">
+                  <h4>{selectedReview.contract_info.grant_name}</h4>
+                  <div className="contract-meta">
+                    <span>Status: {selectedReview.contract_status}</span>
+                    <span>Grantor: {selectedReview.contract_info.grantor}</span>
+                    <span>Amount: {formatCurrency(selectedReview.contract_info.total_amount)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Program Manager Review */}
+              {selectedReview.program_manager_review && (
+                <div className="review-section">
+                  <h5>
+                    <ShieldCheck size={18} />
+                    Your Review Summary
+                  </h5>
+                  <div className="review-card">
+                    <div className="review-meta">
+                      <span>
+                        <User size={12} />
+                        {selectedReview.program_manager_review.reviewed_by_name || 'You'}
+                      </span>
+                      <span>
+                        <Calendar size={12} />
+                        {formatDate(selectedReview.program_manager_review.reviewed_at)}
+                      </span>
+                    </div>
+                    <div className="review-content">
+                      <div className="recommendation-display">
+                        <strong>Your Recommendation:</strong>
+                        <span 
+                          className="recommendation-badge"
+                          style={{ backgroundColor: getRecommendationColor(selectedReview.program_manager_review.overall_recommendation) }}
+                        >
+                          {selectedReview.program_manager_review.overall_recommendation}
+                        </span>
+                      </div>
+                      {selectedReview.program_manager_review.review_summary && (
+                        <div className="summary-section">
+                          <strong>Your Summary:</strong>
+                          <p>{selectedReview.program_manager_review.review_summary}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Director Decision */}
+              {selectedReview.director_decision ? (
+                <div className="review-section">
+                  <h5>
+                    <Shield size={18} />
+                    Director's Final Decision
+                  </h5>
+                  <div className="director-decision-card">
+                    <div className="decision-header">
+                      <div className="decision-maker">
+                        <User size={14} />
+                        <span>{selectedReview.director_decision.approved_by_name || 'Director'}</span>
+                      </div>
+                      <div className="decision-date">
+                        <Calendar size={14} />
+                        <span>{formatDate(selectedReview.director_decision.approved_at)}</span>
+                      </div>
+                    </div>
+                    <div className="decision-content">
+                      <div className="final-decision">
+                        <strong>Final Decision:</strong>
+                        <span 
+                          className="decision-badge"
+                          style={{ backgroundColor: getRecommendationColor(selectedReview.director_decision.final_decision) }}
+                        >
+                          {selectedReview.director_decision.final_decision}
+                        </span>
+                      </div>
+                      {selectedReview.director_decision.approval_comments && (
+                        <div className="director-comments">
+                          <strong>Director's Comments:</strong>
+                          <p>{selectedReview.director_decision.approval_comments}</p>
+                        </div>
+                      )}
+                      <div className="additional-requirements">
+                        {selectedReview.director_decision.risk_accepted && (
+                          <div className="requirement-item">
+                            <CheckCircle size={14} />
+                            <span>Risk Accepted</span>
+                          </div>
+                        )}
+                        {selectedReview.director_decision.business_sign_off && (
+                          <div className="requirement-item">
+                            <CheckCircle size={14} />
+                            <span>Business Sign-off</span>
+                          </div>
+                        )}
+                        {selectedReview.director_decision.contract_locked && (
+                          <div className="requirement-item">
+                            <Lock size={14} />
+                            <span>Contract Locked</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="review-section">
+                  <h5>
+                    <Shield size={18} />
+                    Director Decision
+                  </h5>
+                  <div className="no-decision">
+                    <AlertCircle size={24} />
+                    <p>No director decision available for this contract yet.</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Review Comments */}
+              {selectedReview.review_comments && selectedReview.review_comments.length > 0 && (
+                <div className="review-section">
+                  <h5>
+                    <MessageSquare size={18} />
+                    All Review Comments ({selectedReview.review_comments.length})
+                  </h5>
+                  <div className="comments-list">
+                    {selectedReview.review_comments.map((comment, index) => (
+                      <div key={index} className="comment-item">
+                        <div className="comment-header">
+                          <span className="commenter">
+                            <User size={12} />
+                            {comment.user_name} ({comment.user_role})
+                          </span>
+                          <span className="comment-date">
+                            {formatDate(comment.created_at)}
+                          </span>
+                        </div>
+                        <div className="comment-body">
+                          <p>{comment.comment}</p>
+                          <div className="comment-tags">
+                            {comment.comment_type && (
+                              <span className="tag type">{comment.comment_type}</span>
+                            )}
+                            {comment.flagged_risk && (
+                              <span className="tag risk">
+                                <AlertCircle size={10} />
+                                Risk
+                              </span>
+                            )}
+                            {comment.flagged_issue && (
+                              <span className="tag issue">
+                                <AlertCircle size={10} />
+                                Issue
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            <div className="modal-actions">
+              <button
+                className="btn-primary"
+                onClick={() => {
+                  setShowReviewModal(false);
+                  setSelectedReview(null);
+                }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -701,7 +701,6 @@ async def get_comprehensive_data(
         "comprehensive_data": comp_data
     }
 
-# Project Manager specific endpoints - ADDED HERE
 @app.post("/api/contracts/{contract_id}/project-manager/submit-review")
 async def submit_contract_for_review(
     contract_id: int,
@@ -777,6 +776,20 @@ async def submit_contract_for_review(
         
         db.add(version)
         
+        # ✅ CRITICAL FIX: Store Project Manager's submission notes as a review comment
+        if submit_data.notes and submit_data.notes.strip():
+            pm_submission_comment = ReviewComment(
+                contract_id=contract_id,
+                user_id=current_user.id,
+                comment_type="project_manager_submission",
+                comment=f"Project Manager submission notes: {submit_data.notes}",
+                flagged_risk=False,
+                flagged_issue=False,
+                recommendation=None,
+                status="open"
+            )
+            db.add(pm_submission_comment)
+        
         # Update contract version and status
         old_status = contract.status
         contract.status = "under_review"
@@ -828,6 +841,8 @@ async def submit_contract_for_review(
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to submit for review: {str(e)}")
+
+
 
 @app.post("/api/contracts/{contract_id}/project-manager/fix-metadata")
 async def fix_contract_metadata(
@@ -1045,6 +1060,20 @@ async def respond_to_reviewer_comments(
         )
     
     try:
+        # ✅ CRITICAL FIX: Store Project Manager's response as a review comment
+        if response_data.response and response_data.response.strip():
+            pm_response_comment = ReviewComment(
+                contract_id=contract_id,
+                user_id=current_user.id,
+                comment_type="project_manager_response",
+                comment=f"Project Manager response to reviewer: {response_data.response}",
+                flagged_risk=False,
+                flagged_issue=False,
+                recommendation=None,
+                status="open"
+            )
+            db.add(pm_response_comment)
+        
         # Create a version snapshot
         last_version = db.query(models.ContractVersion).filter(
             models.ContractVersion.contract_id == contract_id
@@ -1131,6 +1160,8 @@ async def respond_to_reviewer_comments(
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to submit response: {str(e)}")
+
+
 
 @app.get("/api/contracts/{contract_id}/project-manager/versions")
 async def get_contract_versions(
@@ -2345,27 +2376,37 @@ async def add_review_comment(
     request: Request = None
 ):
     """
-    Add a review comment - Program Manager only
-    Can only comment on contracts in 'under_review' status
+    Add a review comment - Program Manager OR Project Manager (contract creator) can add comments
     """
-    # Check if user is program manager
-    if current_user.role != "program_manager":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only Program Managers can add review comments"
-        )
-    
     # Get the contract
     contract = db.query(models.Contract).filter(models.Contract.id == contract_id).first()
     if not contract:
         raise HTTPException(status_code=404, detail="Contract not found")
     
-    # Check if contract is under review
-    if contract.status != "under_review":
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Cannot comment on contract in '{contract.status}' status"
-        )
+    # ✅ CRITICAL FIX: Allow Project Managers (contract creators) to add comments too
+    if current_user.role == "project_manager":
+        # Project managers can only comment on contracts they created
+        if contract.created_by != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only the contract creator can add comments"
+            )
+        # Project managers can comment when contract is in draft, under_review, or rejected
+        if contract.status not in ["draft", "under_review", "rejected"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Cannot comment on contract in '{contract.status}' status"
+            )
+    elif current_user.role == "program_manager":
+        # Program managers can only comment on contracts in 'under_review' status
+        if contract.status != "under_review":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Cannot comment on contract in '{contract.status}' status"
+            )
+    else:
+        # Directors can also add comments
+        pass
     
     try:
         # Create review comment
@@ -2391,6 +2432,7 @@ async def add_review_comment(
             "action": "review_comment_added",
             "by_user_id": current_user.id,
             "by_user_name": current_user.full_name or current_user.username,
+            "by_user_role": current_user.role,  # ✅ Store user role
             "timestamp": datetime.utcnow().isoformat(),
             "comment_type": comment_data.comment_type,
             "flagged_risk": comment_data.flagged_risk,
@@ -2409,6 +2451,7 @@ async def add_review_comment(
                 "type": "risk" if comment_data.flagged_risk else "issue",
                 "flagged_by": current_user.id,
                 "flagged_by_name": current_user.full_name or current_user.username,
+                "flagged_by_role": current_user.role,  # ✅ Store user role
                 "timestamp": datetime.utcnow().isoformat(),
                 "comment": comment_data.comment[:100] + "..." if len(comment_data.comment) > 100 else comment_data.comment
             })
@@ -2423,6 +2466,7 @@ async def add_review_comment(
             contract_id=contract_id, 
             details={
                 "contract_id": contract_id,
+                "user_role": current_user.role,  # ✅ Include user role in logs
                 "comment_type": comment_data.comment_type,
                 "flagged_risk": comment_data.flagged_risk,
                 "flagged_issue": comment_data.flagged_issue,
@@ -2434,12 +2478,107 @@ async def add_review_comment(
         return {
             "message": "Review comment added successfully",
             "comment_id": review_comment.id,
-            "contract_id": contract_id
+            "contract_id": contract_id,
+            "user_role": current_user.role  # ✅ Return user role
         }
         
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"Failed to add review comment: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to add review comment: {str(e)}") 
+
+
+@app.get("/api/contracts/{contract_id}/all-review-comments")
+async def get_all_review_comments_including_pm(
+    contract_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get ALL review comments including Project Manager's comments
+    """
+    # Get the contract
+    contract = db.query(models.Contract).filter(models.Contract.id == contract_id).first()
+    if not contract:
+        raise HTTPException(status_code=404, detail="Contract not found")
+    
+    # Check permission based on role
+    if current_user.role == "project_manager":
+        # Project managers can only see their own contracts
+        if contract.created_by != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You don't have permission to view this contract's comments"
+            )
+    elif current_user.role == "program_manager":
+        # Program managers can see contracts in review/approved status
+        if contract.status not in ["under_review", "reviewed", "approved", "rejected"]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You don't have permission to view this contract's comments"
+            )
+    # Directors can see all
+    
+    # Get ALL review comments from the database
+    review_comments = db.query(ReviewComment).filter(
+        ReviewComment.contract_id == contract_id
+    ).order_by(ReviewComment.created_at.desc()).all()
+    
+    # Format comments with user info
+    formatted_comments = []
+    for comment in review_comments:
+        user = db.query(User).filter(User.id == comment.user_id).first()
+        
+        formatted_comments.append({
+            "id": comment.id,
+            "contract_id": comment.contract_id,
+            "comment": comment.comment,
+            "comment_type": comment.comment_type,
+            "flagged_risk": comment.flagged_risk,
+            "flagged_issue": comment.flagged_issue,
+            "change_request": comment.change_request,
+            "recommendation": comment.recommendation,
+            "status": comment.status,
+            "created_at": comment.created_at.isoformat(),
+            "user_id": comment.user_id,
+            "user_name": user.full_name if user else user.username,
+            "user_role": user.role if user else "unknown",
+            "resolved_by": comment.resolved_by,
+            "resolved_at": comment.resolved_at.isoformat() if comment.resolved_at else None,
+            "resolution_response": comment.resolution_response
+        })
+    
+    # ✅ Also extract Project Manager submission notes from review_history
+    if contract.comprehensive_data:
+        review_history = contract.comprehensive_data.get("review_history", [])
+        for entry in review_history:
+            if entry.get("action") == "submitted_for_review" and entry.get("notes"):
+                # This is a Project Manager submission note
+                formatted_comments.append({
+                    "id": f"submission_{len(formatted_comments)}",
+                    "contract_id": contract_id,
+                    "comment": f"Contract submitted for review. Notes: {entry['notes']}",
+                    "comment_type": "project_manager_submission",
+                    "flagged_risk": False,
+                    "flagged_issue": False,
+                    "change_request": None,
+                    "recommendation": None,
+                    "status": "open",
+                    "created_at": entry.get("timestamp", datetime.utcnow().isoformat()),
+                    "user_id": entry.get("by_user_id"),
+                    "user_name": entry.get("by_user_name", "Project Manager"),
+                    "user_role": "project_manager"
+                })
+    
+    return {
+        "contract_id": contract_id,
+        "contract_status": contract.status,
+        "total_comments": len(formatted_comments),
+        "project_manager_comments": len([c for c in formatted_comments if c["user_role"] == "project_manager"]),
+        "program_manager_comments": len([c for c in formatted_comments if c["user_role"] == "program_manager"]),
+        "comments": formatted_comments
+    }
+
+    
 
 @app.post("/api/contracts/{contract_id}/program-manager/submit-review")
 async def submit_contract_review(
@@ -2763,21 +2902,34 @@ async def get_review_comments(
     if not contract:
         raise HTTPException(status_code=404, detail="Contract not found")
     
-    # Check permission based on role
+    # Check permission based on role - UPDATED PERMISSION LOGIC
     if current_user.role == "project_manager":
-        # Project managers can only see their own contracts
+        # Project managers can only see their own contracts OR contracts where they've commented
         if contract.created_by != current_user.id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="You don't have permission to view this contract's comments"
-            )
+            # Check if user has commented on this contract
+            user_comment = db.query(ReviewComment).filter(
+                ReviewComment.contract_id == contract_id,
+                ReviewComment.user_id == current_user.id
+            ).first()
+            if not user_comment:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="You don't have permission to view this contract's comments"
+                )
     elif current_user.role == "program_manager":
-        # Program managers can only see contracts in review
-        if contract.status not in ["under_review", "reviewed", "rejected"]:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="You don't have permission to view this contract's comments"
-            )
+        # Program managers can see contracts they are reviewing OR contracts they've reviewed
+        # Allow access if contract is under review, reviewed, or approved
+        if contract.status not in ["under_review", "reviewed", "approved", "rejected"]:
+            # Check if this program manager has reviewed/commented on this contract
+            user_comment = db.query(ReviewComment).filter(
+                ReviewComment.contract_id == contract_id,
+                ReviewComment.user_id == current_user.id
+            ).first()
+            if not user_comment:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="You don't have permission to view this contract's comments"
+                )
     # Directors can see all
     
     # Build query
@@ -2821,6 +2973,101 @@ async def get_review_comments(
         "total_comments": len(formatted_comments),
         "open_comments": len([c for c in formatted_comments if c["status"] == "open"]),
         "comments": formatted_comments
+    }
+
+@app.get("/api/contracts/{contract_id}/program-manager/director-review")
+async def get_director_review_for_program_manager(
+    contract_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get Director's review decisions for Program Manager to view
+    Program Managers can see contracts they have reviewed
+    """
+    # Check if user is program manager
+    if current_user.role != "program_manager":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only Program Managers can view director reviews"
+        )
+    
+    # Get the contract
+    contract = db.query(models.Contract).filter(models.Contract.id == contract_id).first()
+    if not contract:
+        raise HTTPException(status_code=404, detail="Contract not found")
+    
+    # Check if this Program Manager has reviewed/commented on this contract
+    user_comment = db.query(ReviewComment).filter(
+        ReviewComment.contract_id == contract_id,
+        ReviewComment.user_id == current_user.id
+    ).first()
+    
+    # Also check if contract has program manager review data from this user
+    has_program_manager_review = False
+    if contract.comprehensive_data and contract.comprehensive_data.get("program_manager_review"):
+        review_data = contract.comprehensive_data["program_manager_review"]
+        if review_data.get("reviewed_by") == current_user.id:
+            has_program_manager_review = True
+    
+    if not user_comment and not has_program_manager_review:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only view director decisions for contracts you have reviewed"
+        )
+    
+    # Get comprehensive data
+    comp_data = contract.comprehensive_data or {}
+    
+    # Get review comments (all comments including Project Manager's)
+    review_comments = db.query(ReviewComment).filter(
+        ReviewComment.contract_id == contract_id
+    ).order_by(ReviewComment.created_at.desc()).all()
+    
+    # Format review comments
+    formatted_comments = []
+    for comment in review_comments:
+        user = db.query(User).filter(User.id == comment.user_id).first()
+        formatted_comments.append({
+            "id": comment.id,
+            "comment": comment.comment,
+            "comment_type": comment.comment_type,
+            "flagged_risk": comment.flagged_risk,
+            "flagged_issue": comment.flagged_issue,
+            "change_request": comment.change_request,
+            "recommendation": comment.recommendation,
+            "status": comment.status,
+            "created_at": comment.created_at.isoformat(),
+            "user_name": user.full_name if user else user.username,
+            "user_role": user.role if user else "unknown",
+            "resolution_response": comment.resolution_response,
+            "resolved_at": comment.resolved_at.isoformat() if comment.resolved_at else None
+        })
+    
+    # Extract Director's decision
+    director_decision = comp_data.get("director_final_approval", {})
+    program_manager_review = comp_data.get("program_manager_review", {})
+    
+    return {
+        "contract_id": contract_id,
+        "contract_status": contract.status,
+        "contract_info": {
+            "grant_name": contract.grant_name,
+            "grantor": contract.grantor,
+            "grantee": contract.grantee,
+            "total_amount": contract.total_amount,
+            "created_by": contract.created_by
+        },
+        "program_manager_review": program_manager_review,
+        "director_decision": director_decision if director_decision else None,
+        "has_director_decision": bool(director_decision),
+        "review_comments": formatted_comments,
+        "summary": {
+            "total_comments": len(formatted_comments),
+            "program_manager_comments": len([c for c in formatted_comments if c["user_role"] == "program_manager"]),
+            "project_manager_comments": len([c for c in formatted_comments if c["user_role"] == "project_manager"]),
+            "director_comments": len([c for c in formatted_comments if c["user_role"] == "director"])
+        }
     }
 
 @app.put("/api/review-comments/{comment_id}/resolve")

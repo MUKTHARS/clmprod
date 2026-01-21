@@ -1025,3 +1025,107 @@
     width: 100%;
   }
 }
+
+
+
+/* Add to ProgramManagerReview.css */
+
+/* Style for Project Manager comments */
+.comment-card.project-manager {
+  border-left: 4px solid #3b82f6;
+  background: linear-gradient(90deg, rgba(59, 130, 246, 0.05) 0%, transparent 100%);
+}
+
+.comment-card.project-manager .commenter-role {
+  color: #1d4ed8;
+  font-weight: 600;
+  background: #dbeafe;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+}
+
+/* Style for submission notes */
+.comment-card .comment-type-badge.submission_notes {
+  background-color: #dcfce7;
+  color: #16a34a;
+}
+
+.comment-card .comment-type-badge.project_manager_response {
+  background-color: #fef3c7;
+  color: #d97706;
+}
+
+/* Add a special indicator for PM comments */
+.pm-comment-indicator {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
+  padding: 4px 8px;
+  background-color: #eff6ff;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  color: #1d4ed8;
+}
+
+.pm-comment-indicator svg {
+  color: #3b82f6;
+}
+
+
+
+/* Add to ProgramManagerReview.css */
+.project-manager-comment {
+  border-left: 4px solid #3b82f6;
+  background: linear-gradient(90deg, rgba(59, 130, 246, 0.05) 0%, rgba(59, 130, 246, 0.02) 100%);
+}
+
+.project-manager-comment .commenter-role.project_manager {
+  color: #1d4ed8;
+  font-weight: 600;
+  background-color: #dbeafe;
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+.pm-comment-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 6px 10px;
+  background-color: #eff6ff;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  color: #1e40af;
+}
+
+.pm-comment-label svg {
+  color: #3b82f6;
+}
+
+.pm-note-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 6px 10px;
+  background-color: #f0f9ff;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  color: #0c4a6e;
+  border: 1px dashed #7dd3fc;
+}
+
+/* Style for PM comment type badges */
+.comment-type-badge.project_manager_note,
+.comment-type-badge.project_manager_submission {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+.comment-type-badge.project_manager_note svg,
+.comment-type-badge.project_manager_submission svg {
+  color: #3b82f6;
+}
