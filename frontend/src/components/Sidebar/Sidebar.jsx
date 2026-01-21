@@ -123,14 +123,14 @@ const getMenuItems = () => {
       roles: ['director'],
       badge: true
     },
-    { 
-      id: 'pending-approvals', 
-      label: 'Pending Approvals', 
-      icon: ShieldCheck, 
-      path: '/pending-approvals', 
-      permission: 'can_approve',
-      roles: ['director']
-    },
+    // { 
+    //   id: 'pending-approvals', 
+    //   label: 'Pending Approvals', 
+    //   icon: ShieldCheck, 
+    //   path: '/pending-approvals', 
+    //   permission: 'can_approve',
+    //   roles: ['director']
+    // },
     { 
       id: 'users', 
       label: 'Users', 

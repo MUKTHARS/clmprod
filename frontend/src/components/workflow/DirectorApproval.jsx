@@ -339,36 +339,36 @@ function DirectorApproval() {
       {/* Stats Overview */}
       <div className="stats-overview">
         <div className="stat-card">
-          <div className="stat-icon">
+          {/* <div className="stat-icon">
             <FileText size={24} />
-          </div>
+          </div> */}
           <div className="stat-content">
             <span className="stat-value">{stats.total}</span>
             <span className="stat-label">Pending Approval</span>
           </div>
         </div>
         <div className="stat-card">
-          <div className="stat-icon">
+          {/* <div className="stat-icon">
             <AlertCircle size={24} />
-          </div>
+          </div> */}
           <div className="stat-content">
             <span className="stat-value">{stats.highPriority}</span>
             <span className="stat-label">High Priority</span>
           </div>
         </div>
         <div className="stat-card">
-          <div className="stat-icon">
+          {/* <div className="stat-icon">
             <Clock size={24} />
-          </div>
+          </div> */}
           <div className="stat-content">
             <span className="stat-value">{stats.newToday}</span>
             <span className="stat-label">New Today</span>
           </div>
         </div>
         <div className="stat-card">
-          <div className="stat-icon">
+          {/* <div className="stat-icon">
             <DollarSign size={24} />
-          </div>
+          </div> */}
           <div className="stat-content">
             <span className="stat-value">{formatCurrency(stats.totalValue)}</span>
             <span className="stat-label">Total Value</span>

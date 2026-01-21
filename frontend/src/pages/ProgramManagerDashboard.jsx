@@ -94,9 +94,9 @@ function ProgramManagerDashboard() {
       <div className="dashboard-header">
         <div className="header-left">
           <h1>Contract Reviews</h1>
-          <p className="page-subtitle">
+          {/* <p className="page-subtitle">
             Review and provide feedback on submitted contracts
-          </p>
+          </p> */}
         </div>
         <div className="header-actions">
           <button 

@@ -1,5 +1,7 @@
+// C:\saple.ai\POC\frontend\src\App.jsx
+
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Sidebar from './components/Sidebar/Sidebar';
 import TopBar from './components/TopBar/TopBar';
 import Dashboard from './Dashboard';
@@ -13,33 +15,239 @@ import './styles/App.css';
 import Review from './components/workflow/Review';
 import ProgramManagerReview from './components/workflow/ProgramManagerReview';
 import ProgramManagerDashboard from './pages/ProgramManagerDashboard';
-// import ContractReview from './components/Workflow/ContractReview';
-import ContractApproval from './components/Workflow/ContractApproval';
-// import AdvancedSearch from './components/AdvancedSearch/AdvancedSearch';
-// import ActivityLogs from './components/Activity/ActivityLogs';
 import ContractReview from './components/workflow/ContractReview';
+import ContractApproval from './components/workflow/ContractApproval';
 import ProjectManagerActions from './components/workflow/ProjectManagerActions';
 import ProjectManagerDashboard from './pages/ProjectManagerDashboard';
 import ViewProgramManagerReviews from './components/workflow/ViewProgramManagerReviews';
 import DirectorApproval from './components/workflow/DirectorApproval';
 import ProgramManagerDirectorDecisions from './components/workflow/ProgramManagerDirectorDecisions';
 
+// Create a wrapper component to handle the redirect logic
+function AppContent({ user, isAuthenticated, loading, contracts, onLogin, onLogout, onUploadComplete, fetchContracts }) {
+  const location = useLocation();
+  
+  // Don't show app layout on login page
+  if (!isAuthenticated) {
+    return (
+      <Routes>
+        <Route path="/login" element={<Login onLogin={onLogin} />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    );
+  }
+
+  return (
+    <>
+      <Sidebar user={user} onLogout={onLogout} />
+      <div className="main-content">
+        <TopBar user={user} />
+        <div className="content-area">
+          <Routes>
+            <Route 
+              path="/dashboard" 
+              element={
+                <PrivateRoute user={user}>
+                  <Dashboard 
+                    contracts={contracts} 
+                    loading={loading} 
+                    refreshContracts={fetchContracts}
+                    user={user}
+                  />
+                </PrivateRoute>
+              } 
+            />
+            <Route 
+              path="/upload" 
+              element={
+                <PrivateRoute user={user} requiredRoles={['project_manager', 'director']}>
+                  <UploadPage 
+                    setLoading={() => {}} 
+                    onUploadComplete={onUploadComplete}
+                    user={user}
+                  />
+                </PrivateRoute>
+              } 
+            />
+            <Route 
+              path="/contracts" 
+              element={
+                <PrivateRoute user={user}>
+                  <ContractsListPage contracts={contracts} user={user} />
+                </PrivateRoute>
+              } 
+            />
+            <Route 
+              path="/contracts/:id" 
+              element={
+                <PrivateRoute user={user}>
+                  <ContractDetailsPage user={user} />
+                </PrivateRoute>
+              } 
+            />
+            <Route 
+              path="/pm-dashboard" 
+              element={
+                <PrivateRoute user={user} requiredRole="project_manager">
+                  <ProjectManagerDashboard user={user} />
+                </PrivateRoute>
+              } 
+            />
+            
+            {/* Program Manager Routes */}
+            <Route 
+              path="/review" 
+              element={
+                <PrivateRoute user={user} requiredRole="program_manager">
+                  <Review />
+                </PrivateRoute>
+              } 
+            />
+            <Route 
+              path="/review-contract/:contractId" 
+              element={
+                <PrivateRoute user={user} requiredRole="program_manager">
+                  <ProgramManagerReview />
+                </PrivateRoute>
+              } 
+            />
+            <Route 
+              path="/my-reviews" 
+              element={
+                <PrivateRoute user={user} requiredRole="program_manager">
+                  <ProgramManagerDashboard />
+                </PrivateRoute>
+              } 
+            />
+            
+            {/* Director Routes */}
+            <Route 
+              path="/approvals" 
+              element={
+                <PrivateRoute user={user} requiredRole="director">
+                  <DirectorApproval />
+                </PrivateRoute>
+              } 
+            />
+            <Route 
+              path="/pending-approvals" 
+              element={
+                <PrivateRoute user={user} requiredRole="director">
+                  <DirectorApproval />
+                </PrivateRoute>
+              } 
+            />
+            
+            {/* Old review routes (keep for compatibility) */}
+            <Route 
+              path="/review-old" 
+              element={
+                <PrivateRoute user={user} requiredRole="program_manager">
+                  <ContractReview />
+                </PrivateRoute>
+              } 
+            />
+
+            <Route 
+              path="/program-manager/director-decisions" 
+              element={
+                <PrivateRoute user={user} requiredRole="program_manager">
+                  <ProgramManagerDirectorDecisions />
+                </PrivateRoute>
+              } 
+            />
+            <Route 
+              path="/director-approval" 
+              element={
+                <PrivateRoute user={user} requiredRole="director">
+                  <DirectorApproval />
+                </PrivateRoute>
+              } 
+            />
+            <Route 
+              path="/contracts/:contractId/reviews" 
+              element={
+                <PrivateRoute user={user} requiredRole="project_manager">
+                  <ViewProgramManagerReviews />
+                </PrivateRoute>
+              } 
+            />
+            
+            {/* Redirect / to dashboard ONLY if user is on root path */}
+            <Route 
+              path="/" 
+              element={
+                location.pathname === "/" ? (
+                  <Navigate to="/dashboard" replace />
+                ) : (
+                  <PrivateRoute user={user}>
+                    <Dashboard 
+                      contracts={contracts} 
+                      loading={loading} 
+                      refreshContracts={fetchContracts}
+                      user={user}
+                    />
+                  </PrivateRoute>
+                )
+              } 
+            />
+            
+            {/* Catch-all route - preserve current path */}
+            <Route 
+              path="*" 
+              element={
+                <PrivateRoute user={user}>
+                  {/* Don't redirect, just show 404 or current page */}
+                  <div className="not-found">
+                    <h2>Page Not Found</h2>
+                    <p>The page you're looking for doesn't exist.</p>
+                    <button onClick={() => window.history.back()}>Go Back</button>
+                  </div>
+                </PrivateRoute>
+              } 
+            />
+          </Routes>
+        </div>
+      </div>
+    </>
+  );
+}
+
 function App() {
   const [contracts, setContracts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
 
   useEffect(() => {
-    // Check if user is logged in
-    const token = localStorage.getItem('token');
-    const userData = localStorage.getItem('user');
-    
-    if (token && userData) {
-      setUser(JSON.parse(userData));
-      setIsAuthenticated(true);
-      fetchContracts();
-    }
+    const initializeAuth = () => {
+      const token = localStorage.getItem('token');
+      const userData = localStorage.getItem('user');
+      
+      if (token && userData) {
+        try {
+          const parsedUser = JSON.parse(userData);
+          setUser(parsedUser);
+          setIsAuthenticated(true);
+          
+          // Only fetch contracts if needed for current page
+          const currentPath = window.location.pathname;
+          if (currentPath === '/dashboard' || 
+              currentPath.startsWith('/contracts') ||
+              currentPath === '/') {
+            fetchContracts();
+          }
+        } catch (error) {
+          console.error('Error parsing user data:', error);
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+        }
+      }
+      setIsInitializing(false);
+    };
+
+    initializeAuth();
   }, []);
 
   const fetchContracts = async () => {
@@ -55,7 +263,6 @@ function App() {
         return;
       }
       
-      // IMPORTANT: Add trailing slash to match backend endpoint
       const response = await fetch(`${API_CONFIG.BASE_URL}/api/contracts/`, {
         method: 'GET',
         headers: {
@@ -77,7 +284,6 @@ function App() {
         handleLogout();
       } else if (response.status === 405) {
         console.log('405 Method Not Allowed - trying without trailing slash');
-        // Try without trailing slash as fallback
         const fallbackResponse = await fetch(`${API_CONFIG.BASE_URL}/api/contracts`, {
           method: 'GET',
           headers: {
@@ -95,7 +301,6 @@ function App() {
       }
     } catch (error) {
       console.error('Network error fetching contracts:', error);
-      // Don't logout on network errors
     } finally {
       setLoading(false);
     }
@@ -121,159 +326,31 @@ function App() {
     setContracts([newContract, ...contracts]);
   };
 
+  // Show loading state while initializing auth
+  if (isInitializing) {
+    return (
+      <div className="app-container">
+        <div className="loading-screen">
+          <div className="loading-spinner"></div>
+          <p>Initializing...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <Router>
       <div className="app-container">
-        {isAuthenticated && user && (
-          <>
-            <Sidebar user={user} onLogout={handleLogout} />
-            <div className="main-content">
-              <TopBar user={user} />
-              <div className="content-area">
-                <Routes>
-                 <Route 
-  path="/dashboard" 
-  element={
-    <PrivateRoute user={user}>
-      <Dashboard 
-        contracts={contracts} 
-        loading={loading} 
-        refreshContracts={fetchContracts}
-        user={user}
-      />
-    </PrivateRoute>
-  } 
-/>
-                  <Route 
-                    path="/upload" 
-                    element={
-                      <PrivateRoute user={user} requiredRole="project_manager">
-                        <UploadPage 
-                          setLoading={setLoading} 
-                          onUploadComplete={handleUploadComplete}
-                          user={user}
-                        />
-                      </PrivateRoute>
-                    } 
-                  />
-                  <Route 
-                    path="/contracts" 
-                    element={
-                      <PrivateRoute user={user}>
-                        <ContractsListPage contracts={contracts} user={user} />
-                      </PrivateRoute>
-                    } 
-                  />
-                  <Route 
-                    path="/contracts/:id" 
-                    element={
-                      <PrivateRoute user={user}>
-                        <ContractDetailsPage user={user} />
-                      </PrivateRoute>
-                    } 
-                  />
-                  <Route 
-                    path="/pm-dashboard" 
-                    element={
-                      <PrivateRoute user={user} requiredRole="project_manager">
-                        <ProjectManagerDashboard user={user} />
-                      </PrivateRoute>
-                    } 
-                  />
-                  
-                  {/* Program Manager Routes - MOVED INSIDE AUTHENTICATED BLOCK */}
-                  <Route 
-                    path="/review" 
-                    element={
-                      <PrivateRoute user={user} requiredRole="program_manager">
-                        <Review />
-                      </PrivateRoute>
-                    } 
-                  />
-                  <Route 
-                    path="/review-contract/:contractId" 
-                    element={
-                      <PrivateRoute user={user} requiredRole="program_manager">
-                        <ProgramManagerReview />
-                      </PrivateRoute>
-                    } 
-                  />
-                  <Route 
-                    path="/my-reviews" 
-                    element={
-                      <PrivateRoute user={user} requiredRole="program_manager">
-                        <ProgramManagerDashboard />
-                      </PrivateRoute>
-                    } 
-                  />
-                  
-                  {/* Director Routes */}
-                  <Route 
-                    path="/approvals" 
-                    element={
-                      <PrivateRoute user={user} requiredRole="director">
-                        <DirectorApproval />
-                      </PrivateRoute>
-                    } 
-                  />
-                  <Route 
-                    path="/pending-approvals" 
-                    element={
-                      <PrivateRoute user={user} requiredRole="director">
-                        <DirectorApproval />
-                      </PrivateRoute>
-                    } 
-                  />
-                  
-                  {/* Old review routes (keep for compatibility) */}
-                  <Route 
-                    path="/review-old" 
-                    element={
-                      <PrivateRoute user={user} requiredRole="program_manager">
-                        <ContractReview />
-                      </PrivateRoute>
-                    } 
-                  />
-
-                  <Route 
-  path="/program-manager/director-decisions" 
-  element={
-    <PrivateRoute user={user} requiredRole="program_manager">
-      <ProgramManagerDirectorDecisions />
-    </PrivateRoute>
-  } 
-/>
-<Route 
-    path="/director-approval" 
-    element={
-      <PrivateRoute user={user} requiredRole="director">
-        <DirectorApproval />
-      </PrivateRoute>
-    } 
-  />
-                  <Route 
-  path="/contracts/:contractId/reviews" 
-  element={
-    <PrivateRoute user={user} requiredRole="project_manager">
-      <ViewProgramManagerReviews />
-    </PrivateRoute>
-  } 
-/>
-                  
-                  <Route path="/login" element={<Navigate to="/dashboard" />} />
-                  <Route path="/" element={<Navigate to="/dashboard" />} />
-                </Routes>
-              </div>
-            </div>
-          </>
-        )}
-        
-        {!isAuthenticated && (
-          <Routes>
-            <Route path="/login" element={<Login onLogin={handleLogin} />} />
-            <Route path="*" element={<Navigate to="/login" />} />
-          </Routes>
-        )}
+        <AppContent 
+          user={user}
+          isAuthenticated={isAuthenticated}
+          loading={loading}
+          contracts={contracts}
+          onLogin={handleLogin}
+          onLogout={handleLogout}
+          onUploadComplete={handleUploadComplete}
+          fetchContracts={fetchContracts}
+        />
       </div>
     </Router>
   );

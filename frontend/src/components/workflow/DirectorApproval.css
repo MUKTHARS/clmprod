@@ -1326,3 +1326,30 @@
 .border-red-200 { border-color: #fecaca; }
 .border-yellow-200 { border-color: #fef08a; }
 .border-gray-200 { border-color: #e5e7eb; }
+
+/* Change pending/under review colors to lighter shades */
+.status-badge.under_review,
+.status-indicator.under_review {
+  background: #eff6ff;  /* Lighter blue */
+  color: #1d4ed8;       /* Darker blue for contrast */
+  border-color: #bfdbfe;
+}
+
+/* Change view contract button to secondary style */
+.card-footer .btn-primary {
+  background: #f3f4f6;
+  color: #374151;
+  border-color: #d1d5db;
+}
+
+.card-footer .btn-primary:hover {
+  background: #e5e7eb;
+  border-color: #9ca3af;
+}
+
+.card-footer .btn-primary:disabled {
+  background: #f3f4f6;
+  color: #9ca3af;
+  border-color: #e5e7eb;
+}
+

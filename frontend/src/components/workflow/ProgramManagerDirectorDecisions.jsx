@@ -28,7 +28,7 @@ import {
   FileCheck
 } from 'lucide-react';
 import API_CONFIG from '../../config';
-
+import './ProgramManagerDirectorDecisions.css';
 function ProgramManagerDirectorDecisions() {
   const [contracts, setContracts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -172,9 +172,9 @@ function ProgramManagerDirectorDecisions() {
       <div className="decisions-header">
         <div className="header-left">
           <h1>Director Decisions</h1>
-          <p className="page-subtitle">
+          {/* <p className="page-subtitle">
             View final decisions on contracts you reviewed
-          </p>
+          </p> */}
         </div>
         <div className="header-actions">
           <button 
@@ -287,9 +287,9 @@ function ProgramManagerDirectorDecisions() {
 
                 {/* Contract Info */}
                 <div className="card-content">
-                  <div className="contract-icon">
+                  {/* <div className="contract-icon">
                     <FileText size={24} />
-                  </div>
+                  </div> */}
                   
                   <h3 className="contract-name">
                     {contract.grant_name || contract.filename}
@@ -409,7 +409,7 @@ function ProgramManagerDirectorDecisions() {
                     ) : (
                       <FileCheck size={14} />
                     )}
-                    View Director Review
+                     Review
                   </button>
                 </div>
               </div>
