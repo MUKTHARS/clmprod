@@ -7,31 +7,21 @@ function PrivateRoute({ children, user, requiredRole, requiredPermission }) {
     return <Navigate to="/login" replace />;
   }
 
+  const path = window.location.pathname;
+  if (path === '/dashboard' || path.startsWith('/dashboard/')) {
+    return children;
+  }
+
   // Check if user has required role
   if (requiredRole && user.role !== requiredRole) {
-    return (
-      <div className="unauthorized-container">
-        <div className="unauthorized-content">
-          <h2>Access Denied</h2>
-          <p>You don't have permission to access this page.</p>
-          <p>Required role: {requiredRole}</p>
-          <p>Your role: {user.role}</p>
-        </div>
-      </div>
-    );
+    // Instead of showing access denied, redirect to dashboard
+    return <Navigate to="/dashboard" replace />;
   }
 
   // Check if user has required permission
   if (requiredPermission && !user.permissions?.[requiredPermission]) {
-    return (
-      <div className="unauthorized-container">
-        <div className="unauthorized-content">
-          <h2>Access Denied</h2>
-          <p>You don't have permission to access this page.</p>
-          <p>Required permission: {requiredPermission}</p>
-        </div>
-      </div>
-    );
+    // Instead of showing access denied, redirect to dashboard
+    return <Navigate to="/dashboard" replace />;
   }
 
   return children;

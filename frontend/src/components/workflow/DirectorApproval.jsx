@@ -4,7 +4,6 @@ import {
   CheckCircle,
   XCircle,
   Lock,
-  Unlock,
   Shield,
   AlertCircle,
   FileText,
@@ -19,34 +18,19 @@ import {
   User,
   Building,
   DollarSign,
-  ChevronRight,
   Loader2,
   Filter,
   Search,
   RefreshCw,
   Clock,
   Flag,
-  FileCheck,
   ChevronDown,
-  ExternalLink,
-  Bell,
-  Award,
-  Target,
-  PieChart,
-  ShieldCheck,
-  BookOpen,
-  FileBarChart,
-  Copy,
-  Share2,
-  Upload,
-  Archive,
-  Layers,
   MoreVertical,
-  ArrowLeft
+  ShieldCheck
 } from 'lucide-react';
 import API_CONFIG from '../../config';
 import './DirectorApproval.css';
-import './Workflow.css';
+
 function DirectorApproval() {
   const [contracts, setContracts] = useState([]);
   const [selectedContract, setSelectedContract] = useState(null);
@@ -68,34 +52,34 @@ function DirectorApproval() {
     fetchContractsForApproval();
   }, []);
 
-const fetchContractsForApproval = async () => {
-  try {
-    setLoading(true);
-    const token = localStorage.getItem('token');
-    
-    // Use Director's specific endpoint
-    const response = await fetch(`${API_CONFIG.BASE_URL}/api/contracts/director/dashboard`, {
-      headers: {
-        'Authorization': `Bearer ${token}`
+  const fetchContractsForApproval = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('token');
+      
+      // Use Director's specific endpoint
+      const response = await fetch(`${API_CONFIG.BASE_URL}/api/contracts/director/dashboard`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Filter to show only contracts with status "reviewed" for approval section
+        const reviewedContracts = data.filter(contract => 
+          contract.status === "reviewed"
+        );
+        
+        setContracts(reviewedContracts);
       }
-    });
-    
-    if (response.ok) {
-      const data = await response.json();
-      
-      // Filter to show only contracts with status "reviewed" for approval section
-      const reviewedContracts = data.filter(contract => 
-        contract.status === "reviewed"
-      );
-      
-      setContracts(reviewedContracts);
+    } catch (error) {
+      console.error('Failed to fetch contracts for approval:', error);
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    console.error('Failed to fetch contracts for approval:', error);
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   const fetchCompleteContractInfo = async (contractId) => {
     try {
@@ -331,11 +315,7 @@ const fetchContractsForApproval = async () => {
       {/* Header */}
       <div className="approval-header">
         <div className="header-left">
-          <button className="btn-back" onClick={() => navigate('/dashboard')}>
-            <ArrowLeft size={20} />
-            <span>Back to Dashboard</span>
-          </button>
-          <h1>Final Approval Dashboard</h1>
+          <h1>Director Approval Dashboard</h1>
           <p className="page-subtitle">
             Review and provide final approval for contracts forwarded by Program Managers
           </p>
@@ -398,26 +378,28 @@ const fetchContractsForApproval = async () => {
 
       {/* Search and Filters */}
       <div className="search-filters-section">
-        <div className="search-container">
-          <Search className="search-icon" />
-          <input
-            type="text"
-            placeholder="Search contracts by name, grantor, or forwarded by..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="search-input"
-          />
-        </div>
+        <div className="section-controls">
+          <div className="search-container">
+            <Search className="search-icon" />
+            <input
+              type="text"
+              placeholder="Search contracts by name, grantor, or forwarded by..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="search-input"
+            />
+          </div>
 
-        <div className="controls-container">
-          <button 
-            className="btn-filter"
-            onClick={() => setShowFilters(!showFilters)}
-          >
-            <Filter size={18} />
-            <span>Filters</span>
-            <ChevronDown size={16} className={showFilters ? 'rotate-180' : ''} />
-          </button>
+          <div className="controls-container">
+            <button 
+              className="btn-filter"
+              onClick={() => setShowFilters(!showFilters)}
+            >
+              <Filter size={16} />
+              <span>Filters</span>
+              <ChevronDown size={14} className={showFilters ? 'rotate-180' : ''} />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -599,13 +581,13 @@ const fetchContractsForApproval = async () => {
                 <MessageSquare size={16} />
                 <span>Review & Decision</span>
               </button>
-              <button 
+              {/* <button 
                 className={`tab-btn ${activeTab === 'details' ? 'active' : ''}`}
                 onClick={() => setActiveTab('details')}
               >
                 <FileText size={16} />
                 <span>Contract Details</span>
-              </button>
+              </button> */}
               <button 
                 className={`tab-btn ${activeTab === 'history' ? 'active' : ''}`}
                 onClick={() => setActiveTab('history')}

@@ -131,19 +131,19 @@ function App() {
               <TopBar user={user} />
               <div className="content-area">
                 <Routes>
-                  <Route 
-                    path="/dashboard" 
-                    element={
-                      <PrivateRoute user={user} requiredRole="project_manager">
-                        <Dashboard 
-                          contracts={contracts} 
-                          loading={loading} 
-                          refreshContracts={fetchContracts}
-                          user={user}
-                        />
-                      </PrivateRoute>
-                    } 
-                  />
+                 <Route 
+  path="/dashboard" 
+  element={
+    <PrivateRoute user={user}>
+      <Dashboard 
+        contracts={contracts} 
+        loading={loading} 
+        refreshContracts={fetchContracts}
+        user={user}
+      />
+    </PrivateRoute>
+  } 
+/>
                   <Route 
                     path="/upload" 
                     element={

@@ -27,7 +27,7 @@ import {
 } from 'lucide-react';
 import './styles/Dashboard.css';
 
-function Dashboard({ contracts, loading, refreshContracts }) {
+function Dashboard({ contracts, loading, refreshContracts, user }) {
   const navigate = useNavigate();
   const [stats, setStats] = useState({
     totalGrants: 0,
@@ -44,184 +44,89 @@ function Dashboard({ contracts, loading, refreshContracts }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [normalizedContracts, setNormalizedContracts] = useState([]);
 
-  // Debug log to see what data we're getting
-useEffect(() => {
-  if (contracts && Array.isArray(contracts)) {
-    console.log(`Processing ${contracts.length} contracts from API`);
-    
-    // Debug: Log first contract structure
-    if (contracts.length > 0) {
-      console.log('First contract full structure:', contracts[0]);
-      console.log('Type of contract:', typeof contracts[0]);
-      console.log('Is array?', Array.isArray(contracts[0]));
+  useEffect(() => {
+    if (contracts && Array.isArray(contracts)) {
+      const normalized = contracts
+        .map((contract, index) => {
+          return normalizeContractData(contract);
+        })
+        .filter(contract => contract !== null);
       
-      // Try to access properties in different ways
-      const sample = contracts[0];
-      console.log('Property check:', {
-        id: sample.id,
-        'sample.id': sample.id,
-        'sample.ID': sample.ID,
-        'sample._sa_instance_state': sample._sa_instance_state,
-        'Object.keys(sample)': Object.keys(sample),
-        'JSON.stringify(sample)': JSON.stringify(sample)
-      });
+      setNormalizedContracts(normalized);
+      calculateStats(normalized);
+    } else {
+      setNormalizedContracts([]);
+      resetStats();
     }
-    
-    const normalized = contracts
-      .map((contract, index) => {
-        console.log(`Processing contract ${index}:`, contract);
-        return normalizeContractData(contract);
-      })
-      .filter(contract => contract !== null); // Keep only valid contracts
-    
-    console.log(`Normalized ${normalized.length} valid contracts`, normalized);
-    setNormalizedContracts(normalized);
-    calculateStats(normalized);
-  } else {
-    console.log('No contracts or contracts is not an array:', contracts);
-    setNormalizedContracts([]);
-    resetStats();
-  }
-}, [contracts]);
+  }, [contracts]);
 
-const normalizeContractData = (contract) => {
-  // Check if contract is null or undefined
-  if (!contract) {
-    console.error('Contract is null or undefined:', contract);
-    return null;
-  }
-  
-  // Check if it's an empty object
-  if (typeof contract === 'object' && Object.keys(contract).length === 0) {
-    console.error('Contract object is empty:', contract);
-    return null;
-  }
-  
-  // IMPORTANT: Check if this is an SQLAlchemy model instance with hidden attributes
-  // SQLAlchemy objects might not show keys directly but have attributes
-  const contractId = contract.id || contract.contract_id || contract.contractId;
-  
-  if (!contractId) {
-    console.error('Contract has no ID property. Contract structure:', contract);
+  const normalizeContractData = (contract) => {
+    if (!contract) return null;
     
-    // Try to get ID from any possible property
-    const possibleId = 
-      contract.id || 
-      contract.Id || 
-      contract.ID || 
-      (contract._sa_instance_state && contract._sa_instance_state.key && 
-       contract._sa_instance_state.key[1]) || 
-      contract[0]; // If it's an array-like object
-      
-    if (!possibleId) {
-      console.error('Cannot find any ID in contract:', contract);
-      return null;
-    }
+    const contractId = contract.id || contract.contract_id || contract.contractId;
     
-    // Create a minimal contract object with the ID we found
-    console.log(`Creating minimal contract from found ID: ${possibleId}`);
-    return {
-      id: possibleId,
-      filename: 'Unknown Contract',
-      grant_name: 'Unknown Contract',
-      grantor: 'Unknown',
-      total_amount: 0,
-      status: 'unknown'
+    if (!contractId) return null;
+    
+    const normalized = {
+      id: contractId,
+      filename: contract.filename || contract.Filename || 'Unnamed Contract',
+      uploaded_at: contract.uploaded_at || contract.uploadedAt || contract.upload_date,
+      status: contract.status || contract.Status || 'processed',
+      investment_id: contract.investment_id || contract.investmentId,
+      project_id: contract.project_id || contract.projectId,
+      grant_id: contract.grant_id || contract.grantId,
+      extracted_reference_ids: contract.extracted_reference_ids || [],
+      comprehensive_data: contract.comprehensive_data || contract.comprehensiveData || null
     };
-  }
-  
-  console.log(`Normalizing contract ID: ${contractId}`, contract);
-  
-  // Build normalized contract object with safe access
-  const normalized = {
-    id: contractId,
-    filename: contract.filename || contract.Filename || 'Unnamed Contract',
-    uploaded_at: contract.uploaded_at || contract.uploadedAt || contract.upload_date,
-    status: contract.status || contract.Status || 'processed',
-    investment_id: contract.investment_id || contract.investmentId,
-    project_id: contract.project_id || contract.projectId,
-    grant_id: contract.grant_id || contract.grantId,
-    extracted_reference_ids: contract.extracted_reference_ids || [],
-    comprehensive_data: contract.comprehensive_data || contract.comprehensiveData || null
+    
+    const safeGet = (obj, prop, altProp) => {
+      return obj[prop] || obj[altProp] || obj[prop?.toLowerCase?.()] || 
+             obj[prop?.toUpperCase?.()] || null;
+    };
+    
+    normalized.grant_name = safeGet(contract, 'grant_name', 'grantName') || 
+                           safeGet(contract, 'filename', 'Filename') || 
+                           'Unnamed Contract';
+    
+    normalized.grantor = safeGet(contract, 'grantor', 'Grantor') || 'Unknown Grantor';
+    normalized.grantee = safeGet(contract, 'grantee', 'Grantee') || 'Unknown Grantee';
+    normalized.total_amount = safeGet(contract, 'total_amount', 'totalAmount') || 
+                             safeGet(contract, 'totalAmount', 'total_amount') || 
+                             0;
+    normalized.contract_number = safeGet(contract, 'contract_number', 'contractNumber');
+    normalized.start_date = safeGet(contract, 'start_date', 'startDate');
+    normalized.end_date = safeGet(contract, 'end_date', 'endDate');
+    normalized.purpose = safeGet(contract, 'purpose', 'Purpose');
+    
+    if (normalized.comprehensive_data && typeof normalized.comprehensive_data === 'object') {
+      const compData = normalized.comprehensive_data;
+      const contractDetails = compData.contract_details || compData.contractDetails || {};
+      const parties = compData.parties || compData.Parties || {};
+      const financial = compData.financial_details || compData.financialDetails || {};
+      
+      normalized.grant_name = contractDetails.grant_name || 
+                             contractDetails.grantName || 
+                             normalized.grant_name;
+      
+      normalized.grantor = parties.grantor?.organization_name || 
+                          parties.grantor?.organizationName || 
+                          normalized.grantor;
+      
+      normalized.grantee = parties.grantee?.organization_name || 
+                          parties.grantee?.organizationName || 
+                          normalized.grantee;
+      
+      normalized.total_amount = financial.total_grant_amount || 
+                               financial.totalGrantAmount || 
+                               normalized.total_amount;
+    }
+    
+    if (!normalized.grant_name || normalized.grant_name === 'Unnamed Contract') {
+      normalized.grant_name = normalized.filename || 'Unnamed Contract';
+    }
+    
+    return normalized;
   };
-  
-  // Try to access properties in multiple ways (case-sensitive and case-insensitive)
-  const safeGet = (obj, prop, altProp) => {
-    return obj[prop] || obj[altProp] || obj[prop?.toLowerCase?.()] || 
-           obj[prop?.toUpperCase?.()] || null;
-  };
-  
-  // Try to extract basic fields
-  normalized.grant_name = safeGet(contract, 'grant_name', 'grantName') || 
-                         safeGet(contract, 'filename', 'Filename') || 
-                         'Unnamed Contract';
-  
-  normalized.grantor = safeGet(contract, 'grantor', 'Grantor') || 'Unknown Grantor';
-  normalized.grantee = safeGet(contract, 'grantee', 'Grantee') || 'Unknown Grantee';
-  normalized.total_amount = safeGet(contract, 'total_amount', 'totalAmount') || 
-                           safeGet(contract, 'totalAmount', 'total_amount') || 
-                           0;
-  normalized.contract_number = safeGet(contract, 'contract_number', 'contractNumber');
-  normalized.start_date = safeGet(contract, 'start_date', 'startDate');
-  normalized.end_date = safeGet(contract, 'end_date', 'endDate');
-  normalized.purpose = safeGet(contract, 'purpose', 'Purpose');
-  
-  // If we have comprehensive_data, extract from it
-  if (normalized.comprehensive_data && typeof normalized.comprehensive_data === 'object') {
-    const compData = normalized.comprehensive_data;
-    
-    // Override with comprehensive data if available
-    const contractDetails = compData.contract_details || compData.contractDetails || {};
-    const parties = compData.parties || compData.Parties || {};
-    const financial = compData.financial_details || compData.financialDetails || {};
-    
-    normalized.grant_name = contractDetails.grant_name || 
-                           contractDetails.grantName || 
-                           normalized.grant_name;
-    
-    normalized.grantor = parties.grantor?.organization_name || 
-                        parties.grantor?.organizationName || 
-                        normalized.grantor;
-    
-    normalized.grantee = parties.grantee?.organization_name || 
-                        parties.grantee?.organizationName || 
-                        normalized.grantee;
-    
-    normalized.total_amount = financial.total_grant_amount || 
-                             financial.totalGrantAmount || 
-                             normalized.total_amount;
-  }
-  
-  // Ensure we have at least some data
-  if (!normalized.grant_name || normalized.grant_name === 'Unnamed Contract') {
-    console.warn(`Contract ${contractId} has minimal data, using filename as name`);
-    normalized.grant_name = normalized.filename || 'Unnamed Contract';
-  }
-  
-  console.log(`Normalized contract ${contractId}:`, {
-    grant_name: normalized.grant_name,
-    grantor: normalized.grantor,
-    total_amount: normalized.total_amount,
-    has_data: !!(normalized.grant_name || normalized.grantor || normalized.total_amount)
-  });
-  
-  return normalized;
-};
-
-useEffect(() => {
-  if (contracts && contracts.length > 0) {
-    const normalized = contracts
-      .map(contract => normalizeContractData(contract))
-      .filter(contract => contract !== null && contract.id); // Filter out null and contracts without ID
-    
-    console.log(`Normalized ${normalized.length} valid contracts`, normalized);
-    setNormalizedContracts(normalized);
-    calculateStats(normalized);
-  } else {
-    setNormalizedContracts([]);
-    resetStats();
-  }
-}, [contracts]);
 
   const resetStats = () => {
     setStats({
@@ -381,7 +286,6 @@ useEffect(() => {
     (contract.contract_number && contract.contract_number.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  // Render a contract row for table view
   const renderContractRow = (contract) => {
     if (!contract) return null;
     
@@ -389,9 +293,6 @@ useEffect(() => {
       <tr key={contract.id} className="contract-row">
         <td>
           <div className="contract-info">
-            <div className="contract-icon-small">
-              <FileText size={16} />
-            </div>
             <div>
               <div className="contract-name">
                 {contract.grant_name || contract.filename || 'Unnamed Contract'}
@@ -404,19 +305,16 @@ useEffect(() => {
         </td>
         <td>
           <div className="grantor-cell">
-            <Building size={14} />
             <span>{contract.grantor || 'N/A'}</span>
           </div>
         </td>
         <td>
           <div className="amount-cell">
-            <DollarSign size={14} />
             <span>{formatCurrency(contract.total_amount)}</span>
           </div>
         </td>
         <td>
           <div className="date-cell">
-            <Calendar size={14} />
             <span>{contract.end_date ? new Date(contract.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}</span>
           </div>
         </td>
@@ -446,7 +344,6 @@ useEffect(() => {
     );
   };
 
-  // Render a contract card for grid view
   const renderContractCard = (contract) => {
     if (!contract) return null;
     
@@ -465,9 +362,6 @@ useEffect(() => {
         </div>
 
         <div className="card-content">
-          <div className="contract-icon">
-            <FileText size={20} />
-          </div>
           <h3 className="contract-name">
             {contract.grant_name || contract.filename || 'Unnamed Contract'}
           </h3>
@@ -477,17 +371,14 @@ useEffect(() => {
 
           <div className="contract-meta">
             <div className="meta-item">
-              <Building size={14} />
               <span>{contract.grantor || 'No grantor'}</span>
             </div>
             <div className="meta-item">
-              <Calendar size={14} />
               <span>{contract.start_date ? new Date(contract.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'No date'}</span>
             </div>
           </div>
 
           <div className="contract-amount">
-            <DollarSign size={16} />
             <span>{formatCurrency(contract.total_amount)}</span>
           </div>
 
@@ -506,7 +397,6 @@ useEffect(() => {
             className="btn-view"
             onClick={() => navigate(`/contracts/${contract.id}`)}
           >
-            <Eye size={16} />
             View Details
           </button>
         </div>
@@ -516,14 +406,7 @@ useEffect(() => {
 
   return (
     <div className="dashboard">
-      {/* Header */}
-      <div className="dashboard-header">
-        <div className="header-actions">
-          {/* Refresh button can be added here if needed */}
-        </div>
-      </div>
-
-      {/* Key Metrics */}
+      {/* Key Metrics - Reduced spacing */}
       <div className="metrics-container">
         <div className="metric-card">
           <div className="metric-content">
@@ -562,55 +445,56 @@ useEffect(() => {
         </div>
       </div>
 
-      {/* Recent Contracts Section */}
+      {/* Recent Contracts Section - Fixed layout */}
       <div className="recent-contracts">
         <div className="section-header">
-          <div className="section-controls">
-            <div className="search-box">
-              <Search size={16} />
-              <input
-                type="text"
-                placeholder="Search contracts..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="search-input"
-              />
-            </div>
-            
-            <div className="controls-right">
-              <div className="view-toggle">
-                <button 
-                  className={`view-btn ${activeView === 'list' ? 'active' : ''}`}
-                  onClick={() => setActiveView('list')}
-                >
-                  <span className="view-icon">☰</span>
-                  List
-                </button>
-                <button 
-                  className={`view-btn ${activeView === 'grid' ? 'active' : ''}`}
-                  onClick={() => setActiveView('grid')}
-                >
-                  <span className="view-icon">⏹️</span>
-                  Grid
-                </button>
-              </div>
+          <h2>Recent Contracts</h2>
+          {/* <p className="section-subtitle">Manage and monitor your contract portfolio</p> */}
+        </div>
 
+        {/* Controls with search on left, buttons on right */}
+        <div className="section-controls">
+          <div className="search-box">
+            <Search size={16} />
+            <input
+              type="text"
+              placeholder="Search contracts..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="search-input"
+            />
+          </div>
+          
+          <div className="controls-right">
+            <div className="view-toggle">
               <button 
-                className="btn-view-all"
-                onClick={() => navigate('/contracts')}
+                className={`view-btn ${activeView === 'list' ? 'active' : ''}`}
+                onClick={() => setActiveView('list')}
               >
-                <span>View All</span>
-                <ArrowRight size={16} />
+                List
               </button>
-              
               <button 
-                className="btn-primary"
-                onClick={() => navigate('/upload')}
+                className={`view-btn ${activeView === 'grid' ? 'active' : ''}`}
+                onClick={() => setActiveView('grid')}
               >
-                <Upload size={18} />
-                <span>Upload</span>
+                Grid
               </button>
             </div>
+
+            <button 
+              className="btn-view-all"
+              onClick={() => navigate('/contracts')}
+            >
+              View All
+            </button>
+            
+            {/* <button 
+              className="btn-upload"
+              onClick={() => navigate('/upload')}
+            >
+              <Upload size={16} />
+              Upload
+            </button> */}
           </div>
         </div>
 
@@ -654,7 +538,7 @@ useEffect(() => {
               <p>{searchTerm ? 'Try adjusting your search' : 'Upload your first contract to get started'}</p>
               {!searchTerm && (
                 <button 
-                  className="btn-primary"
+                  className="btn-upload-main"
                   onClick={() => navigate('/upload')}
                 >
                   <Upload size={20} />
@@ -668,14 +552,12 @@ useEffect(() => {
 
       {/* Financial & Deadlines Summary */}
       <div className="summary-container">
-        {/* Financial Summary - Individual Contracts */}
         <div className="summary-card">
           <div className="summary-header">
-            <DollarSign size={20} />
+            {/* <DollarSign size={20} /> */}
             <h3>Financial Summary</h3>
           </div>
           <div className="financial-summary">
-            {/* Individual Contract Financials */}
             {normalizedContracts.slice(0, 3).map((contract) => {
               const totalAmount = contract.total_amount || 0;
               const fundsReceived = totalAmount * 0.5;
@@ -717,20 +599,12 @@ useEffect(() => {
                     </div>
                     <div className="progress-text">
                       <span>Progress: {progressPercentage}%</span>
-                      <button 
-                        className="btn-action-small"
-                        onClick={() => navigate(`/contracts/${contract.id}`)}
-                        title="View contract details"
-                      >
-                        <ChevronRight size={16} />
-                      </button>
                     </div>
                   </div>
                 </div>
               );
             })}
             
-            {/* Overall Progress Summary */}
             <div className="overall-progress">
               <div className="financial-item">
                 <span className="item-label">Total Value (All)</span>
@@ -751,10 +625,9 @@ useEffect(() => {
           </div>
         </div>
 
-        {/* Upcoming Deadlines */}
         <div className="summary-card">
           <div className="summary-header">
-            <Calendar size={20} />
+            {/* <Calendar size={20} /> */}
             <h3>Upcoming Deadlines</h3>
             <span className="deadline-count">{stats.upcomingDeadlines}</span>
           </div>
@@ -771,7 +644,6 @@ useEffect(() => {
                       <h4>{contract.grant_name || 'Unnamed Grant'}</h4>
                       <div className="deadline-details">
                         <span className="detail">
-                          <Building size={12} />
                           {contract.grantor || 'No grantor'}
                         </span>
                       </div>
@@ -792,7 +664,6 @@ useEffect(() => {
             </div>
           ) : (
             <div className="empty-deadlines">
-              <Calendar size={24} />
               <p>No upcoming deadlines</p>
             </div>
           )}
