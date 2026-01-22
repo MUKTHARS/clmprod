@@ -420,19 +420,29 @@ const getContractStatus = (contract) => {
     return `CONT-${contract.contract_id || contract.id || 'Unknown'}`;
   };
 
-  if (loading) {
-    return (
-      <div className="loading-page">
-        <div className="loading-content">
-          <div className="loading-spinner">
-            <Loader2 size={48} className="spinning" />
-          </div>
-          <h3>Loading Contract Details</h3>
-          <p>Analyzing comprehensive contract data...</p>
-        </div>
+if (loading) {
+  return (
+    <div className="contract-details-page">
+      <div className="loading-state" style={{ 
+        display: 'flex', 
+        flexDirection: 'column', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        minHeight: '60vh',
+        width: '100%'
+      }}>
+        <RefreshCw className="spinner" style={{ 
+          width: '32px', 
+          height: '32px', 
+          color: '#475569', 
+          animation: 'spin 1s linear infinite',
+          marginBottom: '12px'
+        }} />
+        <p style={{ color: '#64748b', margin: 0, fontSize: '13px' }}>Loading contract details...</p>
       </div>
-    );
-  }
+    </div>
+  );
+}
 
   // Check if id is undefined or invalid
   if (!id) {
