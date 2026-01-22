@@ -174,46 +174,59 @@
   border-color: #a7f3d0;
 }
 
-.title-right {
-  display: flex;
-  align-items: center;
-}
-
-.contract-value {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+/* Contract Metrics Summary in Title - 6 items */
+.contract-metrics-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  background: #f8fafc;
+  border-radius: 8px;
   padding: 12px;
-  background: #f0f9ff;
-  border-radius: 6px;
-  border: 1px solid #bae6fd;
-  min-width: 150px;
+  border: 1px solid #e2e8f0;
+  min-width: 500px;
 }
 
-.value-icon {
-  width: 20px;
-  height: 20px;
-  color: #0369a1;
+.metric-summary-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
 }
 
-.value-content {
+.metric-icon {
+  color: #475569;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.metric-summary-content {
   display: flex;
   flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  overflow: hidden;
 }
 
-.value-label {
-  font-size: 11px;
+.metric-summary-value {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e293b;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.metric-summary-label {
+  font-size: 9px;
   color: #64748b;
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.3px;
-}
-
-.value-amount {
-  font-size: 16px;
-  font-weight: 600;
-  color: #0369a1;
-  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Metrics Overview - Same as Dashboard */
@@ -291,7 +304,8 @@
   gap: 8px;
 }
 
-.btn-expand-all {
+.btn-expand-all,
+.btn-collapse-all {
   padding: 4px 8px;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
@@ -303,7 +317,8 @@
   transition: all 0.2s ease;
 }
 
-.btn-expand-all:hover {
+.btn-expand-all:hover,
+.btn-collapse-all:hover {
   background: #f1f5f9;
   border-color: #cbd5e1;
 }
@@ -941,6 +956,11 @@
   .parties-grid {
     grid-template-columns: 1fr;
   }
+  
+  .contract-metrics-summary {
+    grid-template-columns: repeat(3, 1fr);
+    min-width: 400px;
+  }
 }
 
 @media (max-width: 768px) {
@@ -976,9 +996,15 @@
     font-size: 16px;
   }
   
-  .contract-value {
-    width: 100%;
+  .contract-metrics-summary {
+    grid-template-columns: repeat(2, 1fr);
     min-width: auto;
+    width: 100%;
+    gap: 8px;
+  }
+  
+  .metric-summary-item {
+    padding: 6px 4px;
   }
   
   .metrics-overview {
@@ -1015,6 +1041,11 @@
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
+  }
+  
+  .section-actions {
+    width: 100%;
+    justify-content: space-between;
   }
   
   .expandable-content {
@@ -1069,6 +1100,24 @@
     align-items: flex-start;
   }
   
+  .contract-metrics-summary {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+    padding: 8px;
+  }
+  
+  .metric-summary-item {
+    padding: 4px 2px;
+  }
+  
+  .metric-summary-value {
+    font-size: 11px;
+  }
+  
+  .metric-summary-label {
+    font-size: 8px;
+  }
+  
   .actions-grid {
     grid-template-columns: 1fr;
   }
@@ -1085,8 +1134,16 @@
     font-size: 14px;
   }
   
-  .value-amount {
-    font-size: 14px;
+  .section-actions {
+    flex-wrap: wrap;
+  }
+  
+  .btn-expand-all,
+  .btn-collapse-all {
+    flex: 1;
+    text-align: center;
+    font-size: 10px;
+    padding: 4px 6px;
   }
   
   .field-value {
@@ -1115,11 +1172,11 @@
 .btn-secondary,
 .btn-back,
 .btn-expand-all,
+.btn-collapse-all,
 .quick-action-btn,
 .action-btn-mini {
   transition: all 0.2s ease;
 }
-
 
 /* Project Manager Workflow Section */
 .workflow-section {

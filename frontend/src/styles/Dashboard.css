@@ -1149,185 +1149,80 @@
 }
 
 
+
 /* =========================
-   JIRA-STYLE ACTION BUTTONS
+   ACTION BUTTONS – FIX
    ========================= */
 
-/* Container for action buttons */
 .action-buttons {
   display: flex !important;
   flex-direction: row !important;
   align-items: center !important;
   justify-content: flex-start !important;
-  gap: 2px !important;
-  min-width: auto !important;
-  background: #ffffff !important;
-  border-radius: 3px !important;
-  border: 1px solid #DFE1E6 !important;
-  padding: 1px !important;
-  height: 32px !important;
-  width: fit-content !important;
+  gap: 8px !important;
+  min-width: 100px !important;
 }
 
-/* Jira-style action button */
+/* Ensure buttons are side by side */
 .btn-action {
-  width: 32px !important;
-  height: 30px !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  background: transparent !important;
-  border: none !important;
-  border-radius: 3px !important;
-  color: #42526E !important;
-  cursor: pointer !important;
-  transition: all 0.2s ease !important;
-  font-size: 14px !important;
-  flex-shrink: 0 !important;
-  padding: 0 !important;
+  display: inline-flex !important;
+  float: none !important;
   margin: 0 !important;
 }
 
-/* Hover state - Jira style */
-.btn-action:hover {
-  background: #F4F5F7 !important;
-  border: none !important;
-  color: #42526E !important;
-  transform: none !important;
-  box-shadow: none !important;
-}
-
-/* Active/click state */
-.btn-action:active {
-  background: #EAECF0 !important;
-  transform: none !important;
-}
-
-/* Focus state (accessibility) */
-.btn-action:focus {
-  outline: none !important;
-  box-shadow: 0 0 0 2px #4C9AFF !important;
-}
-
-/* Icon styling for Jira look */
+/* Icon color */
 .btn-action svg {
-  width: 16px !important;
-  height: 16px !important;
-  stroke: #42526E !important;
-  stroke-width: 2px !important;
-  transition: stroke 0.2s ease !important;
+  stroke: #2563eb; /* blue */
+  transition: stroke 0.2s ease;
 }
 
-.btn-action:hover svg {
-  stroke: #0052CC !important;
+/* Hover effect */
+.btn-action:hover {
+  background: #eff6ff; /* blue tint */
+  border-color: #2563eb;
+  transform: translateY(-1px);
 }
 
-/* Disabled state */
+/* Active click */
+.btn-action:active {
+  transform: scale(0.95);
+}
+
+/* Disabled (example if used later) */
 .btn-action:disabled {
-  cursor: not-allowed !important;
-  opacity: 0.4 !important;
-  background: transparent !important;
+  cursor: not-allowed;
+  opacity: 0.45;
+  background: #f9fafb;
 }
 
 .btn-action:disabled svg {
-  stroke: #8993A4 !important;
+  stroke: #9ca3af;
 }
 
-/* Special styling for the View button (Eye icon) */
-.btn-action[title="View details"] {
-  position: relative !important;
-}
-
-.btn-action[title="View details"]:hover::after {
-  content: '' !important;
-  position: absolute !important;
-  top: -25px !important;
-  left: 50% !important;
-  transform: translateX(-50%) !important;
-  background: #172B4D !important;
-  color: white !important;
-  padding: 4px 8px !important;
-  border-radius: 3px !important;
-  font-size: 11px !important;
-  font-weight: 500 !important;
-  white-space: nowrap !important;
-  z-index: 1000 !important;
-  content: attr(title) !important;
-}
-
-/* Table-specific adjustments */
+/* Table-specific alignment */
 .contracts-table td .action-buttons {
-  justify-content: flex-start !important;
-  width: auto !important;
-  margin: 0 auto !important;
+  justify-content: center;
 }
 
-/* Ensure buttons don't wrap in table cells */
-.contracts-table td:last-child {
-  white-space: nowrap !important;
-  padding: 8px 12px !important;
-}
-
-/* Card footer buttons - adjust for card view */
+/* Card footer buttons */
 .card-footer .action-buttons {
-  justify-content: center !important;
-  background: transparent !important;
-  border: none !important;
-  padding: 0 !important;
-  height: auto !important;
+  justify-content: flex-end;
 }
 
-.card-footer .btn-action {
-  width: 28px !important;
-  height: 28px !important;
-  margin: 0 2px !important;
-}
-
-/* Small action button for deadlines section */
+/* Small action button (used in deadlines section) */
 .btn-action-small {
-  width: 28px !important;
-  height: 28px !important;
-  background: transparent !important;
-  border: 1px solid #DFE1E6 !important;
-  border-radius: 3px !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  cursor: pointer !important;
-  transition: all 0.2s ease !important;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
 .btn-action-small:hover {
-  background: #F4F5F7 !important;
-  border-color: #C1C7D0 !important;
-}
-
-.btn-action-small svg {
-  width: 14px !important;
-  height: 14px !important;
-  stroke: #42526E !important;
-}
-
-/* Remove any old hover effects that might conflict */
-.btn-action:hover {
-  transform: none !important;
-  box-shadow: none !important;
-}
-
-/* Mobile responsiveness for action buttons */
-@media (max-width: 768px) {
-  .action-buttons {
-    gap: 1px !important;
-    padding: 0 !important;
-  }
-  
-  .btn-action {
-    width: 28px !important;
-    height: 28px !important;
-  }
-  
-  .contracts-table td .action-buttons {
-    justify-content: center !important;
-    width: 100% !important;
-  }
+  background: #f3f4f6;
 }
