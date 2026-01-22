@@ -69,8 +69,8 @@ const getMenuItems = () => {
       roles: ['project_manager', 'director', 'program_manager']  // All roles should have this
     },
     { 
-      id: 'contracts', 
-      label: 'Contracts', 
+      id: 'grants', 
+      label: 'Grants', 
       icon: FileText, 
       path: '/contracts', 
       permission: 'can_view_contracts',

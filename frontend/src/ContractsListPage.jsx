@@ -400,7 +400,7 @@ function ContractsListPage({ contracts: propContracts = [], user }) {
           <div className="metric-content">
             <div className="metric-info">
               <div className="metric-value">{metrics.totalContracts}</div>
-              <div className="metric-label">Total Contracts</div>
+              <div className="metric-label">Total Grants</div>
             </div>
           </div>
         </div>
@@ -440,7 +440,7 @@ function ContractsListPage({ contracts: propContracts = [], user }) {
             <Search size={16} />
             <input
               type="text"
-              placeholder="Search contracts..."
+              placeholder="Search grants..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="search-input"
@@ -573,7 +573,7 @@ function ContractsListPage({ contracts: propContracts = [], user }) {
             <>
               <div className="results-header">
                 <span className="results-count">
-                  Showing {filteredContracts.length} of {propContracts.length} contracts
+                  Showing {filteredContracts.length} of {propContracts.length} grants
                 </span>
               </div>
 
@@ -582,8 +582,8 @@ function ContractsListPage({ contracts: propContracts = [], user }) {
                   <table className="contracts-table">
                     <thead>
                       <tr>
-                        <th className="table-header-large">Contract Name</th>
-                        <th className="table-header-large">Contract ID</th>
+                        <th className="table-header-large">Grant Name</th>
+                        <th className="table-header-large">Grant ID</th>
                         <th className="table-header-large">Grantor</th>
                         <th className="table-header-large">Amount</th>
                         <th className="table-header-large">Upload Date</th>
