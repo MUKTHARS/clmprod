@@ -591,3 +591,58 @@ textarea:focus {
 .login-page .main-content {
   margin-left: 0;
 }
+
+
+
+
+
+/* App.css - Add these styles */
+.app-container {
+  display: flex;
+  min-height: 100vh;
+  background-color: #f9fafb;
+}
+
+.main-content {
+  flex: 1;
+  margin-left: 240px; /* Sidebar width */
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  padding-top: 0 !important;
+}
+
+.content-area {
+  flex: 1;
+  padding: 0 !important; /* Remove all padding */
+  margin-top: 0 !important; /* Remove top margin */
+  background: #f8fafc;
+  min-height: calc(100vh - 70px);
+  overflow-y: auto;
+}
+
+/* Ensure the dashboard and contracts pages take full width */
+.dashboard,
+.contracts-list-page {
+  width: 100%;
+  max-width: none;
+  padding: 0;
+  margin: 0;
+}
+
+/* Remove any top space from the first element in content area */
+.content-area > *:first-child {
+  margin-top: 0;
+  padding-top: 0;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .sidebar {
+    width: 64px;
+  }
+  
+  .main-content {
+    margin-left: 64px;
+  }
+}
