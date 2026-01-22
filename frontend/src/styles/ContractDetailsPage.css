@@ -1752,3 +1752,168 @@
   color: #94a3b8;
   margin: 0;
 }
+
+
+/* Comments Section Styles */
+.comments-section {
+  margin-top: 20px;
+}
+
+.comments-controls {
+  margin-bottom: 20px;
+}
+
+.comments-controls .btn-primary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.comments-list-container {
+  margin-top: 15px;
+}
+
+.loading-comments {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 20px;
+  color: #64748b;
+}
+
+.empty-comments {
+  text-align: center;
+  padding: 40px 20px;
+  color: #94a3b8;
+}
+
+.empty-comments svg {
+  margin-bottom: 10px;
+}
+
+/* Comment Cards */
+.pm-comment-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.pm-comment-card.open {
+  border-left: 4px solid #f59e0b;
+}
+
+.pm-comment-card.resolved {
+  border-left: 4px solid #10b981;
+}
+
+.pm-comment-card.closed {
+  border-left: 4px solid #6b7280;
+}
+
+.comment-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.comment-meta {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.comment-type {
+  font-weight: 600;
+  color: #334155;
+  font-size: 14px;
+}
+
+.comment-date {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.comment-status {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.comment-status.open {
+  color: #f59e0b;
+  background: #fef3c7;
+}
+
+.comment-status.resolved {
+  color: #10b981;
+  background: #d1fae5;
+}
+
+.comment-role {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #6366f1;
+  font-weight: 500;
+}
+
+.comment-body {
+  color: #334155;
+}
+
+.comment-text {
+  margin: 0 0 12px 0;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.comment-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 12px;
+  margin-right: 8px;
+  margin-bottom: 8px;
+}
+
+.comment-tag.risk {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.comment-tag.issue {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.comment-tag.recommendation {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.resolution-note {
+  margin-top: 12px;
+  padding: 12px;
+  background: #f0f9ff;
+  border-radius: 6px;
+  border-left: 3px solid #0ea5e9;
+}
+
+.resolution-note strong {
+  color: #0369a1;
+}
