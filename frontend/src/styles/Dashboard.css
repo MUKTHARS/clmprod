@@ -1080,3 +1080,50 @@
   font-size: 13px;
   vertical-align: middle;
 }
+
+
+
+
+/* Increase size of metric cards */
+.metric-card-tall {
+  min-height: 140px; /* Increased from 120px */
+  padding: 20px; /* Increased from 16px */
+  border-radius: 10px; /* Slightly larger radius */
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); /* Add subtle shadow */
+}
+
+.metric-content {
+  gap: 8px; /* Add some spacing */
+}
+
+.metric-value {
+  font-size: 24px !important; /* Increased from 22px */
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 4px;
+  line-height: 1.1;
+}
+
+.metric-label {
+  font-size: 12px !important; /* Increased from 13px */
+  color: #64748b;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+}
+
+/* Optional: Add icons to metric cards */
+.metric-card-tall .metric-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  width: 100%;
+}
+
+/* Add hover effect for better visual feedback */
+.metric-card-tall:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08);
+  border-color: #cbd5e1;
+}
