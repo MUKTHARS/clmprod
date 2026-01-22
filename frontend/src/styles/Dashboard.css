@@ -336,6 +336,11 @@
   justify-content: flex-start; /* Changed from center to flex-start */
   flex-wrap: nowrap;
 }
+.contracts-table td {
+  display: table-cell !important;
+}
+
+
 
 .btn-action {
   width: 32px; /* Smaller width to fit better */
@@ -526,7 +531,22 @@
 }
 
 .contracts-table td:last-child {
-  text-align: center;
+  text-align: left !important;
+  white-space: nowrap !important;
+  min-width: 100px !important;
+}
+
+.contracts-table td:last-child .btn-action,
+.contracts-table td:last-child .action-buttons {
+  display: inline-flex !important;
+  display: -webkit-inline-flex !important;
+}
+
+.contracts-table td:last-child .action-buttons {
+  display: flex !important;
+  flex-direction: row !important;
+  justify-content: flex-start !important;
+  align-items: center !important;
 }
 
 /* For card view, ensure buttons are properly spaced */
@@ -1126,4 +1146,83 @@
   transform: translateY(-2px);
   box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08);
   border-color: #cbd5e1;
+}
+
+
+
+/* =========================
+   ACTION BUTTONS – FIX
+   ========================= */
+
+.action-buttons {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 8px !important;
+  min-width: 100px !important;
+}
+
+/* Ensure buttons are side by side */
+.btn-action {
+  display: inline-flex !important;
+  float: none !important;
+  margin: 0 !important;
+}
+
+/* Icon color */
+.btn-action svg {
+  stroke: #2563eb; /* blue */
+  transition: stroke 0.2s ease;
+}
+
+/* Hover effect */
+.btn-action:hover {
+  background: #eff6ff; /* blue tint */
+  border-color: #2563eb;
+  transform: translateY(-1px);
+}
+
+/* Active click */
+.btn-action:active {
+  transform: scale(0.95);
+}
+
+/* Disabled (example if used later) */
+.btn-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  background: #f9fafb;
+}
+
+.btn-action:disabled svg {
+  stroke: #9ca3af;
+}
+
+/* Table-specific alignment */
+.contracts-table td .action-buttons {
+  justify-content: center;
+}
+
+/* Card footer buttons */
+.card-footer .action-buttons {
+  justify-content: flex-end;
+}
+
+/* Small action button (used in deadlines section) */
+.btn-action-small {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-action-small:hover {
+  background: #f3f4f6;
 }
