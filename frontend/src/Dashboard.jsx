@@ -153,7 +153,22 @@ function Dashboard({ contracts, loading, refreshContracts, user }) {
       const amount = contract.total_amount || 0;
       totalAmount += amount;
       
-      const received = amount * 0.5;
+      // Fixed: Use actual received amount from payment schedule if available
+      let received = 0;
+      if (contract.payment_schedule && typeof contract.payment_schedule === 'object') {
+        // Try to extract paid amounts from payment schedule
+        const payments = Object.values(contract.payment_schedule);
+        received = payments.reduce((sum, payment) => {
+          if (payment && payment.paid === true && payment.amount) {
+            return sum + (parseFloat(payment.amount) || 0);
+          }
+          return sum;
+        }, 0);
+      } else {
+        // Fallback to 50% if no payment schedule
+        received = amount * 0.5;
+      }
+      
       fundsReceived += received;
       fundsRemaining += (amount - received);
       
@@ -286,63 +301,75 @@ function Dashboard({ contracts, loading, refreshContracts, user }) {
     (contract.contract_number && contract.contract_number.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  const renderContractRow = (contract) => {
-    if (!contract) return null;
+const renderContractRow = (contract) => {
+  if (!contract) return null;
+  
+  return (
+    <tr key={contract.id} className="contract-row">
+      <td>
+        <div className="contract-info">
+          <div className="contract-name-only">
+            {contract.grant_name || contract.filename || 'Unnamed Grant'}
+          </div>
+        </div>
+      </td>
+      <td>
+        <div className="contract-id-only">
+          {getContractDisplayId(contract)}
+        </div>
+      </td>
+      <td>
+        <div className="grantor-cell">
+          <span>{contract.grantor || 'N/A'}</span>
+        </div>
+      </td>
+      <td>
+        <div className="amount-cell">
+          <span>{formatCurrency(contract.total_amount)}</span>
+        </div>
+      </td>
+      <td>
+        <div className="date-cell">
+          <span>{contract.uploaded_at ? new Date(contract.uploaded_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}</span>
+        </div>
+      </td>
+      <td>
+        <div className="date-cell">
+          <span>{contract.end_date ? new Date(contract.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}</span>
+        </div>
+      </td>
+      <td>
+        <div className="status-cell">
+          {getStatusIcon(contract.status)}
+          <span className={`status-text ${getStatusColor(contract.status)}`}>
+            {contract.status || 'unknown'}
+          </span>
+        </div>
+      </td>
+      <td>
+      <td>
+  <div className="action-buttons">
+    <button 
+      className="btn-action"
+      onClick={() => navigate(`/contracts/${contract.id}`)}
+      title="View details"
+    >
+      <Eye size={16} />
+    </button>
+    <button 
+      className="btn-action"
+      title="Download"
+      onClick={() => {}}
+    >
+      <Download size={16} />
+    </button>
     
-    return (
-      <tr key={contract.id} className="contract-row">
-        <td>
-          <div className="contract-info">
-            <div>
-              <div className="contract-name">
-                {contract.grant_name || contract.filename || 'Unnamed Contract'}
-              </div>
-              <div className="contract-id">
-                ID: {getContractDisplayId(contract)}
-              </div>
-            </div>
-          </div>
-        </td>
-        <td>
-          <div className="grantor-cell">
-            <span>{contract.grantor || 'N/A'}</span>
-          </div>
-        </td>
-        <td>
-          <div className="amount-cell">
-            <span>{formatCurrency(contract.total_amount)}</span>
-          </div>
-        </td>
-        <td>
-          <div className="date-cell">
-            <span>{contract.end_date ? new Date(contract.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}</span>
-          </div>
-        </td>
-        <td>
-          <div className="status-cell">
-            {getStatusIcon(contract.status)}
-            <span className={`status-text ${getStatusColor(contract.status)}`}>
-              {contract.status || 'unknown'}
-            </span>
-          </div>
-        </td>
-        <td>
-          <div className="action-buttons">
-            <button 
-              className="btn-action"
-              onClick={() => navigate(`/contracts/${contract.id}`)}
-              title="View details"
-            >
-              <Eye size={16} />
-            </button>
-            <button className="btn-action" title="Download">
-              <Download size={16} />
-            </button>
-          </div>
-        </td>
-      </tr>
-    );
-  };
+  </div>
+</td>
+      </td>
+    </tr>
+  );
+};
 
   const renderContractCard = (contract) => {
     if (!contract) return null;
@@ -356,16 +383,16 @@ function Dashboard({ contracts, loading, refreshContracts, user }) {
               {contract.status || 'unknown'}
             </span>
           </div>
-          <button className="card-menu">
+          {/* <button className="card-menu">
             <MoreVertical size={16} />
-          </button>
+          </button> */}
         </div>
 
         <div className="card-content">
-          <h3 className="contract-name">
-            {contract.grant_name || contract.filename || 'Unnamed Contract'}
+          <h3 className="contract-name-small">
+            {contract.grant_name || contract.filename || 'Unnamed Grant'}
           </h3>
-          <p className="contract-id">
+          <p className="contract-id-small">
             ID: {getContractDisplayId(contract)}
           </p>
 
@@ -374,7 +401,7 @@ function Dashboard({ contracts, loading, refreshContracts, user }) {
               <span>{contract.grantor || 'No grantor'}</span>
             </div>
             <div className="meta-item">
-              <span>{contract.start_date ? new Date(contract.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'No date'}</span>
+              <span>{contract.uploaded_at ? new Date(contract.uploaded_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'No date'}</span>
             </div>
           </div>
 
@@ -393,12 +420,21 @@ function Dashboard({ contracts, loading, refreshContracts, user }) {
         </div>
 
         <div className="card-footer">
-          <button 
-            className="btn-view"
-            onClick={() => navigate(`/contracts/${contract.id}`)}
-          >
-            View Details
-          </button>
+          <div className="action-buttons">
+            <button 
+              className="btn-action"
+              onClick={() => navigate(`/contracts/${contract.id}`)}
+              title="View details"
+            >
+              <Eye size={16} />
+            </button>
+            <button className="btn-action" title="Download">
+              <Download size={16} />
+            </button>
+            <button className="btn-action" title="More">
+              <MoreVertical size={16} />
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -406,18 +442,18 @@ function Dashboard({ contracts, loading, refreshContracts, user }) {
 
   return (
     <div className="dashboard">
-      {/* Key Metrics - Reduced spacing */}
+      
       <div className="metrics-container">
-        <div className="metric-card">
+        <div className="metric-card-tall">
           <div className="metric-content">
             <div className="metric-info">
               <div className="metric-value">{stats.totalGrants}</div>
-              <div className="metric-label">Total Contracts</div>
+              <div className="metric-label">Total Grants</div>
             </div>
           </div>
         </div>
 
-        <div className="metric-card">
+        <div className="metric-card-tall">
           <div className="metric-content">
             <div className="metric-info">
               <div className="metric-value">{formatCurrency(stats.totalAmount)}</div>
@@ -426,7 +462,7 @@ function Dashboard({ contracts, loading, refreshContracts, user }) {
           </div>
         </div>
 
-        <div className="metric-card">
+        <div className="metric-card-tall">
           <div className="metric-content">
             <div className="metric-info">
               <div className="metric-value">{stats.activeContracts}</div>
@@ -435,7 +471,7 @@ function Dashboard({ contracts, loading, refreshContracts, user }) {
           </div>
         </div>
 
-        <div className="metric-card">
+        <div className="metric-card-tall">
           <div className="metric-content">
             <div className="metric-info">
               <div className="metric-value">{stats.upcomingDeadlines}</div>
@@ -445,12 +481,11 @@ function Dashboard({ contracts, loading, refreshContracts, user }) {
         </div>
       </div>
 
-      {/* Recent Contracts Section - Fixed layout */}
+      {/* Recent Grants Section */}
       <div className="recent-contracts">
-        <div className="section-header">
-          <h2>Recent Contracts</h2>
-          {/* <p className="section-subtitle">Manage and monitor your contract portfolio</p> */}
-        </div>
+        {/* <div className="section-header">
+          <h2 className="section-title-large">Recent Grants</h2>
+        </div> */}
 
         {/* Controls with search on left, buttons on right */}
         <div className="section-controls">
@@ -458,7 +493,7 @@ function Dashboard({ contracts, loading, refreshContracts, user }) {
             <Search size={16} />
             <input
               type="text"
-              placeholder="Search contracts..."
+              placeholder="Search grants..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="search-input"
@@ -487,23 +522,15 @@ function Dashboard({ contracts, loading, refreshContracts, user }) {
             >
               View All
             </button>
-            
-            {/* <button 
-              className="btn-upload"
-              onClick={() => navigate('/upload')}
-            >
-              <Upload size={16} />
-              Upload
-            </button> */}
           </div>
         </div>
 
-        {/* Contracts Content */}
+        {/* Grants Content */}
         <div className="contracts-content">
           {loading ? (
             <div className="loading-state">
               <RefreshCw className="spinner" />
-              <p>Loading contracts...</p>
+              <p>Loading grants...</p>
             </div>
           ) : filteredContracts.length > 0 ? (
             <>
@@ -512,12 +539,14 @@ function Dashboard({ contracts, loading, refreshContracts, user }) {
                   <table className="contracts-table">
                     <thead>
                       <tr>
-                        <th>Contract</th>
-                        <th>Grantor</th>
-                        <th>Amount</th>
-                        <th>End Date</th>
-                        <th>Status</th>
-                        <th>Actions</th>
+                        <th className="table-header-large">Grant Name</th>
+                        <th className="table-header-large">Grant ID</th>
+                        <th className="table-header-large">Grantor</th>
+                        <th className="table-header-large">Amount</th>
+                        <th className="table-header-large">Upload Date</th>
+                        <th className="table-header-large">End Date</th>
+                        <th className="table-header-large">Status</th>
+                        <th className="table-header-large">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -534,15 +563,15 @@ function Dashboard({ contracts, loading, refreshContracts, user }) {
           ) : (
             <div className="empty-state">
               <FileText size={48} />
-              <h3>No contracts found</h3>
-              <p>{searchTerm ? 'Try adjusting your search' : 'Upload your first contract to get started'}</p>
+              <h3>No grants found</h3>
+              <p>{searchTerm ? 'Try adjusting your search' : 'Upload your first grant to get started'}</p>
               {!searchTerm && (
                 <button 
                   className="btn-upload-main"
                   onClick={() => navigate('/upload')}
                 >
                   <Upload size={20} />
-                  Upload First Contract
+                  Upload First Grant
                 </button>
               )}
             </div>
@@ -554,13 +583,26 @@ function Dashboard({ contracts, loading, refreshContracts, user }) {
       <div className="summary-container">
         <div className="summary-card">
           <div className="summary-header">
-            {/* <DollarSign size={20} /> */}
-            <h3>Financial Summary</h3>
+            <h3 className="summary-title-large">Financial Summary</h3>
           </div>
           <div className="financial-summary">
             {normalizedContracts.slice(0, 3).map((contract) => {
               const totalAmount = contract.total_amount || 0;
-              const fundsReceived = totalAmount * 0.5;
+              
+              // Fixed: Get actual received amount from payment schedule
+              let fundsReceived = 0;
+              if (contract.payment_schedule && typeof contract.payment_schedule === 'object') {
+                const payments = Object.values(contract.payment_schedule);
+                fundsReceived = payments.reduce((sum, payment) => {
+                  if (payment && payment.paid === true && payment.amount) {
+                    return sum + (parseFloat(payment.amount) || 0);
+                  }
+                  return sum;
+                }, 0);
+              } else {
+                fundsReceived = totalAmount * 0.5; // Fallback
+              }
+              
               const progressPercentage = totalAmount > 0 ? Math.round((fundsReceived / totalAmount) * 100) : 0;
               
               if (!contract.id) return null;
@@ -569,7 +611,7 @@ function Dashboard({ contracts, loading, refreshContracts, user }) {
                 <div key={contract.id} className="contract-financial-item">
                   <div className="contract-financial-header">
                     <h4 className="contract-financial-name">
-                      {contract.grant_name || contract.filename || 'Unnamed Contract'}
+                      {contract.grant_name || contract.filename || 'Unnamed Grant'}
                     </h4>
                     <div className="contract-financial-id">
                       {getContractDisplayId(contract)}
@@ -627,8 +669,7 @@ function Dashboard({ contracts, loading, refreshContracts, user }) {
 
         <div className="summary-card">
           <div className="summary-header">
-            {/* <Calendar size={20} /> */}
-            <h3>Upcoming Deadlines</h3>
+            <h3 className="summary-title-large">Upcoming Deadlines</h3>
             <span className="deadline-count">{stats.upcomingDeadlines}</span>
           </div>
           
@@ -641,7 +682,7 @@ function Dashboard({ contracts, loading, refreshContracts, user }) {
                 .map((contract) => (
                   <div key={contract.id} className="deadline-item">
                     <div className="deadline-info">
-                      <h4>{contract.grant_name || 'Unnamed Grant'}</h4>
+                      <h4 className="deadline-title">{contract.grant_name || 'Unnamed Grant'}</h4>
                       <div className="deadline-details">
                         <span className="detail">
                           {contract.grantor || 'No grantor'}

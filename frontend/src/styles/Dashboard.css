@@ -4,101 +4,49 @@
   margin: 0 auto;
   min-height: 100vh;
   background: #f8fafc;
+  padding-top: 4px !important;
 }
 
-/* Header - Reduced spacing */
-.dashboard-header {
-  margin-bottom: 12px;
+.main-content {
+  padding-top: 0 !important;
 }
 
-.header-content h1 {
-  font-size: 28px;
-  font-weight: 700;
-  color: #1e293b;
-  margin: 0 0 4px 0;
+/* Or if you have a specific container for dashboard */
+.content-container {
+  padding-top: 0;
+  margin-top: 0;
 }
 
-.header-subtitle {
-  font-size: 13px;
-  color: #64748b;
-  margin: 0;
+/* Remove top space before cards */
+.dashboard > *:first-child {
+  margin-top: 0;
 }
 
-.header-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.btn-primary {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  background: #475569;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.btn-primary:hover {
-  background: #374151;
-}
-
-.btn-secondary {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  background: white;
-  border: 1px solid #e2e8f0;
-  color: #475569;
-  border-radius: 6px;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.btn-secondary:hover {
-  background: #f1f5f9;
-  border-color: #cbd5e1;
-}
-
-.btn-secondary:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.spinning {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-/* Key Metrics - Compact */
+/* Key Metrics - Taller cards (25% increase) */
 .metrics-container {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 12px;
   margin-bottom: 16px;
+  margin-top: 0 !important;
 }
 
-.metric-card {
+
+
+.metric-card-tall {
   background: white;
   border-radius: 8px;
-  padding: 12px;
+  padding: 16px; /* Increased padding */
   border: 1px solid #e5e7eb;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
   transition: all 0.2s ease;
+  min-height: 120px; /* Increased height */
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.metric-card:hover {
+.metric-card-tall:hover {
   border-color: #cbd5e1;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
@@ -114,24 +62,24 @@
 .metric-info {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
 }
 
 .metric-value {
-  font-size: 20px;
+  font-size: 22px; /* Slightly larger */
   font-weight: 700;
   color: #1e293b;
-  margin-bottom: 2px;
+  margin-bottom: 4px;
   line-height: 1;
 }
 
 .metric-label {
-  font-size: 12px;
+  font-size: 13px; /* Slightly larger */
   color: #64748b;
   font-weight: 500;
 }
 
-/* Recent Contracts Section */
+/* Recent Grants Section */
 .recent-contracts {
   background: white;
   border-radius: 8px;
@@ -145,16 +93,10 @@
   border-bottom: 1px solid #e5e7eb;
 }
 
-.section-header h2 {
-  font-size: 18px;
+.section-title-large {
+  font-size: 20px; /* Larger title */
   font-weight: 600;
   color: #1e293b;
-  margin: 0 0 4px 0;
-}
-
-.section-subtitle {
-  font-size: 12px;
-  color: #64748b;
   margin: 0;
 }
 
@@ -186,7 +128,7 @@
 
 .search-input {
   width: 100%;
-  padding: 6px 10px 6px 32px;
+  padding: 8px 10px 8px 32px; /* Slightly taller */
   background: white;
   border: 1px solid #e2e8f0;
   border-radius: 6px;
@@ -217,7 +159,7 @@
 }
 
 .view-btn {
-  padding: 5px 10px;
+  padding: 6px 12px; /* Slightly larger */
   background: transparent;
   border: none;
   border-radius: 4px;
@@ -235,7 +177,7 @@
 }
 
 .btn-view-all {
-  padding: 5px 10px;
+  padding: 6px 12px; /* Slightly larger */
   background: white;
   border: 1px solid #e2e8f0;
   color: #475569;
@@ -251,25 +193,6 @@
   border-color: #cbd5e1;
 }
 
-.btn-upload {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  padding: 5px 10px;
-  background: #475569;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.btn-upload:hover {
-  background: #374151;
-}
-
 /* Contracts Content */
 .contracts-content {
   padding: 20px;
@@ -283,21 +206,35 @@
   width: 100%;
   border-collapse: collapse;
 }
+.contracts-table th:nth-child(1), /* Grant Name */
+.contracts-table th:nth-child(2), /* Grant ID */
+.contracts-table th:nth-child(3) { /* Grantor */
+  min-width: 0; /* Allow them to shrink */
+}
+.contracts-table th:nth-child(4) { width: 10%; } /* Amount */
+.contracts-table th:nth-child(5) { width: 10%; } /* Upload Date */
+.contracts-table th:nth-child(6) { width: 10%; } /* End Date */
+.contracts-table th:nth-child(7) { width: 8%; }  /* Status */
+.contracts-table th:nth-child(8) { /* Actions */
+  width: auto; /* Or specific widths */
+}
 
 .contracts-table thead {
   background: #f8fafc;
 }
 
-.contracts-table th {
-  padding: 10px 12px;
+.table-header-large {
+  padding: 12px; /* Increased padding */
   text-align: left;
   font-weight: 600;
   color: #475569;
-  font-size: 12px;
+  font-size: 13px; /* Larger font */
   border-bottom: 1px solid #e5e7eb;
   white-space: nowrap;
 }
-
+.contracts-table th:last-child {
+  min-width: 80px; /* Enough for 2 buttons with gap */
+}
 .contracts-table td {
   padding: 12px;
   border-bottom: 1px solid #f1f5f9;
@@ -322,15 +259,16 @@
   align-items: center;
 }
 
-.contract-name {
+.contract-name-small {
   font-weight: 500;
   color: #1e293b;
   margin-bottom: 2px;
-  font-size: 13px;
+  font-size: 12px; /* Smaller font */
+  line-height: 1.3;
 }
 
-.contract-id {
-  font-size: 11px;
+.contract-id-small {
+  font-size: 10px;
   color: #64748b;
 }
 
@@ -341,14 +279,6 @@
   display: flex;
   align-items: center;
   gap: 6px;
-}
-
-.grantor-cell svg,
-.amount-cell svg,
-.date-cell svg {
-  color: #64748b;
-  opacity: 0.8;
-  font-size: 12px;
 }
 
 .status-cell {
@@ -402,33 +332,39 @@
 
 .action-buttons {
   display: flex;
-  gap: 6px;
+  gap: 8px;
+  justify-content: flex-start; /* Changed from center to flex-start */
+  flex-wrap: nowrap;
 }
 
 .btn-action {
-  width: 28px;
-  height: 28px;
+  width: 32px; /* Smaller width to fit better */
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f8fafc;
+  background: white;
   border: 1px solid #e2e8f0;
   border-radius: 6px;
-  color: #64748b;
+  color: #475569;
   cursor: pointer;
   transition: all 0.2s ease;
   font-size: 12px;
+  flex-shrink: 0;
+  padding: 0;
 }
 
 .btn-action:hover {
   background: #f1f5f9;
   border-color: #cbd5e1;
   color: #475569;
+  transform: translateY(-1px); 
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .btn-action-small {
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -447,7 +383,7 @@
   color: #475569;
 }
 
-/* Contracts Grid (Grid View) - Removed icons */
+/* Contracts Grid (Grid View) */
 .contracts-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -460,6 +396,8 @@
   border: 1px solid #e5e7eb;
   overflow: hidden;
   transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
 }
 
 .contract-card:hover {
@@ -500,20 +438,7 @@
 
 .card-content {
   padding: 12px;
-}
-
-.contract-name {
-  font-size: 14px;
-  font-weight: 600;
-  color: #1e293b;
-  margin: 0 0 6px 0;
-  line-height: 1.3;
-}
-
-.contract-id {
-  font-size: 11px;
-  color: #64748b;
-  margin: 0 0 12px 0;
+  flex: 1;
 }
 
 .contract-meta {
@@ -596,23 +521,23 @@
   padding: 10px 12px;
   border-top: 1px solid #e5e7eb;
   background: #f8fafc;
+  display: flex;
+  justify-content: center;
 }
 
-.btn-view {
+.contracts-table td:last-child {
+  text-align: center;
+}
+
+/* For card view, ensure buttons are properly spaced */
+.card-footer .action-buttons {
+  justify-content: center;
   width: 100%;
-  padding: 6px;
-  background: #475569;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
 }
 
-.btn-view:hover {
-  background: #374151;
+/* Remove any old styles for the MoreVertical button if they exist */
+.btn-action[title="More"] {
+  display: none;
 }
 
 /* Loading & Empty States */
@@ -687,7 +612,7 @@
   background: #374151;
 }
 
-/* Summary Container - Reduced vertical spacing */
+/* Summary Container */
 .summary-container {
   display: grid;
   grid-template-columns: 2fr 1fr;
@@ -714,13 +639,8 @@
   margin-bottom: 16px;
 }
 
-.summary-header svg {
-  color: #475569;
-  font-size: 16px;
-}
-
-.summary-header h3 {
-  font-size: 16px;
+.summary-title-large {
+  font-size: 18px; /* Larger title */
   font-weight: 600;
   color: #1e293b;
   margin: 0;
@@ -730,9 +650,9 @@
 .deadline-count {
   background: #fee2e2;
   color: #dc2626;
-  padding: 3px 8px;
+  padding: 4px 10px; /* Slightly larger */
   border-radius: 10px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
 }
 
@@ -930,7 +850,7 @@
   border: 1px solid #e2e8f0;
 }
 
-.deadline-info h4 {
+.deadline-title {
   font-size: 13px;
   font-weight: 500;
   color: #1e293b;
@@ -1021,6 +941,11 @@
   border-color: #cbd5e1;
 }
 
+/* Spinner animation */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 /* Responsive */
 @media (max-width: 1024px) {
   .summary-container {
@@ -1065,7 +990,7 @@
   }
   
   .contracts-table {
-    min-width: 700px;
+    min-width: 800px; /* Increased for additional column */
   }
   
   .contracts-grid {
@@ -1111,12 +1036,6 @@
     justify-content: center;
   }
   
-  .btn-upload {
-    order: 3;
-    flex: 1;
-    justify-content: center;
-  }
-  
   .contracts-grid {
     grid-template-columns: 1fr;
   }
@@ -1127,3 +1046,37 @@
 }
 
 
+
+/* Add these styles for separate name and ID */
+.contract-name-only {
+  font-weight: 500;
+  color: #1e293b;
+  margin-bottom: 2px;
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.contract-id-only {
+  font-size: 10px;
+  color: #64748b;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  background: #f8fafc;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid #e2e8f0;
+  display: inline-block;
+}
+
+/* Remove the old contract-info styles that combined name and ID */
+.contract-name-small,
+.contract-id-small {
+  /* Keep these for grid view if needed */
+}
+
+/* For table view specifically, you might want to adjust cell padding */
+.contracts-table td {
+  padding: 12px 8px; /* Slightly smaller horizontal padding */
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 13px;
+  vertical-align: middle;
+}

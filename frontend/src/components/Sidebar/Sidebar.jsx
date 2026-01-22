@@ -30,7 +30,7 @@ const Sidebar = ({ user, onLogout }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [permissions, setPermissions] = useState({});
-
+  const [showUserMenu, setShowUserMenu] = useState(false);
   useEffect(() => {
     // Fetch user permissions
     const fetchPermissions = async () => {
@@ -302,7 +302,7 @@ useEffect(() => {
         </div>
       </div>
 
-      <div className="user-profile-section">
+      {/* <div className="user-profile-section">
         <div className="user-avatar">
           <User size={24} />
         </div>
@@ -312,7 +312,7 @@ useEffect(() => {
             {user?.role ? user.role.replace('_', ' ').toUpperCase() : 'GUEST'}
           </div>
         </div>
-      </div>
+      </div> */}
 
       <nav className="sidebar-nav">
         <ul className="nav-menu">
@@ -344,15 +344,53 @@ useEffect(() => {
         </ul>
       </nav>
 
-      <div className="sidebar-footer">
-        <button className="logout-btn" onClick={handleLogout}>
-          <LogOut size={20} />
-          <span>Logout</span>
+<div className="sidebar-footer">
+  {/* ChatGPT-like user profile with dropdown */}
+  <div 
+    className="user-profile-bottom"
+    onClick={() => setShowUserMenu(!showUserMenu)}
+  >
+    <div className="user-avatar-bottom">
+      {user?.full_name ? user.full_name.charAt(0).toUpperCase() : 'G'}
+    </div>
+    <div className="user-info-bottom">
+      <div className="user-name-bottom">{user?.full_name || user?.username || 'Guest User'}</div>
+      <div className="user-email-bottom">{user?.email || ''}</div>
+    </div>
+    <div className="user-menu-arrow">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <path d="M6 9l6 6 6-6"/>
+      </svg>
+    </div>
+
+     {showUserMenu && (
+    <div className="user-dropdown-menu">
+      <div className="dropdown-section">
+        <button className="dropdown-item">
+          <User size={16} />
+          <span>Profile</span>
         </button>
-        <div className="sidebar-version">
-          <span>v1.0.0</span>
-        </div>
+        <button className="dropdown-item">
+          <Settings size={16} />
+          <span>Settings</span>
+        </button>
       </div>
+      <div className="dropdown-divider"></div>
+      <button 
+        className="dropdown-item logout-item"
+        onClick={handleLogout}
+      >
+        <LogOut size={16} />
+        <span>Log out</span>
+      </button>
+    </div>
+  )}
+  </div>
+  
+  <div className="sidebar-version">
+    {/* <span>v1.0.0</span> */}
+  </div>
+</div>
     </aside>
   );
 };
