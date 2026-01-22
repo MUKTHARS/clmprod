@@ -88,14 +88,14 @@ if (!user) {
           </div> */}
           <div className="page-title-content">
              <h1 className="page-title">{pageTitle}</h1>
-            {user && (
+            {/* {user && (
               <div className="user-badge">
                 <span className="user-name">{user.full_name || user.username}</span>
                 <span className={`user-role role-${user.role}`}>
                   {user.role.replace('_', ' ').toUpperCase()}
                 </span>
               </div>
-            )}
+            )} */}
             <p className="page-subtitle">
               {/* {location.pathname === '/dashboard' 
                 ? 'Welcome back! Here\'s what\'s happening with your contracts today.'

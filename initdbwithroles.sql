@@ -323,3 +323,226 @@ SET thread_id = CONCAT('thread_', id::text)
 WHERE thread_id IS NULL;
 
 ALTER TABLE users ADD COLUMN password_hash VARCHAR(255) NOT NULL DEFAULT '';
+ALTER TABLE contracts ADD COLUMN created_by INTEGER REFERENCES users(id);
+
+
+
+-- First, let's add all missing columns to the contracts table
+DO $$ 
+BEGIN
+    -- Add processing_time if missing
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'contracts' AND column_name = 'processing_time'
+    ) THEN
+        ALTER TABLE contracts ADD COLUMN processing_time DOUBLE PRECISION;
+    END IF;
+
+    -- Add chroma_id if missing
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'contracts' AND column_name = 'chroma_id'
+    ) THEN
+        ALTER TABLE contracts ADD COLUMN chroma_id VARCHAR(255);
+    END IF;
+
+    -- Add version if missing
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'contracts' AND column_name = 'version'
+    ) THEN
+        ALTER TABLE contracts ADD COLUMN version INTEGER DEFAULT 1;
+    END IF;
+
+    -- Add review_comments if missing (TEMPORARY - we'll remove it from INSERT later)
+    -- This is just to make the INSERT work, but we should fix the backend code
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'contracts' AND column_name = 'review_comments'
+    ) THEN
+        ALTER TABLE contracts ADD COLUMN review_comments JSONB DEFAULT '[]';
+    END IF;
+
+    -- Add created_by if missing
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'contracts' AND column_name = 'created_by'
+    ) THEN
+        ALTER TABLE contracts ADD COLUMN created_by INTEGER;
+        
+        -- Set default value
+        UPDATE contracts SET created_by = 1 WHERE created_by IS NULL;
+        
+        -- Add foreign key constraint
+        ALTER TABLE contracts 
+        ADD CONSTRAINT contracts_created_by_fkey 
+        FOREIGN KEY (created_by) REFERENCES users(id);
+    END IF;
+
+    -- Add uploaded_at if missing (this should already exist but just in case)
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'contracts' AND column_name = 'uploaded_at'
+    ) THEN
+        ALTER TABLE contracts ADD COLUMN uploaded_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
+    END IF;
+
+    -- Make sure status has a default
+    ALTER TABLE contracts ALTER COLUMN status SET DEFAULT 'draft';
+    
+    -- Make sure version has a default
+    ALTER TABLE contracts ALTER COLUMN version SET DEFAULT 1;
+    
+    -- Make sure review_comments has a default
+    ALTER TABLE contracts ALTER COLUMN review_comments SET DEFAULT '[]';
+    
+END $$;
+
+-- Now, here's the complete CREATE TABLE statement with ALL columns
+-- that your INSERT statement is trying to use:
+/*
+CREATE TABLE IF NOT EXISTS contracts (
+    id SERIAL PRIMARY KEY,
+    filename VARCHAR NOT NULL,
+    uploaded_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    
+    -- Reference IDs
+    investment_id VARCHAR(255),
+    project_id VARCHAR(255),
+    grant_id VARCHAR(255),
+    extracted_reference_ids JSONB DEFAULT '[]',
+    
+    -- Basic extracted data
+    contract_number VARCHAR,
+    grant_name VARCHAR,
+    grantor VARCHAR,
+    grantee VARCHAR,
+    total_amount DOUBLE PRECISION,
+    start_date VARCHAR,
+    end_date VARCHAR,
+    purpose TEXT,
+    payment_schedule JSONB,
+    terms_conditions JSONB,
+    
+    -- Comprehensive data
+    comprehensive_data JSONB,
+    
+    -- Raw text
+    full_text TEXT,
+    
+    -- Metadata
+    status VARCHAR DEFAULT 'draft',
+    processing_time DOUBLE PRECISION,
+    
+    -- ChromaDB reference
+    chroma_id VARCHAR(255),
+    
+    -- Version control for amendments
+    document_type VARCHAR DEFAULT 'main_contract',
+    parent_contract_id INTEGER REFERENCES contracts(id) ON DELETE SET NULL,
+    version INTEGER DEFAULT 1,
+    is_latest_version BOOLEAN DEFAULT TRUE,
+    amendment_status VARCHAR DEFAULT 'draft',
+    amendment_date TIMESTAMP WITH TIME ZONE,
+    amendment_reason TEXT,
+    
+    -- Workflow fields
+    created_by INTEGER REFERENCES users(id),
+    
+    -- TEMPORARY: review_comments column (should be removed from INSERT statement)
+    -- This exists only because your backend code is trying to insert into it
+    -- Ideally, remove 'review_comments' from the INSERT in your backend code
+    review_comments JSONB DEFAULT '[]',
+    
+    -- Timestamps
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+*/
+
+-- Create all necessary indexes
+CREATE INDEX IF NOT EXISTS idx_contracts_created_by ON contracts(created_by);
+CREATE INDEX IF NOT EXISTS idx_contracts_status ON contracts(status);
+CREATE INDEX IF NOT EXISTS idx_contracts_version ON contracts(version);
+CREATE INDEX IF NOT EXISTS idx_contracts_investment_id ON contracts(investment_id);
+CREATE INDEX IF NOT EXISTS idx_contracts_project_id ON contracts(project_id);
+CREATE INDEX IF NOT EXISTS idx_contracts_grant_id ON contracts(grant_id);
+CREATE INDEX IF NOT EXISTS idx_contracts_document_type ON contracts(document_type);
+CREATE INDEX IF NOT EXISTS idx_contracts_parent_contract_id ON contracts(parent_contract_id);
+
+
+
+-- One-time fix: Add ALL columns that might be missing
+ALTER TABLE contracts 
+ADD COLUMN IF NOT EXISTS review_status VARCHAR(50) DEFAULT 'pending_review',
+ADD COLUMN IF NOT EXISTS review_summary TEXT,
+ADD COLUMN IF NOT EXISTS forwarded_by INTEGER REFERENCES users(id),
+ADD COLUMN IF NOT EXISTS forwarded_at TIMESTAMP WITH TIME ZONE,
+ADD COLUMN IF NOT EXISTS program_manager_recommendation VARCHAR(20),
+ADD COLUMN IF NOT EXISTS director_decision_status VARCHAR(20),
+ADD COLUMN IF NOT EXISTS director_decision_comments TEXT,
+ADD COLUMN IF NOT EXISTS director_decided_at TIMESTAMP WITH TIME ZONE,
+ADD COLUMN IF NOT EXISTS director_decided_by INTEGER REFERENCES users(id),
+ADD COLUMN IF NOT EXISTS business_sign_off BOOLEAN DEFAULT FALSE,
+ADD COLUMN IF NOT EXISTS risk_accepted BOOLEAN DEFAULT FALSE,
+ADD COLUMN IF NOT EXISTS is_locked BOOLEAN DEFAULT FALSE,
+ADD COLUMN IF NOT EXISTS lock_reason TEXT,
+ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+ADD COLUMN IF NOT EXISTS review_comments JSONB DEFAULT '[]',
+ADD COLUMN IF NOT EXISTS processing_time DOUBLE PRECISION,
+ADD COLUMN IF NOT EXISTS chroma_id VARCHAR(255),
+ADD COLUMN IF NOT EXISTS version INTEGER DEFAULT 1,
+ADD COLUMN IF NOT EXISTS created_by INTEGER DEFAULT 1;
+
+-- Set defaults for existing rows
+UPDATE contracts SET review_status = 'pending_review' WHERE review_status IS NULL;
+UPDATE contracts SET business_sign_off = FALSE WHERE business_sign_off IS NULL;
+UPDATE contracts SET risk_accepted = FALSE WHERE risk_accepted IS NULL;
+UPDATE contracts SET is_locked = FALSE WHERE is_locked IS NULL;
+UPDATE contracts SET updated_at = NOW() WHERE updated_at IS NULL;
+UPDATE contracts SET review_comments = '[]'::JSONB WHERE review_comments IS NULL;
+UPDATE contracts SET version = 1 WHERE version IS NULL;
+UPDATE contracts SET created_by = 1 WHERE created_by IS NULL;
+
+-- Add foreign key constraints
+ALTER TABLE contracts 
+ADD CONSTRAINT IF NOT EXISTS contracts_created_by_fkey 
+FOREIGN KEY (created_by) REFERENCES users(id);
+
+ALTER TABLE contracts 
+ADD CONSTRAINT IF NOT EXISTS contracts_forwarded_by_fkey 
+FOREIGN KEY (forwarded_by) REFERENCES users(id);
+
+ALTER TABLE contracts 
+ADD CONSTRAINT IF NOT EXISTS contracts_director_decided_by_fkey 
+FOREIGN KEY (director_decided_by) REFERENCES users(id);
+
+-- Create indexes
+CREATE INDEX IF NOT EXISTS idx_contracts_review_status ON contracts(review_status);
+CREATE INDEX IF NOT EXISTS idx_contracts_forwarded_by ON contracts(forwarded_by);
+CREATE INDEX IF NOT EXISTS idx_contracts_director_decision_status ON contracts(director_decision_status);
+CREATE INDEX IF NOT EXISTS idx_contracts_program_manager_recommendation ON contracts(program_manager_recommendation);
+
+
+
+-- Change review_comments column from JSONB to TEXT
+ALTER TABLE contracts 
+ALTER COLUMN review_comments TYPE TEXT USING review_comments::TEXT;
+
+-- Remove the default JSON array since it's now TEXT
+ALTER TABLE contracts 
+ALTER COLUMN review_comments DROP DEFAULT;
+
+-- Set a new default as empty string
+ALTER TABLE contracts 
+ALTER COLUMN review_comments SET DEFAULT '';
+
+-- Update existing rows
+UPDATE contracts 
+SET review_comments = '' 
+WHERE review_comments IS NULL OR review_comments = '[]';
+
+-- OR if you want to preserve existing JSON data as text:
+-- UPDATE contracts 
+-- SET review_comments = review_comments::TEXT 
+-- WHERE review_comments IS NOT NULL;

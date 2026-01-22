@@ -330,9 +330,11 @@ textarea:focus {
 
 .content-area {
   flex: 1;
-  padding: 1.5rem;
+  padding: 0 !important; /* Remove all padding */
+  margin-top: 0 !important; /* Remove top margin */
+  background: #f8fafc;
+  min-height: calc(100vh - 70px);
   overflow-y: auto;
-  background-color: #f9fafb;
 }
 
 /* Responsive design */
@@ -547,8 +549,22 @@ textarea:focus {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  padding-top: 0 !important;
 }
 
+/* Ensure the dashboard takes full width */
+.dashboard {
+  width: 100%;
+  max-width: none;
+  padding: 0;
+  margin: 0;
+}
+
+/* Remove any top space from the first element in content area */
+.content-area > *:first-child {
+  margin-top: 0;
+  padding-top: 0;
+}
 .content-area {
   flex: 1;
   padding: 1.5rem;
