@@ -1754,6 +1754,7 @@
 }
 
 
+
 /* Comments Section Styles */
 .comments-section {
   margin-top: 20px;
@@ -1802,9 +1803,9 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
-.pm-comment-card.open {
+/* .pm-comment-card.open {
   border-left: 4px solid #f59e0b;
-}
+} */
 
 .pm-comment-card.resolved {
   border-left: 4px solid #10b981;

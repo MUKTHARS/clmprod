@@ -1145,15 +1145,12 @@ if (loading) {
                               <span className="comment-date">
                                 {formatDate(comment.created_at)}
                               </span>
-                              <span className={`comment-status ${comment.status}`}>
+                              {/* <span className={`comment-status ${comment.status}`}>
                                 {getStatusIcon(comment.status)}
                                 {comment.status}
-                              </span>
+                              </span> */}
                             </div>
-                            <div className="comment-role">
-                              <User size={12} />
-                              <span>Your Comment</span>
-                            </div>
+                          
                           </div>
                           
                           <div className="comment-body">
