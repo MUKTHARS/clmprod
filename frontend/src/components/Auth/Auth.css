@@ -2,13 +2,20 @@
 
 /* ===== Main Container ===== */
 .auth-container {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #f9fafb;
-  padding: 1.5rem;
+  background:
+    linear-gradient(
+      rgba(0, 0, 0, 0.4), /* Lighter dark overlay */
+      rgba(0, 0, 0, 0.5)
+    ),
+    linear-gradient(
+      rgba(1, 68, 33, 0.3), /* Lighter green tint */
+      rgba(1, 68, 33, 0.4)
+    ),
+    url('../../assets/login_cover.jpeg') center/cover no-repeat fixed;
+  background-blend-mode: overlay, normal;
 }
+
+
 
 /* ===== Auth Card ===== */
 .auth-card {
@@ -290,3 +297,5 @@
   justify-content: center;
   align-items: center;
 }
+
+
