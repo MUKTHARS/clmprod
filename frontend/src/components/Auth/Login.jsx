@@ -72,7 +72,7 @@ function Login({ onLogin }) {  // Add onLogin prop
           {/* <div className="auth-icon">
             <Lock size={32} />
           </div> */}
-          <h1>Grant OS</h1>
+          <h1>GrantOS</h1>
           <p className="auth-subtitle">Sign in to your account</p>
         </div>
 

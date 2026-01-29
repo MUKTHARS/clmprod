@@ -294,7 +294,7 @@ useEffect(() => {
   return (
     <aside className="sidebar">
       <div className="sidebar-header">
-        <div className="logo-container" onClick={() => handleNavigation('/dashboard')} title="Grant OS">
+        <div className="logo-container" onClick={() => handleNavigation('/dashboard')} title="GrantOS">
           <div className="logo-text">
             <span className="logo-text-primary">GRANT</span>
             <span className="logo-text-secondary">OS</span>
