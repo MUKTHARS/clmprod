@@ -11,7 +11,7 @@
       rgba(1, 68, 33, 0.3), /* Lighter green tint */
       rgba(1, 68, 33, 0.4)
     ),
-    url('../../assets/login_cover.jpeg') center/cover no-repeat fixed;
+    url('../../assets/login_cover.webp') center/cover no-repeat fixed;
   background-blend-mode: overlay, normal;
 }
 

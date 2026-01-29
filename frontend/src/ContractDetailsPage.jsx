@@ -823,7 +823,7 @@ function ContractDetailsPage({ user = null }) {
                 </div>
                 
                 {/* Objectives - Full width */}
-                {contractDetails.objectives && contractDetails.objectives.length > 0 && (
+                {/* {contractDetails.objectives && contractDetails.objectives.length > 0 && (
                   <div className="objectives-section">
                     <div className="field-card full-width">
                       <div className="field-header">
@@ -840,7 +840,27 @@ function ContractDetailsPage({ user = null }) {
                       </div>
                     </div>
                   </div>
-                )}
+                )} */}
+                {/* Objectives - Display like other fields */}
+{contractDetails.objectives && contractDetails.objectives.length > 0 && (
+  <div className="objectives-section">
+    {contractDetails.objectives.map((obj, idx) => (
+      <div key={idx} className="field-card">
+        <div className="field-header">
+          <Target size={16} />
+          <label className="field-label">
+            Objective {idx + 1}
+          </label>
+        </div>
+        <div className="field-value-container">
+          <span className="field-value">
+            {obj}
+          </span>
+        </div>
+      </div>
+    ))}
+  </div>
+)}
                 
                 {/* Scope of Work - Full width */}
                 {contractDetails.scope_of_work && (

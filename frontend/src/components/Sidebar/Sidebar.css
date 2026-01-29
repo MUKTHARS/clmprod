@@ -29,8 +29,8 @@
 
 .logo-text {
   display: flex;
-  flex-direction: column;
-  line-height: 1;
+  align-items: baseline; /* keeps GRANT + OS nicely aligned */
+  gap: 2px;              /* small spacing, optional */
 }
 
 .logo-text-primary {
@@ -41,7 +41,7 @@
 }
 
 .logo-text-secondary {
-  font-size: 1rem;
+  font-size: 1.25rem;
   font-weight: 600;
   color: #4b5563;
   letter-spacing: -0.25px;
