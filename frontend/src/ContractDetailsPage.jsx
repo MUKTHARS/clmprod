@@ -37,7 +37,9 @@ import {
   Minus,
   ExternalLink,
   Loader2,
-  RefreshCw 
+  RefreshCw,
+  MessageSquare,
+  XCircle
 } from 'lucide-react';
 import ComprehensiveView from './ComprehensiveView';
 import API_CONFIG from './config';
@@ -60,10 +62,13 @@ function ContractDetailsPage({ user = null }) {
     executiveSummary: true
   });
   
+  // State for comments section
+  const [pmComments, setPmComments] = useState([]);
+  const [pmCommentsLoading, setPmCommentsLoading] = useState(false);
+  
   useEffect(() => {
     console.log('ContractDetailsPage mounted with id:', id);
     
-    // Check if id exists and is valid
     if (id) {
       const contractId = parseInt(id);
       console.log('Parsed contract ID:', contractId);
@@ -82,150 +87,173 @@ function ContractDetailsPage({ user = null }) {
     }
   }, [id]);
 
-  const fetchContractData = async (contractId) => {
-  console.log('Fetching contract data for ID:', contractId);
-  
-  try {
-    setLoading(true);
-    
-    // Get the authentication token
-    const token = localStorage.getItem('token');
-    const headers = {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json'
-    };
-    
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
+  useEffect(() => {
+    if (contractData && user?.role === "project_manager") {
+      fetchReviewComments();
     }
-    
-    // First try the comprehensive endpoint
-    const comprehensiveUrl = `${API_CONFIG.BASE_URL}/api/contracts/${contractId}/comprehensive`;
-    console.log('Trying comprehensive endpoint:', comprehensiveUrl);
-    
-    let response = await fetch(comprehensiveUrl, { headers });
-    
-    if (response.ok) {
-      const data = await response.json();
-      console.log('Comprehensive data fetched:', data);
-      
-      // Check if we got valid data
-      if (!data || (data.error && data.error.includes('not found'))) {
-        console.log('Contract not found in comprehensive endpoint, trying basic');
-        await fetchBasicContractData(contractId);
-        return;
-      }
-      
-      // Normalize the data
-      const normalizedData = normalizeContractData(data);
-      if (normalizedData) {
-        setContractData(normalizedData);
-      } else {
-        console.log('Normalized data is null, trying basic endpoint');
-        await fetchBasicContractData(contractId);
-      }
-    } else if (response.status === 404) {
-      console.log('Contract not found (404), trying basic endpoint');
-      await fetchBasicContractData(contractId);
-    } else {
-      console.log('Comprehensive endpoint failed:', response.status);
-      await fetchBasicContractData(contractId);
-    }
-  } catch (error) {
-    console.error('Error fetching comprehensive data:', error);
-    await fetchBasicContractData(contractId);
-  } finally {
-    setLoading(false);
-  }
-};
+  }, [contractData, user]);
 
-const normalizeContractData = (apiResponse) => {
-  if (!apiResponse) {
-    console.error('API response is null or undefined');
-    return null;
-  }
-  
-  console.log('Normalizing API response:', apiResponse);
-  
-  // The API might return different structures
-  let contractId = apiResponse.contract_id || apiResponse.id;
-  let basicData = apiResponse.basic_data || {};
-  let compData = apiResponse.comprehensive_data || apiResponse;
-  let filename = apiResponse.filename || 'Unknown';
-  
-  // If the response is directly a contract object
-  if (apiResponse.id && !apiResponse.contract_id && !apiResponse.basic_data) {
-    contractId = apiResponse.id;
-    filename = apiResponse.filename || 'Unknown';
-    basicData = apiResponse;
-    compData = apiResponse.comprehensive_data || {};
-  }
-  
-  // Extract from comprehensive_data if available
-  if (compData && typeof compData === 'object') {
-    console.log('Extracting from comprehensive_data:', Object.keys(compData));
+  const fetchContractData = async (contractId) => {
+    console.log('Fetching contract data for ID:', contractId);
     
-    const contractDetails = compData.contract_details || {};
-    const parties = compData.parties || {};
-    const financial = compData.financial_details || {};
-    const deliverables = compData.deliverables || {};
-    const terms = compData.terms_conditions || {};
-    const compliance = compData.compliance || {};
-    const summary = compData.summary || {};
+    try {
+      setLoading(true);
+      
+      const token = localStorage.getItem('token');
+      const headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
+      const comprehensiveUrl = `${API_CONFIG.BASE_URL}/api/contracts/${contractId}/comprehensive`;
+      console.log('Trying comprehensive endpoint:', comprehensiveUrl);
+      
+      let response = await fetch(comprehensiveUrl, { headers });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Comprehensive data fetched:', data);
+        
+        if (!data || (data.error && data.error.includes('not found'))) {
+          console.log('Contract not found in comprehensive endpoint, trying basic');
+          await fetchBasicContractData(contractId);
+          return;
+        }
+        
+        const normalizedData = normalizeContractData(data);
+        if (normalizedData) {
+          setContractData(normalizedData);
+        } else {
+          console.log('Normalized data is null, trying basic endpoint');
+          await fetchBasicContractData(contractId);
+        }
+      } else if (response.status === 404) {
+        console.log('Contract not found (404), trying basic endpoint');
+        await fetchBasicContractData(contractId);
+      } else {
+        console.log('Comprehensive endpoint failed:', response.status);
+        await fetchBasicContractData(contractId);
+      }
+    } catch (error) {
+      console.error('Error fetching comprehensive data:', error);
+      await fetchBasicContractData(contractId);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const normalizeContractData = (apiResponse) => {
+    if (!apiResponse) {
+      console.error('API response is null or undefined');
+      return null;
+    }
     
-    // Check if this is a reviewed contract with program_manager_review
-    const programManagerReview = compData.program_manager_review || {};
+    console.log('Normalizing API response:', apiResponse);
     
-    // Merge with basic data
-    const normalized = {
+    let contractId = apiResponse.contract_id || apiResponse.id;
+    let basicData = apiResponse.basic_data || {};
+    let compData = apiResponse.comprehensive_data || apiResponse;
+    let filename = apiResponse.filename || 'Unknown';
+    
+    if (apiResponse.id && !apiResponse.contract_id && !apiResponse.basic_data) {
+      contractId = apiResponse.id;
+      filename = apiResponse.filename || 'Unknown';
+      basicData = apiResponse;
+      compData = apiResponse.comprehensive_data || {};
+    }
+    
+    if (compData && typeof compData === 'object') {
+      console.log('Extracting from comprehensive_data:', Object.keys(compData));
+      
+      const contractDetails = compData.contract_details || {};
+      const parties = compData.parties || {};
+      const financial = compData.financial_details || {};
+      const deliverables = compData.deliverables || {};
+      const terms = compData.terms_conditions || {};
+      const compliance = compData.compliance || {};
+      const summary = compData.summary || {};
+      
+      const programManagerReview = compData.program_manager_review || {};
+      
+      // Clean objectives text
+      let cleanedObjectives = [];
+      if (contractDetails.objectives && Array.isArray(contractDetails.objectives)) {
+        cleanedObjectives = contractDetails.objectives
+          .map(obj => {
+            if (typeof obj !== 'string') return String(obj);
+            let cleaned = obj
+              .replace(/^["'`]+|["'`]+$/g, '')
+              .replace(/Obective/gi, 'Objective')
+              .replace(/Obejective/gi, 'Objective')
+              .replace(/Objctive/gi, 'Objective')
+              .replace(/Objetive/gi, 'Objective')
+              .replace(/Objecitve/gi, 'Objective')
+              .trim();
+            
+            if (cleaned.length > 0) {
+              cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+            }
+            
+            return cleaned;
+          })
+          .filter(obj => obj && obj.trim().length > 2);
+      }
+      
+      const normalized = {
+        ...basicData,
+        contract_id: contractId,
+        filename: filename,
+        grant_name: contractDetails.grant_name || basicData.grant_name || filename,
+        contract_number: contractDetails.contract_number || basicData.contract_number,
+        grantor: parties.grantor?.organization_name || basicData.grantor || 'Unknown Grantor',
+        grantee: parties.grantee?.organization_name || basicData.grantee || 'Unknown Grantee',
+        total_amount: financial?.total_grant_amount || basicData.total_amount || 0,
+        start_date: contractDetails.start_date || basicData.start_date,
+        end_date: contractDetails.end_date || basicData.end_date,
+        purpose: contractDetails.purpose || basicData.purpose,
+        status: basicData.status || programManagerReview.overall_recommendation || 'processed',
+        investment_id: basicData.investment_id,
+        project_id: basicData.project_id,
+        grant_id: basicData.grant_id,
+        comprehensive_data: {
+          contract_details: {
+            ...contractDetails,
+            objectives: cleanedObjectives
+          },
+          parties: parties,
+          financial_details: financial,
+          deliverables: deliverables,
+          terms_conditions: terms,
+          compliance: compliance,
+          summary: summary,
+          program_manager_review: programManagerReview,
+          extended_data: compData.extended_data || {}
+        }
+      };
+      
+      console.log('Normalized contract data:', normalized);
+      return normalized;
+    }
+    
+    const normalizedBasic = {
       ...basicData,
       contract_id: contractId,
       filename: filename,
-      grant_name: contractDetails.grant_name || basicData.grant_name || filename,
-      contract_number: contractDetails.contract_number || basicData.contract_number,
-      grantor: parties.grantor?.organization_name || basicData.grantor || 'Unknown Grantor',
-      grantee: parties.grantee?.organization_name || basicData.grantee || 'Unknown Grantee',
-      total_amount: financial?.total_grant_amount || basicData.total_amount || 0,
-      start_date: contractDetails.start_date || basicData.start_date,
-      end_date: contractDetails.end_date || basicData.end_date,
-      purpose: contractDetails.purpose || basicData.purpose,
-      status: basicData.status || programManagerReview.overall_recommendation || 'processed',
-      investment_id: basicData.investment_id,
-      project_id: basicData.project_id,
-      grant_id: basicData.grant_id,
-      comprehensive_data: {
-        contract_details: contractDetails,
-        parties: parties,
-        financial_details: financial,
-        deliverables: deliverables,
-        terms_conditions: terms,
-        compliance: compliance,
-        summary: summary,
-        program_manager_review: programManagerReview,
-        extended_data: compData.extended_data || {}
-      }
+      grant_name: basicData.grant_name || filename,
+      grantor: basicData.grantor || 'Unknown Grantor',
+      grantee: basicData.grantee || 'Unknown Grantee',
+      total_amount: basicData.total_amount || 0,
+      status: basicData.status || 'processed',
+      comprehensive_data: {}
     };
     
-    console.log('Normalized contract data:', normalized);
-    return normalized;
-  }
-  
-  // Return basic data if no comprehensive_data
-  const normalizedBasic = {
-    ...basicData,
-    contract_id: contractId,
-    filename: filename,
-    grant_name: basicData.grant_name || filename,
-    grantor: basicData.grantor || 'Unknown Grantor',
-    grantee: basicData.grantee || 'Unknown Grantee',
-    total_amount: basicData.total_amount || 0,
-    status: basicData.status || 'processed',
-    comprehensive_data: {}
+    console.log('Returning basic normalized data:', normalizedBasic);
+    return normalizedBasic;
   };
-  
-  console.log('Returning basic normalized data:', normalizedBasic);
-  return normalizedBasic;
-};
 
   const fetchBasicContractData = async (contractId) => {
     try {
@@ -239,7 +267,6 @@ const normalizeContractData = (apiResponse) => {
         headers['Authorization'] = `Bearer ${token}`;
       }
       
-      // Try the basic contract endpoint
       const basicUrl = `${API_CONFIG.BASE_URL}/api/contracts/${contractId}`;
       console.log('Trying basic endpoint:', basicUrl);
       
@@ -253,8 +280,6 @@ const normalizeContractData = (apiResponse) => {
         setContractData(normalizedData);
       } else {
         console.log('Basic endpoint failed:', response.status);
-        
-        // Try to fetch from all contracts list
         await fetchFromAllContracts(contractId);
       }
     } catch (error) {
@@ -262,76 +287,100 @@ const normalizeContractData = (apiResponse) => {
       await fetchFromAllContracts(contractId);
     }
   };
-const getContractStatus = (contract) => {
-  if (!contract) return 'unknown';
-  
-  // First try to get status from basic data
-  if (contract.status) {
-    return contract.status;
-  }
-  
-  // Check if there's a program manager review
-  if (contract.comprehensive_data?.program_manager_review?.overall_recommendation) {
-    const recommendation = contract.comprehensive_data.program_manager_review.overall_recommendation;
-    if (recommendation === 'approve') return 'reviewed';
-    if (recommendation === 'reject') return 'rejected';
-    if (recommendation === 'modify') return 'rejected';
-  }
-  
-  // Default status
-  return 'processed';
-};
-  const fetchFromAllContracts = async (contractId) => {
-  try {
-    const token = localStorage.getItem('token');
-    const headers = {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json'
-    };
+
+  const getContractStatus = (contract) => {
+    if (!contract) return 'unknown';
     
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
+    if (contract.status) {
+      return contract.status;
     }
     
-    // Fetch all contracts and find the specific one
-    const allContractsUrl = `${API_CONFIG.BASE_URL}/api/contracts/`;
-    console.log('Trying all contracts endpoint:', allContractsUrl);
+    if (contract.comprehensive_data?.program_manager_review?.overall_recommendation) {
+      const recommendation = contract.comprehensive_data.program_manager_review.overall_recommendation;
+      if (recommendation === 'approve') return 'reviewed';
+      if (recommendation === 'reject') return 'rejected';
+      if (recommendation === 'modify') return 'rejected';
+    }
     
-    const response = await fetch(allContractsUrl, { headers });
-    
-    if (response.ok) {
-      const allContracts = await response.json();
-      console.log('All contracts fetched:', allContracts.length);
+    return 'processed';
+  };
+
+  const fetchFromAllContracts = async (contractId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      };
       
-      // Find the contract with matching ID
-      const foundContract = allContracts.find(contract => {
-        if (!contract) return false;
-        const contractIdNum = parseInt(contractId);
-        return contract.id === contractIdNum;
-      });
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
       
-      if (foundContract) {
-        console.log('Contract found in all contracts list:', foundContract);
-        const normalizedData = normalizeContractData(foundContract);
-        if (normalizedData) {
-          setContractData(normalizedData);
+      const allContractsUrl = `${API_CONFIG.BASE_URL}/api/contracts/`;
+      console.log('Trying all contracts endpoint:', allContractsUrl);
+      
+      const response = await fetch(allContractsUrl, { headers });
+      
+      if (response.ok) {
+        const allContracts = await response.json();
+        console.log('All contracts fetched:', allContracts.length);
+        
+        const foundContract = allContracts.find(contract => {
+          if (!contract) return false;
+          const contractIdNum = parseInt(contractId);
+          return contract.id === contractIdNum;
+        });
+        
+        if (foundContract) {
+          console.log('Contract found in all contracts list:', foundContract);
+          const normalizedData = normalizeContractData(foundContract);
+          if (normalizedData) {
+            setContractData(normalizedData);
+          } else {
+            console.log('Failed to normalize contract data');
+            setContractData(null);
+          }
         } else {
-          console.log('Failed to normalize contract data');
+          console.log('Contract not found in all contracts list');
           setContractData(null);
         }
       } else {
-        console.log('Contract not found in all contracts list');
+        console.log('All contracts endpoint failed:', response.status);
         setContractData(null);
       }
-    } else {
-      console.log('All contracts endpoint failed:', response.status);
+    } catch (error) {
+      console.error('Error fetching from all contracts:', error);
       setContractData(null);
     }
-  } catch (error) {
-    console.error('Error fetching from all contracts:', error);
-    setContractData(null);
-  }
-};
+  };
+
+  const fetchReviewComments = async () => {
+    if (!contractData?.contract_id) return;
+    
+    try {
+      setPmCommentsLoading(true);
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_CONFIG.BASE_URL}/api/contracts/${contractData.contract_id}/all-review-comments`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const pmComments = data.comments?.filter(comment => 
+          comment.user_role === "project_manager"
+        ) || [];
+        setPmComments(pmComments);
+      }
+    } catch (error) {
+      console.error('Failed to fetch review comments:', error);
+    } finally {
+      setPmCommentsLoading(false);
+    }
+  };
 
   const formatCurrency = (amount) => {
     if (!amount && amount !== 0) return '-';
@@ -379,25 +428,14 @@ const getContractStatus = (contract) => {
     }
   };
 
-  const calculateDuration = (startDate, endDate) => {
-    if (!startDate || !endDate) return 'N/A';
-    try {
-      const start = new Date(startDate);
-      const end = new Date(endDate);
-      const diffTime = Math.abs(end - start);
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      
-      if (diffDays < 30) {
-        return `${diffDays} days`;
-      } else if (diffDays < 365) {
-        const months = Math.floor(diffDays / 30);
-        return `${months} months`;
-      } else {
-        const years = Math.floor(diffDays / 365);
-        return `${years} years`;
-      }
-    } catch (e) {
-      return 'N/A';
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case 'open':
+        return <AlertCircle size={14} className="text-yellow-600" />;
+      case 'resolved':
+        return <CheckCircle size={14} className="text-green-600" />;
+      default:
+        return <Clock size={14} className="text-gray-600" />;
     }
   };
 
@@ -432,8 +470,11 @@ const getContractStatus = (contract) => {
     });
   };
 
-  const renderField = (label, value, icon = null, type = 'text') => {
-    if (!value && value !== 0 && type !== 'currency') return null;
+  // NEW: Render field with proper paragraph handling
+  const renderField = (label, value, icon = null, type = 'text', fullWidth = false) => {
+    if (!value && value !== 0 && type !== 'currency' && value !== '') {
+      return null;
+    }
     
     let displayValue = value;
     if (type === 'date' && value) {
@@ -443,7 +484,7 @@ const getContractStatus = (contract) => {
     } else if (type === 'array' && Array.isArray(value)) {
       if (value.length === 0) return null;
       return (
-        <div className="field-card array-field">
+        <div className={`field-card ${fullWidth ? 'full-width' : ''}`}>
           <div className="field-header">
             {icon && <span className="field-icon">{icon}</span>}
             <label className="field-label">{label}</label>
@@ -461,12 +502,16 @@ const getContractStatus = (contract) => {
     }
     
     return (
-      <div className="field-card">
+      <div className={`field-card ${fullWidth ? 'full-width' : ''}`}>
         <div className="field-header">
           {icon && <span className="field-icon">{icon}</span>}
           <label className="field-label">{label}</label>
         </div>
-        <span className="field-value">{displayValue}</span>
+        <div className="field-value-container">
+          <span className={`field-value ${fullWidth ? 'paragraph-value' : ''}`}>
+            {displayValue || 'Not specified'}
+          </span>
+        </div>
       </div>
     );
   };
@@ -479,31 +524,30 @@ const getContractStatus = (contract) => {
     return `CONT-${contract.contract_id || contract.id || 'Unknown'}`;
   };
 
-if (loading) {
-  return (
-    <div className="contract-details-page">
-      <div className="loading-state" style={{ 
-        display: 'flex', 
-        flexDirection: 'column', 
-        alignItems: 'center', 
-        justifyContent: 'center', 
-        minHeight: '60vh',
-        width: '100%'
-      }}>
-        <RefreshCw className="spinner" style={{ 
-          width: '32px', 
-          height: '32px', 
-          color: '#475569', 
-          animation: 'spin 1s linear infinite',
-          marginBottom: '12px'
-        }} />
-        <p style={{ color: '#64748b', margin: 0, fontSize: '13px' }}>Loading contract details...</p>
+  if (loading) {
+    return (
+      <div className="contract-details-page">
+        <div className="loading-state" style={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          minHeight: '60vh',
+          width: '100%'
+        }}>
+          <RefreshCw className="spinner" style={{ 
+            width: '32px', 
+            height: '32px', 
+            color: '#475569', 
+            animation: 'spin 1s linear infinite',
+            marginBottom: '12px'
+          }} />
+          <p style={{ color: '#64748b', margin: 0, fontSize: '13px' }}>Loading contract details...</p>
+        </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
 
-  // Check if id is undefined or invalid
   if (!id) {
     return (
       <div className="error-page">
@@ -574,10 +618,7 @@ if (loading) {
   const daysRemaining = getDaysRemaining(contractDetails.end_date || contractData.end_date);
   const installmentsCount = financial?.payment_schedule?.installments?.length || 0;
   const deliverablesCount = deliverables?.items?.length || 0;
-  const duration = calculateDuration(
-    contractDetails.start_date || contractData.start_date, 
-    contractDetails.end_date || contractData.end_date
-  );
+  const duration = contractDetails.duration || 'N/A';
   
   // Determine risk level based on days remaining
   let riskLevel = 'Low';
@@ -661,93 +702,48 @@ if (loading) {
             </div>
           </div>
           <div className="title-right">
-            <div className="contract-metrics-summary">
-              <div className="metric-summary-item">
-                <DollarSign size={14} className="metric-icon" />
-                <div className="metric-summary-content">
-                  <div className="metric-summary-value">{formatCurrency(metrics.totalAmount)}</div>
-                  <div className="metric-summary-label">Total Value</div>
+            <div className="contract-value-summary">
+              <div className="contract-value">
+                <DollarSign className="value-icon" />
+                <div className="value-content">
+                  <span className="value-label">Total Value</span>
+                  <span className="value-amount">
+                    {formatCurrency(metrics.totalAmount)}
+                  </span>
                 </div>
               </div>
-              <div className="metric-summary-item">
-                <Clock size={14} className="metric-icon" />
-                <div className="metric-summary-content">
-                  <div className="metric-summary-value">{metrics.duration}</div>
-                  <div className="metric-summary-label">Duration</div>
+              <div className="contract-value">
+                <Clock className="value-icon"/>
+                <div className="value-content">
+                  <span className="value-label">Duration</span>
+                  <span className="value-amount">{metrics.duration}</span>
                 </div>
               </div>
-              <div className="metric-summary-item">
-                <FileBarChart size={14} className="metric-icon" />
-                <div className="metric-summary-content">
-                  <div className="metric-summary-value">{metrics.installmentsCount}</div>
-                  <div className="metric-summary-label">Installments</div>
+              <div className="contract-value">
+                <Target className="value-icon"  />
+                <div className="value-content">
+                  <span className="value-label">Deliverables</span>
+                  <span className="value-amount">{metrics.deliverablesCount}</span>
                 </div>
               </div>
-              <div className="metric-summary-item">
-                <Target size={14} className="metric-icon" />
-                <div className="metric-summary-content">
-                  <div className="metric-summary-value">{metrics.deliverablesCount}</div>
-                  <div className="metric-summary-label">Deliverables</div>
+              <div className="contract-value">
+                <FileText className="value-icon"  />
+                <div className="value-content">
+                  <span className="value-label">Installments</span>
+                  <span className="value-amount">{metrics.installmentsCount}</span>
                 </div>
               </div>
-              <div className="metric-summary-item">
-                <Calendar size={14} className="metric-icon" />
-                <div className="metric-summary-content">
-                  <div className="metric-summary-value">{metrics.daysRemaining}d</div>
-                  <div className="metric-summary-label">Days Left</div>
-                </div>
-              </div>
-              <div className="metric-summary-item">
-                <AlertCircle size={14} className="metric-icon" />
-                <div className="metric-summary-content">
-                  <div className="metric-summary-value">{metrics.riskLevel}</div>
-                  <div className="metric-summary-label">Risk Level</div>
+              <div className="contract-value">
+                <Calendar className="value-icon"  />
+                <div className="value-content">
+                  <span className="value-label">Days Left</span>
+                  <span className="value-amount">{metrics.daysRemaining}d</span>
                 </div>
               </div>
             </div>
           </div>
-        </div>
+        </div>  
       </div>
-
-      {/* Metrics Overview */}
-      {/* <div className="metrics-overview">
-        <div className="metric-card">
-          <div className="metric-content">
-            <span className="metric-value">{formatCurrency(metrics.totalAmount)}</span>
-            <span className="metric-label">Total Value</span>
-          </div>
-        </div>
-        <div className="metric-card">
-          <div className="metric-content">
-            <span className="metric-value">{metrics.duration}</span>
-            <span className="metric-label">Duration</span>
-          </div>
-        </div>
-        <div className="metric-card">
-          <div className="metric-content">
-            <div className="metric-value">{metrics.deliverablesCount}</div>
-            <span className="metric-label">Deliverables</span>
-          </div>
-        </div>
-        <div className="metric-card">
-          <div className="metric-content">
-            <span className="metric-value">{metrics.installmentsCount}</span>
-            <span className="metric-label">Installments</span>
-          </div>
-        </div>
-        <div className="metric-card">
-          <div className="metric-content">
-            <span className="metric-value">{metrics.daysRemaining}d</span>
-            <span className="metric-label">Days Remaining</span>
-          </div>
-        </div>
-        <div className="metric-card">
-          <div className="metric-content">
-            <span className="metric-value">{metrics.riskLevel}</span>
-            <span className="metric-label">Risk Level</span>
-          </div>
-        </div>
-      </div> */}
 
       {/* Single Tab: AI Analysis with Expandable Sections */}
       <div className="tab-content">
@@ -765,7 +761,7 @@ if (loading) {
             </div>
           </div>
           
-          {/* Executive Summary */}
+          {/* Executive Summary - Full width */}
           <div className="expandable-section">
             <div 
               className="section-title expandable-header"
@@ -779,12 +775,22 @@ if (loading) {
             </div>
             {expandedSections.executiveSummary && summary.executive_summary && (
               <div className="expandable-content">
-                <p className="summary-text">{summary.executive_summary}</p>
+                <div className="field-card full-width">
+                  <div className="field-header">
+                    <BookOpen size={16} />
+                    <label className="field-label">Summary</label>
+                  </div>
+                  <div className="field-value-container">
+                    <span className="field-value paragraph-value">
+                      {summary.executive_summary}
+                    </span>
+                  </div>
+                </div>
               </div>
             )}
           </div>
 
-          {/* Contract Details */}
+          {/* Contract Details - Each field in its own row */}
           <div className="expandable-section">
             <div 
               className="section-title expandable-header"
@@ -798,7 +804,8 @@ if (loading) {
             </div>
             {expandedSections.contractDetails && (
               <div className="expandable-content">
-                <div className="fields-grid">
+                <div className="fields-grid contract-details-grid">
+                  {/* Single line fields */}
                   {renderField('Contract Name', contractData.grant_name, <FileText size={16} />)}
                   {renderField('Contract Number', contractData.contract_number, <FileText size={16} />)}
                   {renderField('Grant Reference', contractDetails.grant_reference, <Award size={16} />)}
@@ -808,30 +815,46 @@ if (loading) {
                   {renderField('Start Date', contractDetails.start_date || contractData.start_date, <Calendar size={16} />, 'date')}
                   {renderField('End Date', contractDetails.end_date || contractData.end_date, <Calendar size={16} />, 'date')}
                   {renderField('Duration', contractDetails.duration, <Clock size={16} />)}
-                  {renderField('Purpose', contractDetails.purpose || contractData.purpose, <Target size={16} />)}
-                  {renderField('Geographic Scope', contractDetails.geographic_scope, <MapPin size={16} />)}
-                  {renderField('Risk Management', contractDetails.risk_management, <AlertCircle size={16} />)}
+                  
+                  {/* Full width paragraph fields */}
+                  {renderField('Purpose', contractDetails.purpose || contractData.purpose, <Target size={16} />, 'text', true)}
+                  {renderField('Geographic Scope', contractDetails.geographic_scope, <MapPin size={16} />, 'text', true)}
+                  {renderField('Risk Management', contractDetails.risk_management, <AlertCircle size={16} />, 'text', true)}
                 </div>
                 
+                {/* Objectives - Full width */}
                 {contractDetails.objectives && contractDetails.objectives.length > 0 && (
                   <div className="objectives-section">
-                    <h4>Objectives</h4>
-                    <div className="objectives-list">
-                      {contractDetails.objectives.map((obj, idx) => (
-                        <div key={idx} className="objective-item">
-                          <CheckCircle size={16} />
-                          <span>{obj}</span>
-                        </div>
-                      ))}
+                    <div className="field-card full-width">
+                      <div className="field-header">
+                        <Target size={16} />
+                        <label className="field-label">Objectives</label>
+                      </div>
+                      <div className="objectives-list">
+                        {contractDetails.objectives.map((obj, idx) => (
+                          <div key={idx} className="objective-item">
+                            <CheckCircle size={16} />
+                            <span>{obj}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 )}
                 
+                {/* Scope of Work - Full width */}
                 {contractDetails.scope_of_work && (
                   <div className="scope-section">
-                    <h4>Scope of Work</h4>
-                    <div className="scope-content">
-                      {contractDetails.scope_of_work}
+                    <div className="field-card full-width">
+                      <div className="field-header">
+                        <FileText size={16} />
+                        <label className="field-label">Scope of Work</label>
+                      </div>
+                      <div className="field-value-container">
+                        <span className="field-value paragraph-value">
+                          {contractDetails.scope_of_work}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -839,7 +862,7 @@ if (loading) {
             )}
           </div>
 
-          {/* Financial Details */}
+          {/* Financial Details - Organized layout */}
           <div className="expandable-section">
             <div 
               className="section-title expandable-header"
@@ -853,11 +876,15 @@ if (loading) {
             </div>
             {expandedSections.financial && (
               <div className="expandable-content">
-                <div className="fields-grid">
+                <div className="fields-grid financial-details-grid">
                   {renderField('Total Grant Amount', totalAmount, <DollarSign size={16} />, 'currency')}
                   {renderField('Currency', financial.currency, <DollarSign size={16} />)}
-                  {renderField('Payment Terms', financial.payment_terms, <FileText size={16} />)}
-                  {renderField('Financial Reporting Requirements', financial.financial_reporting_requirements, <FileBarChart size={16} />)}
+                  
+                  {/* Payment Terms on its own row */}
+                  {renderField('Payment Terms', financial.payment_terms, <FileText size={16} />, 'text', true)}
+                  
+                  {/* Financial Reporting Requirements on its own row */}
+                  {renderField('Financial Reporting Requirements', financial.financial_reporting_requirements, <FileBarChart size={16} />, 'text', true)}
                 </div>
 
                 {/* Payment Schedule */}
@@ -891,11 +918,11 @@ if (loading) {
                   </div>
                 )}
 
-                {/* Budget Breakdown */}
+                {/* Budget Breakdown - Single column */}
                 {financial?.budget_breakdown && Object.keys(financial.budget_breakdown).length > 0 && (
                   <div className="budget-breakdown">
                     <h4>Budget Breakdown</h4>
-                    <div className="budget-items">
+                    <div className="budget-items single-column">
                       {Object.entries(financial.budget_breakdown).map(([key, value]) => (
                         value !== null && value !== undefined && (
                           <div key={key} className="budget-item">
@@ -916,7 +943,7 @@ if (loading) {
             )}
           </div>
 
-          {/* Parties Information */}
+          {/* Parties Information - Single column */}
           <div className="expandable-section">
             <div 
               className="section-title expandable-header"
@@ -930,7 +957,7 @@ if (loading) {
             </div>
             {expandedSections.parties && (
               <div className="expandable-content">
-                <div className="parties-grid">
+                <div className="parties-grid single-column">
                   {/* Grantor */}
                   <div className="party-card">
                     <div className="party-header">
@@ -940,7 +967,7 @@ if (loading) {
                         <span className="party-role">Funding Organization</span>
                       </div>
                     </div>
-                    <div className="party-details">
+                    <div className="party-details single-column">
                       {renderField('Organization', parties.grantor?.organization_name, <Building size={14} />)}
                       {renderField('Address', parties.grantor?.address, <MapPin size={14} />)}
                       {renderField('Contact Person', parties.grantor?.contact_person, <User size={14} />)}
@@ -961,7 +988,7 @@ if (loading) {
                         <span className="party-role">Recipient Organization</span>
                       </div>
                     </div>
-                    <div className="party-details">
+                    <div className="party-details single-column">
                       {renderField('Organization', parties.grantee?.organization_name, <Building size={14} />)}
                       {renderField('Address', parties.grantee?.address, <MapPin size={14} />)}
                       {renderField('Contact Person', parties.grantee?.contact_person, <User size={14} />)}
@@ -1025,8 +1052,7 @@ if (loading) {
 
                     {deliverables?.reporting_requirements && (
                       <div className="reporting-requirements">
-                        <h4>Reporting Requirements</h4>
-                        <div className="fields-grid">
+                        <div className="fields-grid single-column">
                           {renderField('Frequency', deliverables.reporting_requirements.frequency, <Calendar size={16} />)}
                           {renderField('Format Requirements', deliverables.reporting_requirements.format_requirements, <FileText size={16} />)}
                           {renderField('Submission Method', deliverables.reporting_requirements.submission_method, <Upload size={16} />)}
@@ -1044,7 +1070,7 @@ if (loading) {
             )}
           </div>
 
-          {/* Terms & Conditions */}
+          {/* Terms & Conditions - Single column, each field in its own row */}
           <div className="expandable-section">
             <div 
               className="section-title expandable-header"
@@ -1058,23 +1084,23 @@ if (loading) {
             </div>
             {expandedSections.terms && (
               <div className="expandable-content">
-                <div className="fields-grid">
-                  {renderField('Intellectual Property', terms.intellectual_property, <FileText size={16} />)}
-                  {renderField('Confidentiality', terms.confidentiality, <Shield size={16} />)}
-                  {renderField('Liability', terms.liability, <AlertCircle size={16} />)}
-                  {renderField('Termination Clauses', terms.termination_clauses, <FileText size={16} />)}
-                  {renderField('Renewal Options', terms.renewal_options, <Clock size={16} />)}
-                  {renderField('Dispute Resolution', terms.dispute_resolution, <Shield size={16} />)}
-                  {renderField('Governing Law', terms.governing_law, <FileText size={16} />)}
-                  {renderField('Force Majeure', terms.force_majeure, <AlertCircle size={16} />)}
-                  {renderField('Key Obligations', terms.key_obligations, <CheckCircle size={16} />, 'array')}
-                  {renderField('Restrictions', terms.restrictions, <AlertCircle size={16} />, 'array')}
+                <div className="fields-grid terms-conditions-grid single-column">
+                  {renderField('Intellectual Property', terms.intellectual_property, <FileText size={16} />, 'text', true)}
+                  {renderField('Confidentiality', terms.confidentiality, <Shield size={16} />, 'text', true)}
+                  {renderField('Liability', terms.liability, <AlertCircle size={16} />, 'text', true)}
+                  {renderField('Termination Clauses', terms.termination_clauses, <FileText size={16} />, 'text', true)}
+                  {renderField('Renewal Options', terms.renewal_options, <Clock size={16} />, 'text', true)}
+                  {renderField('Dispute Resolution', terms.dispute_resolution, <Shield size={16} />, 'text', true)}
+                  {renderField('Governing Law', terms.governing_law, <FileText size={16} />, 'text', true)}
+                  {renderField('Force Majeure', terms.force_majeure, <AlertCircle size={16} />, 'text', true)}
+                  {renderField('Key Obligations', terms.key_obligations, <CheckCircle size={16} />, 'array', true)}
+                  {renderField('Restrictions', terms.restrictions, <AlertCircle size={16} />, 'array', true)}
                 </div>
               </div>
             )}
           </div>
 
-          {/* Compliance */}
+          {/* Compliance - Single column, each field in its own row */}
           <div className="expandable-section">
             <div 
               className="section-title expandable-header"
@@ -1088,30 +1114,114 @@ if (loading) {
             </div>
             {expandedSections.compliance && (
               <div className="expandable-content">
-                <div className="fields-grid">
-                  {renderField('Audit Requirements', compliance.audit_requirements, <FileCheck size={16} />)}
-                  {renderField('Record Keeping', compliance.record_keeping, <FileText size={16} />)}
-                  {renderField('Regulatory Compliance', compliance.regulatory_compliance, <ShieldCheck size={16} />)}
-                  {renderField('Ethics Requirements', compliance.ethics_requirements, <Users size={16} />)}
+                <div className="fields-grid compliance-grid single-column">
+                  {renderField('Audit Requirements', compliance.audit_requirements, <FileCheck size={16} />, 'text', true)}
+                  {renderField('Record Keeping', compliance.record_keeping, <FileText size={16} />, 'text', true)}
+                  {renderField('Regulatory Compliance', compliance.regulatory_compliance, <ShieldCheck size={16} />, 'text', true)}
+                  {renderField('Ethics Requirements', compliance.ethics_requirements, <Users size={16} />, 'text', true)}
                 </div>
               </div>
             )}
           </div>
         </div>
-
         
+        {/* Project Manager Actions Section */}
+        {user && user.role === "project_manager" && contractData && (
+          <div className="workflow-section">
+            <ProjectManagerActions 
+              contract={contractData}
+              user={user}
+              onActionComplete={() => {
+                fetchContractData(contractId);
+                fetchReviewComments();
+              }}
+            />
+          </div>
+        )}  
+        
+        {/* Project Manager Comments Section */}
+        {user && user.role === "project_manager" && contractData && (
+          <div className="section-card">
+            <div className="section-header">
+              <h3>Comments({pmComments.length})</h3>
+            </div>
+            
+            <div className="comments-section">
+              <div className="comments-list-container">
+                {pmCommentsLoading ? (
+                  <div className="loading-comments">
+                    <Loader2 className="spinner" size={20} />
+                    <span>Loading comments...</span>
+                  </div>
+                ) : pmComments.length === 0 ? (
+                  <div className="empty-comments">
+                    <FileText size={32} />
+                    <p>No comments found. Add notes above for Program Managers to see.</p>
+                  </div>
+                ) : (
+                  <div className="comments-list">
+                    {pmComments.map((comment, index) => {
+                      const isSubmission = comment.comment_type === "project_manager_submission";
+                      const isResponse = comment.comment_type === "project_manager_response";
+                      
+                      return (
+                        <div key={comment.id || index} className={`pm-comment-card ${comment.status}`}>
+                          <div className="comment-header">
+                            <div className="comment-meta">
+                              <span className="comment-type">
+                                {isSubmission ? 'Submission Note' : 
+                                 isResponse ? 'Response to Reviewer' : 
+                                 'Note for Reviewers'}
+                              </span>
+                              <span className="comment-date">
+                                {formatDate(comment.created_at)}
+                              </span>
+                            </div>
+                          
+                          </div>
+                          
+                          <div className="comment-body">
+                            <p className="comment-text">{comment.comment}</p>
+                            
+                            {comment.flagged_risk && (
+                              <div className="comment-tag risk">
+                                <AlertCircle size={12} />
+                                Flagged as Risk
+                              </div>
+                            )}
+                            
+                            {comment.flagged_issue && (
+                              <div className="comment-tag issue">
+                                <AlertCircle size={12} />
+                                Flagged as Issue
+                              </div>
+                            )}
+                            
+                            {comment.recommendation && (
+                              <div className={`comment-tag recommendation ${comment.recommendation}`}>
+                                {comment.recommendation === 'approve' && <CheckCircle size={12} />}
+                                {comment.recommendation === 'reject' && <XCircle size={12} />}
+                                {comment.recommendation === 'modify' && <RefreshCw size={12} />}
+                                <span>Recommendation: {comment.recommendation}</span>
+                              </div>
+                            )}
+                            
+                            {comment.resolution_response && (
+                              <div className="resolution-note">
+                                <strong>Your Response:</strong> {comment.resolution_response}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
-      
-      {/* Project Manager Actions Section */}
-      {user && user.role === "project_manager" && contractData && (
-        <div className="workflow-section">
-          <ProjectManagerActions 
-            contract={contractData}
-            user={user}
-            onActionComplete={() => fetchContractData(contractId)}
-          />
-        </div>
-      )}
     </div>
   );
 }
@@ -1157,7 +1267,9 @@ export default ContractDetailsPage;
 //   Minus,
 //   ExternalLink,
 //   Loader2,
-//   RefreshCw 
+//   RefreshCw,
+//   MessageSquare,
+//   XCircle
 // } from 'lucide-react';
 // import ComprehensiveView from './ComprehensiveView';
 // import API_CONFIG from './config';
@@ -1180,6 +1292,10 @@ export default ContractDetailsPage;
 //     executiveSummary: true
 //   });
   
+//   // State for comments section
+//   const [pmComments, setPmComments] = useState([]);
+//   const [pmCommentsLoading, setPmCommentsLoading] = useState(false);
+  
 //   useEffect(() => {
 //     console.log('ContractDetailsPage mounted with id:', id);
     
@@ -1201,6 +1317,13 @@ export default ContractDetailsPage;
 //       setContractData(null);
 //     }
 //   }, [id]);
+
+//   useEffect(() => {
+//     // Automatically fetch comments when contract data is loaded and user is project manager
+//     if (contractData && user?.role === "project_manager") {
+//       fetchReviewComments();
+//     }
+//   }, [contractData, user]);
 
 //   const fetchContractData = async (contractId) => {
 //   console.log('Fetching contract data for ID:', contractId);
@@ -1401,6 +1524,7 @@ export default ContractDetailsPage;
 //   // Default status
 //   return 'processed';
 // };
+
 //   const fetchFromAllContracts = async (contractId) => {
 //   try {
 //     const token = localStorage.getItem('token');
@@ -1453,6 +1577,35 @@ export default ContractDetailsPage;
 //   }
 // };
 
+//   // Function to fetch Project Manager comments
+//   const fetchReviewComments = async () => {
+//     if (!contractData?.contract_id) return;
+    
+//     try {
+//       setPmCommentsLoading(true);
+//       const token = localStorage.getItem('token');
+//       const response = await fetch(`${API_CONFIG.BASE_URL}/api/contracts/${contractData.contract_id}/all-review-comments`, {
+//         headers: {
+//           'Authorization': `Bearer ${token}`,
+//           'Content-Type': 'application/json'
+//         }
+//       });
+
+//       if (response.ok) {
+//         const data = await response.json();
+//         // Filter to show only Project Manager's comments
+//         const pmComments = data.comments?.filter(comment => 
+//           comment.user_role === "project_manager"
+//         ) || [];
+//         setPmComments(pmComments);
+//       }
+//     } catch (error) {
+//       console.error('Failed to fetch review comments:', error);
+//     } finally {
+//       setPmCommentsLoading(false);
+//     }
+//   };
+
 //   const formatCurrency = (amount) => {
 //     if (!amount && amount !== 0) return '-';
 //     return new Intl.NumberFormat('en-US', {
@@ -1499,6 +1652,18 @@ export default ContractDetailsPage;
 //     }
 //   };
 
+//   // Helper function for comment status icons
+//   const getStatusIcon = (status) => {
+//     switch (status) {
+//       case 'open':
+//         return <AlertCircle size={14} className="text-yellow-600" />;
+//       case 'resolved':
+//         return <CheckCircle size={14} className="text-green-600" />;
+//       default:
+//         return <Clock size={14} className="text-gray-600" />;
+//     }
+//   };
+
 //   const toggleSection = (section) => {
 //     setExpandedSections(prev => ({
 //       ...prev,
@@ -1530,34 +1695,11 @@ export default ContractDetailsPage;
 //     });
 //   };
 
-//   const renderField = (label, value, icon = null, type = 'text') => {
-//     if (!value && value !== 0 && type !== 'currency') return null;
-    
-//     let displayValue = value;
-//     if (type === 'date' && value) {
-//       displayValue = formatDate(value);
-//     } else if (type === 'currency' && (value || value === 0)) {
-//       displayValue = formatCurrencyWithDecimals(value);
-//     } else if (type === 'array' && Array.isArray(value)) {
-//       if (value.length === 0) return null;
-//       return (
-//         <div className="field-card array-field">
-//           <div className="field-header">
-//             {icon && <span className="field-icon">{icon}</span>}
-//             <label className="field-label">{label}</label>
-//           </div>
-//           <div className="array-values">
-//             {value.map((item, idx) => (
-//               <div key={idx} className="array-item">
-//                 <CheckCircle size={12} />
-//                 <span>{item}</span>
-//               </div>
-//             ))}
-//           </div>
-//         </div>
-//       );
-//     }
-    
+
+// const renderField = (label, value, icon = null, type = 'text') => {
+//   // Special handling for text fields - show even if empty
+//   if (type === 'text') {
+//     const displayValue = value || 'Not specified';
 //     return (
 //       <div className="field-card">
 //         <div className="field-header">
@@ -1567,7 +1709,143 @@ export default ContractDetailsPage;
 //         <span className="field-value">{displayValue}</span>
 //       </div>
 //     );
+//   }
+  
+//   // For other types, keep original logic but handle empty values better
+//   if (!value && value !== 0 && type !== 'currency') {
+//     return null;
+//   }
+  
+//   let displayValue = value;
+//   if (type === 'date' && value) {
+//     displayValue = formatDate(value);
+//   } else if (type === 'currency' && (value || value === 0)) {
+//     displayValue = formatCurrencyWithDecimals(value);
+//   } else if (type === 'array' && Array.isArray(value)) {
+//     if (value.length === 0) return null;
+//     return (
+//       <div className="field-card array-field">
+//         <div className="field-header">
+//           {icon && <span className="field-icon">{icon}</span>}
+//           <label className="field-label">{label}</label>
+//         </div>
+//         <div className="array-values">
+//           {value.map((item, idx) => (
+//             <div key={idx} className="array-item">
+//               <CheckCircle size={12} />
+//               <span>{item}</span>
+//             </div>
+//           ))}
+//         </div>
+//       </div>
+//     );
+//   }
+
+// const cleanObjectiveText = (text) => {
+//   if (!text) return '';
+  
+//   // Common spelling corrections
+//   const corrections = {
+//     'objectives': 'objectives',
+//     'objective': 'objective',
+//     'Obective': 'Objective',
+//     'Obejective': 'Objective',
+//     'Objctive': 'Objective',
+//     'Objetive': 'Objective',
+//     'Objecitve': 'Objective',
 //   };
+  
+//   let cleaned = text;
+  
+//   // Apply corrections
+//   Object.keys(corrections).forEach(wrong => {
+//     const regex = new RegExp(`\\b${wrong}\\b`, 'gi');
+//     cleaned = cleaned.replace(regex, corrections[wrong]);
+//   });
+  
+//   // Clean up common AI extraction artifacts
+//   cleaned = cleaned.replace(/^["'`]+|["'`]+$/g, ''); // Remove quotes
+//   cleaned = cleaned.replace(/\s+/g, ' ').trim(); // Normalize whitespace
+//   cleaned = cleaned.replace(/^[^a-zA-Z]*|[^a-zA-Z]*$/g, ''); // Remove non-letter start/end
+  
+//   // Capitalize first letter if it's a sentence
+//   if (cleaned.length > 0) {
+//     cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+//   }
+  
+//   return cleaned;
+// };
+
+
+// {contractDetails.objectives && contractDetails.objectives.length > 0 && (
+//   <div className="objectives-section">
+//     <h4>Objectives</h4>
+//     <div className="objectives-list">
+//       {contractDetails.objectives
+//         .filter(obj => obj && obj.trim().length > 0) // Filter out empty objectives
+//         .map((obj, idx) => {
+//           const cleanedObj = cleanObjectiveText(obj);
+//           return cleanedObj ? (
+//             <div key={idx} className="objective-item">
+//               <CheckCircle size={16} />
+//               <span>{cleanedObj}</span>
+//             </div>
+//           ) : null;
+//         })
+//         .filter(Boolean) // Remove null entries
+//       }
+//     </div>
+//   </div>
+// )}
+//   return (
+//     <div className="field-card">
+//       <div className="field-header">
+//         {icon && <span className="field-icon">{icon}</span>}
+//         <label className="field-label">{label}</label>
+//       </div>
+//       <span className="field-value">{displayValue}</span>
+//     </div>
+//   );
+// };
+
+//   // const renderField = (label, value, icon = null, type = 'text') => {
+//   //   if (!value && value !== 0 && type !== 'currency') return null;
+    
+//   //   let displayValue = value;
+//   //   if (type === 'date' && value) {
+//   //     displayValue = formatDate(value);
+//   //   } else if (type === 'currency' && (value || value === 0)) {
+//   //     displayValue = formatCurrencyWithDecimals(value);
+//   //   } else if (type === 'array' && Array.isArray(value)) {
+//   //     if (value.length === 0) return null;
+//   //     return (
+//   //       <div className="field-card array-field">
+//   //         <div className="field-header">
+//   //           {icon && <span className="field-icon">{icon}</span>}
+//   //           <label className="field-label">{label}</label>
+//   //         </div>
+//   //         <div className="array-values">
+//   //           {value.map((item, idx) => (
+//   //             <div key={idx} className="array-item">
+//   //               <CheckCircle size={12} />
+//   //               <span>{item}</span>
+//   //             </div>
+//   //           ))}
+//   //         </div>
+//   //       </div>
+//   //     );
+//   //   }
+    
+//   //   return (
+//   //     <div className="field-card">
+//   //       <div className="field-header">
+//   //         {icon && <span className="field-icon">{icon}</span>}
+//   //         <label className="field-label">{label}</label>
+//   //       </div>
+//   //       <span className="field-value">{displayValue}</span>
+//   //     </div>
+//   //   );
+//   // };
 
 //   const getContractDisplayId = (contract) => {
 //     if (!contract) return 'Unknown';
@@ -1672,6 +1950,7 @@ export default ContractDetailsPage;
 //   const daysRemaining = getDaysRemaining(contractDetails.end_date || contractData.end_date);
 //   const installmentsCount = financial?.payment_schedule?.installments?.length || 0;
 //   const deliverablesCount = deliverables?.items?.length || 0;
+//   const duration = contractDetails.duration || 'N/A';
   
 //   // Determine risk level based on days remaining
 //   let riskLevel = 'Low';
@@ -1680,7 +1959,7 @@ export default ContractDetailsPage;
   
 //   const metrics = {
 //     totalAmount: totalAmount,
-//     duration: contractDetails.duration || 'N/A',
+//     duration: duration,
 //     deliverablesCount: deliverablesCount,
 //     installmentsCount: installmentsCount,
 //     daysRemaining: daysRemaining,
@@ -1726,108 +2005,85 @@ export default ContractDetailsPage;
 //           </div>
 //         </div>
 
-//         <div className="contract-title-section">
-//           <div className="title-left">
-//             <h1>{contractData.grant_name || contractData.filename}</h1>
-//             <div className="contract-tags">
-//               {contractData.investment_id && (
-//                 <span className="tag investment-tag">
-//                   <DollarSign size={12} />
-//                   INV: {contractData.investment_id}
-//                 </span>
-//               )}
-//               {contractData.project_id && (
-//                 <span className="tag project-tag">
-//                   <Layers size={12} />
-//                   PRJ: {contractData.project_id}
-//                 </span>
-//               )}
-//               {contractData.grant_id && (
-//                 <span className="tag grant-tag">
-//                   <Award size={12} />
-//                   GRANT: {contractData.grant_id}
-//                 </span>
-//               )}
-//               <span className="tag status-tag active">
-//                 <CheckCircle size={12} />
-//                 Active
-//               </span>
-//             </div>
-//           </div>
-//           <div className="title-right">
-//             <div className="contract-metrics-summary">
-//               <div className="metric-summary-item">
-//                 <DollarSign size={14} className="metric-icon" />
-//                 <div className="metric-summary-content">
-//                   <div className="metric-summary-value">{formatCurrency(metrics.totalAmount)}</div>
-//                   <div className="metric-summary-label">Total Value</div>
-//                 </div>
-//               </div>
-//               <div className="metric-summary-item">
-//                 <Target size={14} className="metric-icon" />
-//                 <div className="metric-summary-content">
-//                   <div className="metric-summary-value">{metrics.deliverablesCount}</div>
-//                   <div className="metric-summary-label">Deliverables</div>
-//                 </div>
-//               </div>
-//               <div className="metric-summary-item">
-//                 <Calendar size={14} className="metric-icon" />
-//                 <div className="metric-summary-content">
-//                   <div className="metric-summary-value">{metrics.daysRemaining}d</div>
-//                   <div className="metric-summary-label">Days Left</div>
-//                 </div>
-//               </div>
-//               <div className="metric-summary-item">
-//                 <AlertCircle size={14} className="metric-icon" />
-//                 <div className="metric-summary-content">
-//                   <div className="metric-summary-value">{metrics.riskLevel}</div>
-//                   <div className="metric-summary-label">Risk Level</div>
-//                 </div>
-//               </div>
-//             </div>
-//           </div>
+// <div className="contract-title-section">
+//   <div className="title-left">
+//     <h1>{contractData.grant_name || contractData.filename}</h1>
+//     <div className="contract-tags">
+//       {contractData.investment_id && (
+//         <span className="tag investment-tag">
+//           <DollarSign size={12} />
+//           INV: {contractData.investment_id}
+//         </span>
+//       )}
+//       {contractData.project_id && (
+//         <span className="tag project-tag">
+//           <Layers size={12} />
+//           PRJ: {contractData.project_id}
+//         </span>
+//       )}
+//       {contractData.grant_id && (
+//         <span className="tag grant-tag">
+//           <Award size={12} />
+//           GRANT: {contractData.grant_id}
+//         </span>
+//       )}
+//       <span className="tag status-tag active">
+//         <CheckCircle size={12} />
+//         Active
+//       </span>
+//     </div>
+//   </div>
+//   <div className="title-right">
+//     <div className="contract-value-summary">
+//       <div className="contract-value">
+//         <DollarSign className="value-icon" />
+//         <div className="value-content">
+//           <span className="value-label">Total Value</span>
+//           <span className="value-amount">
+//             {formatCurrency(metrics.totalAmount)}
+//           </span>
 //         </div>
+//       </div>
+//       <div className="contract-value">
+//         <Clock className="value-icon"/>
+//         <div className="value-content">
+//           <span className="value-label">Duration</span>
+//           <span className="value-amount">{metrics.duration}</span>
+//         </div>
+//       </div>
+//       <div className="contract-value">
+//         <Target className="value-icon"  />
+//         <div className="value-content">
+//           <span className="value-label">Deliverables</span>
+//           <span className="value-amount">{metrics.deliverablesCount}</span>
+//         </div>
+//       </div>
+//       <div className="contract-value">
+//         <FileText className="value-icon"  />
+//         <div className="value-content">
+//           <span className="value-label">Installments</span>
+//           <span className="value-amount">{metrics.installmentsCount}</span>
+//         </div>
+//       </div>
+//       <div className="contract-value">
+//         <Calendar className="value-icon"  />
+//         <div className="value-content">
+//           <span className="value-label">Days Left</span>
+//           <span className="value-amount">{metrics.daysRemaining}d</span>
+//         </div>
+//       </div>
+//         {/* <div className="contract-value">
+//           <AlertCircle className="value-icon"  />
+//           <div className="value-content">
+//             <span className="value-label">Risk Level</span>
+//             <span className="value-amount">{metrics.riskLevel}</span>
+//           </div>
+//         </div> */}
+//     </div>
+//   </div>
+// </div>  
 //       </div>
 
-//       {/* Metrics Overview */}
-//       <div className="metrics-overview">
-//         <div className="metric-card">
-//           <div className="metric-content">
-//             <span className="metric-value">{formatCurrency(metrics.totalAmount)}</span>
-//             <span className="metric-label">Total Value</span>
-//           </div>
-//         </div>
-//         <div className="metric-card">
-//           <div className="metric-content">
-//             <span className="metric-value">{metrics.duration}</span>
-//             <span className="metric-label">Duration</span>
-//           </div>
-//         </div>
-//         <div className="metric-card">
-//           <div className="metric-content">
-//             <span className="metric-value">{metrics.deliverablesCount}</span>
-//             <span className="metric-label">Deliverables</span>
-//           </div>
-//         </div>
-//         <div className="metric-card">
-//           <div className="metric-content">
-//             <span className="metric-value">{metrics.installmentsCount}</span>
-//             <span className="metric-label">Installments</span>
-//           </div>
-//         </div>
-//         <div className="metric-card">
-//           <div className="metric-content">
-//             <span className="metric-value">{metrics.daysRemaining}d</span>
-//             <span className="metric-label">Days Remaining</span>
-//           </div>
-//         </div>
-//         <div className="metric-card">
-//           <div className="metric-content">
-//             <span className="metric-value">{metrics.riskLevel}</span>
-//             <span className="metric-label">Risk Level</span>
-//           </div>
-//         </div>
-//       </div>
 
 //       {/* Single Tab: AI Analysis with Expandable Sections */}
 //       <div className="tab-content">
@@ -2178,20 +2434,112 @@ export default ContractDetailsPage;
 //             )}
 //           </div>
 //         </div>
-
-        
-//       </div>
-      
-//       {/* Project Manager Actions Section */}
+//          {/* Project Manager Actions Section */}
 //       {user && user.role === "project_manager" && contractData && (
 //         <div className="workflow-section">
 //           <ProjectManagerActions 
 //             contract={contractData}
 //             user={user}
-//             onActionComplete={() => fetchContractData(contractId)}
+//             onActionComplete={() => {
+//               fetchContractData(contractId);
+//               fetchReviewComments();
+//             }}
 //           />
 //         </div>
-//       )}
+//       )}  
+//         {/* Project Manager Comments Section - ALWAYS VISIBLE */}
+//         {user && user.role === "project_manager" && contractData && (
+//           <div className="section-card">
+//             <div className="section-header">
+//               <h3>
+//                 {/* <MessageSquare size={20} /> */}
+//                 Comments({pmComments.length})
+
+//               </h3>
+//             </div>
+            
+//             <div className="comments-section">
+//               <div className="comments-list-container">
+//                 {pmCommentsLoading ? (
+//                   <div className="loading-comments">
+//                     <Loader2 className="spinner" size={20} />
+//                     <span>Loading comments...</span>
+//                   </div>
+//                 ) : pmComments.length === 0 ? (
+//                   <div className="empty-comments">
+//                     <FileText size={32} />
+//                     <p>No comments found. Add notes above for Program Managers to see.</p>
+//                   </div>
+//                 ) : (
+//                   <div className="comments-list">
+//                     {pmComments.map((comment, index) => {
+//                       const isSubmission = comment.comment_type === "project_manager_submission";
+//                       const isResponse = comment.comment_type === "project_manager_response";
+                      
+//                       return (
+//                         <div key={comment.id || index} className={`pm-comment-card ${comment.status}`}>
+//                           <div className="comment-header">
+//                             <div className="comment-meta">
+//                               <span className="comment-type">
+//                                 {isSubmission ? 'Submission Note' : 
+//                                  isResponse ? 'Response to Reviewer' : 
+//                                  'Note for Reviewers'}
+//                               </span>
+//                               <span className="comment-date">
+//                                 {formatDate(comment.created_at)}
+//                               </span>
+//                               {/* <span className={`comment-status ${comment.status}`}>
+//                                 {getStatusIcon(comment.status)}
+//                                 {comment.status}
+//                               </span> */}
+//                             </div>
+                          
+//                           </div>
+                          
+//                           <div className="comment-body">
+//                             <p className="comment-text">{comment.comment}</p>
+                            
+//                             {comment.flagged_risk && (
+//                               <div className="comment-tag risk">
+//                                 <AlertCircle size={12} />
+//                                 Flagged as Risk
+//                               </div>
+//                             )}
+                            
+//                             {comment.flagged_issue && (
+//                               <div className="comment-tag issue">
+//                                 <AlertCircle size={12} />
+//                                 Flagged as Issue
+//                               </div>
+//                             )}
+                            
+//                             {comment.recommendation && (
+//                               <div className={`comment-tag recommendation ${comment.recommendation}`}>
+//                                 {comment.recommendation === 'approve' && <CheckCircle size={12} />}
+//                                 {comment.recommendation === 'reject' && <XCircle size={12} />}
+//                                 {comment.recommendation === 'modify' && <RefreshCw size={12} />}
+//                                 <span>Recommendation: {comment.recommendation}</span>
+//                               </div>
+//                             )}
+                            
+//                             {comment.resolution_response && (
+//                               <div className="resolution-note">
+//                                 <strong>Your Response:</strong> {comment.resolution_response}
+//                               </div>
+//                             )}
+//                           </div>
+//                         </div>
+//                       );
+//                     })}
+//                   </div>
+//                 )}
+//               </div>
+//             </div>
+//           </div>
+//         )}
+//       </div>
+      
+     
 //     </div>
 //   );
 // }
