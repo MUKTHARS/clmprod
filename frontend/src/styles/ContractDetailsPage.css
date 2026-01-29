@@ -716,7 +716,7 @@
   background: white;
   border-radius: 4px;
   border: 1px solid #e2e8f0;
-  font-size: 12px; /* Slightly larger than field-label */
+  font-size: 14px; /* Slightly larger than field-label */
   font-weight: 500;
 }
 

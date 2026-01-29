@@ -130,6 +130,32 @@ class AIExtractor:
         resources_required: Personnel, equipment, materials
         assumptions_and_constraints: Project assumptions and limitations
 
+
+        CRITICAL BUDGET EXTRACTION RULES:
+
+        1. BUDGET TABLE VALIDATION:
+        - Extract amounts ONLY from budget tables
+        - DO NOT infer budget categories from other sections
+        - If no budget table exists, leave ALL budget fields as NULL or empty
+
+        2. EXACT BUDGET CATEGORY MATCHING:
+        - "personnel": Only extract if explicitly labeled as personnel costs, salaries, wages, staff costs
+        - "equipment": Only extract if explicitly labeled as equipment, hardware, machinery
+        - "travel": Only extract if explicitly labeled as travel, transportation, per diem
+        - "materials": Only extract if explicitly labeled as materials, supplies, consumables
+        - "indirect_costs": Only extract if explicitly labeled as indirect costs, overhead, administration
+        - "other": Only extract if explicitly labeled as other, miscellaneous, contingencies
+        - "contingency": Only extract if explicitly labeled as contingency, risk reserve
+        - "overhead": Only extract if explicitly labeled as overhead, administrative costs
+        - "subcontractors": Only extract if explicitly labeled as subcontractors, consultants
+
+        3. ZERO VALUE VALIDATION:
+        - DO NOT set budget amounts to 0 unless explicitly stated as "0", "zero", or "$0"
+        - Use NULL/None for missing budget categories
+        - Empty budget fields are acceptable and preferred over incorrect zeros
+
+
+
         LOGO AND HEADER EXTRACTION GUIDANCE:
         1. CONTRACT TITLE OFTEN APPEARS IN:
            - The first all-caps line before "BETWEEN"
