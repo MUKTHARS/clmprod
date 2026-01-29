@@ -25,7 +25,7 @@ function ProjectManagerDashboard({ user }) {
   const fetchMyContracts = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://44.219.56.85:4001/api/contracts/', {
+      const response = await fetch('http://localhost:4001/api/contracts/', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
