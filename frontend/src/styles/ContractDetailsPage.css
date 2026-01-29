@@ -408,8 +408,9 @@
   height: 16px;
 }
 
+/* FIXED: Field labels - smaller size */
 .field-label {
-  font-size: 12px;
+  font-size: 11px; /* Reduced from 12px */
   color: #64748b;
   font-weight: 600;
   text-transform: uppercase;
@@ -426,8 +427,9 @@
   padding-left: 24px; /* Align with field icon */
 }
 
+/* FIXED: Regular field values */
 .field-value {
-  font-size: 13px;
+  font-size: 13px; /* Kept same */
   font-weight: 500;
   color: #1e293b;
   line-height: 1.5;
@@ -437,12 +439,16 @@
   display: block;
 }
 
+/* FIXED: Paragraph values - larger than labels */
 .field-value.paragraph-value {
+  font-size: 14px; /* Increased from 13px, larger than field-label (11px) */
+  font-weight: 400;
   line-height: 1.6;
   white-space: pre-line;
   padding: 8px 0;
   border-top: 1px solid #f1f5f9;
   margin-top: 4px;
+  color: #334155; /* Slightly darker for better readability */
 }
 
 /* Array Fields */
@@ -466,7 +472,7 @@
   background: white;
   border: 1px solid #e2e8f0;
   border-radius: 4px;
-  font-size: 11px;
+  font-size: 12px; /* Slightly larger for array items */
   font-weight: 500;
   color: #475569;
   line-height: 1.4;
@@ -530,7 +536,7 @@
 }
 
 .party-role {
-  font-size: 11px;
+  font-size: 11px; /* Consistent with field-label */
   color: #64748b;
   font-weight: 500;
   text-transform: uppercase;
@@ -564,7 +570,7 @@
   font-weight: 600;
   color: #475569;
   border-bottom: 1px solid #e5e7eb;
-  font-size: 11px;
+  font-size: 11px; /* Consistent with field-label */
   text-transform: uppercase;
   letter-spacing: 0.3px;
 }
@@ -572,7 +578,7 @@
 .data-table td {
   padding: 10px 12px;
   border-bottom: 1px solid #f1f5f9;
-  font-size: 12px;
+  font-size: 13px; /* Table data slightly larger than headers */
   color: #475569;
   text-align: left;
 }
@@ -588,7 +594,7 @@
 .amount-cell {
   font-weight: 700;
   color: #059669;
-  font-size: 12px;
+  font-size: 13px; /* Consistent with table data */
 }
 
 .deliverable-name {
@@ -597,6 +603,7 @@
   gap: 6px;
   font-weight: 600;
   color: #1e293b;
+  font-size: 13px; /* Consistent with table data */
 }
 
 .deliverable-name svg {
@@ -609,7 +616,7 @@
   display: inline-block;
   padding: 2px 6px;
   border-radius: 10px;
-  font-size: 10px;
+  font-size: 10px; /* Smaller badge text */
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.3px;
@@ -638,7 +645,7 @@
 
 .payment-schedule h4,
 .budget-breakdown h4 {
-  font-size: 14px;
+  font-size: 14px; /* Section headers larger than field labels */
   font-weight: 600;
   color: #1e293b;
   margin: 0 0 12px 0;
@@ -665,7 +672,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
+  font-size: 11px; /* Consistent with field-label */
   font-weight: 500;
   color: #475569;
 }
@@ -677,7 +684,7 @@
 }
 
 .budget-amount {
-  font-size: 14px;
+  font-size: 14px; /* Larger than budget label */
   font-weight: 700;
   color: #059669;
 }
@@ -709,7 +716,7 @@
   background: white;
   border-radius: 4px;
   border: 1px solid #e2e8f0;
-  font-size: 11px;
+  font-size: 12px; /* Slightly larger than field-label */
   font-weight: 500;
 }
 
@@ -756,7 +763,7 @@
 
 .empty-state p {
   color: #64748b;
-  font-size: 11px;
+  font-size: 13px; /* Consistent with paragraph values */
   font-weight: 500;
   margin: 0;
 }
@@ -818,7 +825,7 @@
 
 .error-content p {
   color: #64748b;
-  font-size: 11px;
+  font-size: 13px; /* Consistent with paragraph values */
   font-weight: 500;
   margin: 0 0 16px 0;
 }
@@ -838,7 +845,7 @@
   color: white;
   border: none;
   border-radius: 6px;
-  font-size: 11px;
+  font-size: 11px; /* Consistent with field-label */
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -857,7 +864,7 @@
   border: 1px solid #e2e8f0;
   color: #475569;
   border-radius: 6px;
-  font-size: 11px;
+  font-size: 11px; /* Consistent with field-label */
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -876,7 +883,7 @@
 }
 
 .reporting-requirements h4 {
-  font-size: 14px;
+  font-size: 14px; /* Larger than field-label */
   font-weight: 600;
   color: #1e293b;
   margin: 0 0 12px 0;
@@ -899,7 +906,7 @@
 }
 
 .comments-section h4 {
-  font-size: 14px;
+  font-size: 14px; /* Larger than field-label */
   font-weight: 600;
   color: #1e293b;
   margin: 0 0 8px 0;
@@ -961,19 +968,19 @@
 .comment-type {
   font-weight: 600;
   color: #334155;
-  font-size: 14px;
+  font-size: 14px; /* Larger than field-label */
 }
 
 .comment-date {
   color: #64748b;
-  font-size: 13px;
+  font-size: 13px; /* Consistent with regular text */
 }
 
 .comment-status {
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 12px;
+  font-size: 11px; /* Consistent with field-label */
   padding: 2px 8px;
   border-radius: 12px;
   background: #f8fafc;
@@ -997,13 +1004,15 @@
   margin: 0 0 12px 0;
   line-height: 1.5;
   white-space: pre-wrap;
+  font-size: 14px; /* Same as paragraph values */
+  font-weight: 400;
 }
 
 .comment-tag {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 12px;
+  font-size: 11px; /* Consistent with field-label */
   padding: 4px 8px;
   border-radius: 12px;
   margin-right: 8px;
@@ -1031,6 +1040,7 @@
   background: #f0f9ff;
   border-radius: 6px;
   border-left: 3px solid #0ea5e9;
+  font-size: 14px; /* Same as paragraph values */
 }
 
 .resolution-note strong {
@@ -1156,8 +1166,20 @@
     font-size: 12px;
   }
   
+  .field-value.paragraph-value {
+    font-size: 13px; /* Adjusted for mobile */
+  }
+  
   .budget-amount {
-    font-size: 12px;
+    font-size: 13px; /* Adjusted for mobile */
+  }
+  
+  .comment-text {
+    font-size: 13px; /* Adjusted for mobile */
+  }
+  
+  .resolution-note {
+    font-size: 13px; /* Adjusted for mobile */
   }
 }
 
@@ -1182,16 +1204,20 @@
   }
   
   .field-label {
-    font-size: 11px;
+    font-size: 10px; /* Slightly smaller on mobile */
   }
   
   .field-value {
-    font-size: 11px;
+    font-size: 11px; /* Slightly smaller on mobile */
+  }
+  
+  .field-value.paragraph-value {
+    font-size: 12px; /* Slightly smaller on mobile but still larger than label */
   }
   
   .objective-item,
   .array-item {
-    font-size: 10px;
+    font-size: 11px; /* Adjusted for mobile */
   }
   
   .scope-content {
@@ -1222,6 +1248,14 @@
   .field-header {
     gap: 6px;
   }
+  
+  .comment-text {
+    font-size: 12px; /* Adjusted for mobile */
+  }
+  
+  .resolution-note {
+    font-size: 12px; /* Adjusted for mobile */
+  }
 }
 
 /* Executive Summary Fix */
@@ -1232,6 +1266,7 @@
 .executive-summary .field-value.paragraph-value {
   border-top: none;
   padding-top: 4px;
+  font-size: 14px; /* Paragraph values in executive summary */
 }
 
 /* Ensure field labels are fully visible */
@@ -1255,4 +1290,22 @@
 
 .expandable-content > *:last-child {
   margin-bottom: 0;
+}
+
+/* FIX: Make sure section headers are larger than paragraph values */
+.expandable-header h4 {
+  font-size: 14px; /* Same as paragraph-value for hierarchy */
+}
+
+/* FIX: Make executive summary larger for emphasis */
+.executive-summary .field-value.paragraph-value {
+  font-size: 15px; /* Slightly larger than other paragraph values */
+  line-height: 1.7;
+  font-weight: 400;
+}
+
+/* FIX: Scope of work larger for readability */
+.scope-section .field-value.paragraph-value {
+  font-size: 14px;
+  line-height: 1.7;
 }

@@ -69,10 +69,10 @@ function Login({ onLogin }) {  // Add onLogin prop
     <div className="auth-container">
       <div className="auth-card">
         <div className="auth-header">
-          <div className="auth-icon">
+          {/* <div className="auth-icon">
             <Lock size={32} />
-          </div>
-          <h1>Grant Analyzer</h1>
+          </div> */}
+          <h1>Grant OS</h1>
           <p className="auth-subtitle">Sign in to your account</p>
         </div>
 
@@ -89,7 +89,7 @@ function Login({ onLogin }) {  // Add onLogin prop
               Username
             </label>
             <div className="input-group">
-              <Mail className="input-icon" />
+              {/* <Mail className="input-icon" /> */}
               <input
                 id="username"
                 type="text"
@@ -109,7 +109,7 @@ function Login({ onLogin }) {  // Add onLogin prop
               Password
             </label>
             <div className="input-group">
-              <Lock className="input-icon" />
+              {/* <Lock className="input-icon" /> */}
               <input
                 id="password"
                 type={showPassword ? 'text' : 'password'}
@@ -139,7 +139,7 @@ function Login({ onLogin }) {  // Add onLogin prop
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
 
-          <div className="auth-footer">
+          {/* <div className="auth-footer">
             <p className="auth-help">
               Demo credentials:
               <br />
@@ -149,7 +149,7 @@ function Login({ onLogin }) {  // Add onLogin prop
               <br />
               • Director: dir1 / password123
             </p>
-          </div>
+          </div> */}
         </form>
       </div>
     </div>

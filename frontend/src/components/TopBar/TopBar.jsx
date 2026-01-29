@@ -75,7 +75,7 @@ if (!user) {
     <header className="topbar">
       <div className="topbar-left">
         <div className="page-title-container">
-          <h1 className="page-title">Grant Analyzer</h1>
+          <h1 className="page-title">Grant OS</h1>
         </div>
       </div>
     </header>
@@ -161,7 +161,7 @@ if (!user) {
           </div>
 
           {/* Profile Dropdown */}
-          <div className="profile-container">
+          {/* <div className="profile-container">
             <button 
               className="profile-btn"
               onClick={() => setShowProfile(!showProfile)}
@@ -218,7 +218,7 @@ if (!user) {
                 </div>
               </div>
             )}
-          </div>
+          </div> */}
         </div>
       </div>
     </header>
