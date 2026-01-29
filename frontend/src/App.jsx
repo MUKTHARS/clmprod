@@ -22,7 +22,7 @@ import ProjectManagerDashboard from './pages/ProjectManagerDashboard';
 import ViewProgramManagerReviews from './components/workflow/ViewProgramManagerReviews';
 import DirectorApproval from './components/workflow/DirectorApproval';
 import ProgramManagerDirectorDecisions from './components/workflow/ProgramManagerDirectorDecisions';
-
+import CopilotPage from './components/copilot/CopilotPage';
 // Create a wrapper component to handle the redirect logic
 function AppContent({ user, isAuthenticated, loading, contracts, onLogin, onLogout, onUploadComplete, fetchContracts }) {
   const location = useLocation();
@@ -206,6 +206,14 @@ function AppContent({ user, isAuthenticated, loading, contracts, onLogin, onLogo
                 </PrivateRoute>
               } 
             />
+            <Route 
+  path="/copilot" 
+  element={
+    <PrivateRoute user={user}>
+      <CopilotPage />
+    </PrivateRoute>
+  } 
+/>
           </Routes>
         </div>
       </div>
