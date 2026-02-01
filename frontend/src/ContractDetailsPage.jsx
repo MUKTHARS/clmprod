@@ -470,11 +470,18 @@ function ContractDetailsPage({ user = null }) {
     });
   };
 
-  // NEW: Render field with proper paragraph handling
-  const renderField = (label, value, icon = null, type = 'text', fullWidth = false) => {
-    if (!value && value !== 0 && type !== 'currency' && value !== '') {
+  
+const renderField = (label, value, icon = null, type = 'text', fullWidth = false) => {
+  if (!value && value !== 0 && type !== 'currency' && value !== '') {
+    return null;
+  }
+  
+  // Special handling for budget_breakdown
+  if (label === 'Budget Breakdown' && type === 'budget') {
+    if (!value || Object.keys(value).length === 0) {
       return null;
     }
+  }
     
     let displayValue = value;
     if (type === 'date' && value) {
@@ -883,85 +890,105 @@ function ContractDetailsPage({ user = null }) {
           </div>
 
           {/* Financial Details - Organized layout */}
-          <div className="expandable-section">
-            <div 
-              className="section-title expandable-header"
-              onClick={() => toggleSection('financial')}
-            >
-              <div className="expand-icon">
-                {expandedSections.financial ? <Minus size={18} /> : <Plus size={18} />}
-              </div>
-              <DollarSign size={20} />
-              <h4>Financial Details</h4>
-            </div>
-            {expandedSections.financial && (
-              <div className="expandable-content">
-                <div className="fields-grid financial-details-grid">
-                  {renderField('Total Grant Amount', totalAmount, <DollarSign size={16} />, 'currency')}
-                  {renderField('Currency', financial.currency, <DollarSign size={16} />)}
-                  
-                  {/* Payment Terms on its own row */}
-                  {renderField('Payment Terms', financial.payment_terms, <FileText size={16} />, 'text', true)}
-                  
-                  {/* Financial Reporting Requirements on its own row */}
-                  {renderField('Financial Reporting Requirements', financial.financial_reporting_requirements, <FileBarChart size={16} />, 'text', true)}
-                </div>
+<div className="expandable-section">
+  <div 
+    className="section-title expandable-header"
+    onClick={() => toggleSection('financial')}
+  >
+    <div className="expand-icon">
+      {expandedSections.financial ? <Minus size={18} /> : <Plus size={18} />}
+    </div>
+    <DollarSign size={20} />
+    <h4>Financial Details</h4>
+  </div>
+  {expandedSections.financial && (
+    <div className="expandable-content">
+      <div className="fields-grid financial-details-grid">
+        {renderField('Total Grant Amount', totalAmount, <DollarSign size={16} />, 'currency')}
+        {renderField('Currency', financial.currency, <DollarSign size={16} />)}
+        
+        {/* Payment Terms on its own row */}
+        {renderField('Payment Terms', financial.payment_terms, <FileText size={16} />, 'text', true)}
+        
+        {/* Financial Reporting Requirements on its own row */}
+        {renderField('Financial Reporting Requirements', financial.financial_reporting_requirements, <FileBarChart size={16} />, 'text', true)}
+      </div>
 
-                {/* Payment Schedule */}
-                {financial?.payment_schedule?.installments && financial.payment_schedule.installments.length > 0 && (
-                  <div className="payment-schedule">
-                    <h4>Payment Schedule</h4>
-                    <div className="data-table">
-                      <table>
-                        <thead>
-                          <tr>
-                            <th>#</th>
-                            <th>Amount</th>
-                            <th>Due Date</th>
-                            <th>Condition</th>
-                            <th>Description</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {financial.payment_schedule.installments.map((inst, idx) => (
-                            <tr key={idx}>
-                              <td>{inst.installment_number || idx + 1}</td>
-                              <td className="amount-cell">{formatCurrency(inst.amount)}</td>
-                              <td>{inst.due_date ? formatDate(inst.due_date) : 'Not specified'}</td>
-                              <td>{inst.trigger_condition || 'Not specified'}</td>
-                              <td>{inst.description || 'Not specified'}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-
-                {/* Budget Breakdown - Single column */}
-                {financial?.budget_breakdown && Object.keys(financial.budget_breakdown).length > 0 && (
-                  <div className="budget-breakdown">
-                    <h4>Budget Breakdown</h4>
-                    <div className="budget-items single-column">
-                      {Object.entries(financial.budget_breakdown).map(([key, value]) => (
-                        value !== null && value !== undefined && (
-                          <div key={key} className="budget-item">
-                            <div className="budget-label">
-                              <DollarSign size={14} />
-                              <span>{key.replace('_', ' ').toUpperCase()}</span>
-                            </div>
-                            <div className="budget-amount">
-                              {formatCurrency(value)}
-                            </div>
-                          </div>
-                        )
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+      {/* Payment Schedule - Only show if data exists */}
+      {financial?.payment_schedule?.installments && financial.payment_schedule.installments.length > 0 && (
+        <div className="payment-schedule">
+          <h4>Payment Schedule</h4>
+          <div className="data-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Amount</th>
+                  <th>Due Date</th>
+                  <th>Condition</th>
+                  <th>Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                {financial.payment_schedule.installments.map((inst, idx) => (
+                  <tr key={idx}>
+                    <td>{inst.installment_number || idx + 1}</td>
+                    <td className="amount-cell">{formatCurrency(inst.amount)}</td>
+                    <td>{inst.due_date ? formatDate(inst.due_date) : 'Not specified'}</td>
+                    <td>{inst.trigger_condition || 'Not specified'}</td>
+                    <td>{inst.description || 'Not specified'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
+        </div>
+      )}
+
+      {/* Budget Breakdown - Only show if valid data exists */}
+      {financial?.budget_breakdown && 
+       typeof financial.budget_breakdown === 'object' && 
+       Object.keys(financial.budget_breakdown).length > 0 && 
+       // Check if any of the values are not null/undefined and have meaningful content
+       Object.values(financial.budget_breakdown).some(val => 
+         val !== null && val !== undefined && val !== ''
+       ) && (
+        <div className="budget-breakdown">
+          <h4>Budget Breakdown</h4>
+          <div className="budget-items single-column">
+            {Object.entries(financial.budget_breakdown)
+              .filter(([key, value]) => 
+                value !== null && 
+                value !== undefined && 
+                value !== '' &&
+                // Exclude fields that are always 0 or null
+                !(value === 0 && !financial.show_zero_budget_items)
+              )
+              .map(([key, value]) => {
+                // Format the key to be more readable
+                const formattedKey = key
+                  .split('_')
+                  .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                  .join(' ');
+                
+                return (
+                  <div key={key} className="budget-item">
+                    <div className="budget-label">
+                      <DollarSign size={14} />
+                      <span>{formattedKey}</span>
+                    </div>
+                    <div className="budget-amount">
+                      {typeof value === 'number' ? formatCurrency(value) : value}
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+        </div>
+      )}
+    </div>
+  )}
+</div>
 
           {/* Parties Information - Single column */}
           <div className="expandable-section">
@@ -1047,7 +1074,7 @@ function ContractDetailsPage({ user = null }) {
                             <th>Deliverable</th>
                             <th>Description</th>
                             <th>Due Date</th>
-                            <th>Status</th>
+                            {/* <th>Status</th> */}
                           </tr>
                         </thead>
                         <tbody>
@@ -1059,11 +1086,11 @@ function ContractDetailsPage({ user = null }) {
                               </td>
                               <td>{del.description || 'Not specified'}</td>
                               <td>{del.due_date ? formatDate(del.due_date) : 'Not specified'}</td>
-                              <td>
+                              {/* <td>
                                 <span className={`status-badge ${del.status?.toLowerCase() || 'pending'}`}>
                                   {del.status || 'Pending'}
                                 </span>
-                              </td>
+                              </td> */}
                             </tr>
                           ))}
                         </tbody>
