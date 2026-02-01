@@ -475,7 +475,7 @@ function ContractsListPage({ contracts: propContracts = [], user }) {
               
               <button 
                 className="btn-upload"
-                onClick={() => navigate('/upload')}
+               onClick={() => navigate('/upload', { replace: false })}
               >
                 <Upload size={16} />
                 <span>Upload</span>
