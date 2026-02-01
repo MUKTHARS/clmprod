@@ -1,762 +1,339 @@
+# C:\saple.ai\POC\backend\app\ai_extractor.py
+# COMPLETE FIXED VERSION - FAST & COMPREHENSIVE
+
 import openai
 import json
-from typing import Dict, Any
+import re
+from typing import Dict, Any, List
 from app.config import settings
 import os
-
-# Apply proxy fix at module level
+from datetime import datetime
 import sys
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-# Import and apply the patch
-try:
-    from openai_patch import *
-except ImportError:
-    # If patch doesn't exist, manually clean proxy env vars
-    for var in ['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy']:
-        os.environ.pop(var, None)
 
 class AIExtractor:
     def __init__(self):
         # Clean environment
         self._clean_environment()
-        0
-        # Set API key
         self.api_key = settings.OPENAI_API_KEY
         
-        # Initialize client with minimal configuration
+        # Initialize client
         self.client = self._create_openai_client()
         
-        # Enhanced prompt for comprehensive extraction with focus on tables
-        
-        self.extraction_prompt = """ANALYZE THIS GRANT CONTRACT THOROUGHLY AND EXTRACT ALL INFORMATION.
-    
+        # Define the comprehensive but optimized prompt
+        self.extraction_prompt = """ANALYZE THIS GRANT CONTRACT AND EXTRACT ALL INFORMATION.
 
-        PAYMENT SCHEDULE EXTRACTION - CRITICAL:
-        1. LOOK FOR THESE SPECIFIC PAYMENT TERMS:
-           - "Payment Schedule"
-           - "Schedule of Payments"
-           - "Installment Payments"
-           - "Milestone Payments"
-           - "Disbursement Schedule"
-           - "Payment Terms"
-           - Any section with payment amounts and dates
+MOST IMPORTANT FIELDS (EXTRACT THESE FIRST):
+1. CONTRACT TITLE/NAME - Look at beginning of document, headers, logo area
+2. GRANTOR & GRANTEE - Look for "BETWEEN [Grantor] AND [Grantee]"
+3. CONTRACT/GREFERENCE NUMBER - Any alphanumeric ID
+4. TOTAL GRANT AMOUNT - Look for dollar amounts, "total grant", "amount"
+5. START AND END DATES - Look for "effective date", "commencement", "term"
+6. PAYMENT SCHEDULE - Extract ALL payment details from tables or text
 
-        2. EXTRACT ALL PAYMENT DETAILS:
-           - Installment numbers
-           - Payment amounts (with currency)
-           - Due dates (convert to YYYY-MM-DD)
-           - Trigger conditions (e.g., "upon signing", "after delivery")
-           - Payment descriptions
-           - Milestone-linked payments
-           - Reimbursement details
+STRUCTURED EXTRACTION:
+Extract information for these categories:
 
-        3. TABLES ARE CRITICAL FOR PAYMENTS:
-           - Extract EVERY row from payment tables
-           - Include ALL columns: installment number, date, amount, description
-           - Capture the table structure exactly as it appears
-           - If amounts are in different currencies, note each one
+A. BASIC IDENTIFICATION
+- Contract name/title
+- Contract/grant reference number
+- Agreement type (Grant Agreement, Contract, MOU)
+- Signature date, Effective date
+- Parties: Grantor and Grantee with contact details
 
-        4. PAYMENT PATTERN DETECTION (DO NOT INFER SPLITS):
+B. FINANCIAL DETAILS  
+- Total grant amount with currency
+- Payment schedule (installments, milestones, dates, amounts)
+- Budget breakdown if available
+- Payment terms and conditions
 
-            The following patterns are ONLY for locating payment clauses.
-            DO NOT assume percentages, phases, or equal splits unless
-            EXPLICITLY stated in the contract text.
+C. PROJECT DETAILS
+- Purpose of the grant
+- Objectives and goals
+- Scope of work (detailed)
+- Deliverables with due dates
+- Geographic scope
+- Key milestones
 
-            Valid patterns include:
-            - "The Grantor shall pay $X on [date]"
-            - "Payments shall be made as follows:"
-            - "First installment: $X payable on [date]"
-            - "Quarterly payments of $X"
-            - "Annual payment of $X"
-            - "Advance payment of $X"
-            - "Final payment of $X"
+D. LEGAL & COMPLIANCE
+- Confidentiality clauses
+- Intellectual property rights
+- Liability and indemnification
+- Termination conditions
+- Dispute resolution
+- Governing law
+- Audit requirements
+- Reporting requirements
 
-            Percentage-based payments (e.g., "50% upon signing") MUST:
-            - Be explicitly written in the contract
-            - Be extracted ONLY if the percentage symbol (%) or wording appears verbatim
-            - NEVER be inferred from amounts, timing, or number of installments
+E. DATES & TIMELINES
+- All dates mentioned (convert to YYYY-MM-DD)
+- Duration of agreement
+- Key milestone dates
+- Reporting deadlines
 
-        5. FINANCIAL TABLES EXTRACTION:
-           - "Budget Table" - extract all categories and amounts
-           - "Payment Schedule Table" - extract all rows
-           - "Milestone Payment Table" - extract all milestones
-           - "Disbursement Schedule" - extract all disbursements
+F. DELIVERABLES & REPORTING (COMPREHENSIVE - NO CHUNKS)
+- ALL deliverables: Extract EACH deliverable with complete name and description
+- Deliverable due dates in YYYY-MM-DD format
+- Deliverable status (default: "pending")
+- Reporting frequency (monthly, quarterly, annually)
+- ALL report types (progress, financial, technical, final, etc.)
+- Report due dates as array of YYYY-MM-DD
+- Report format requirements (PDF, Word, Excel, etc.)
+- Submission method (email, portal, physical)
+- Report recipients
 
-        CRITICAL FOR SCOPE OF WORK EXTRACTION:
 
-        1. EXTRACT THE ENTIRE SCOPE SECTION: Don't summarize or shorten. Include all details.
+G. TERMS & CONDITIONS (COMPLETE CLAUSES - NO SUMMARIES)
+Extract ALL legal clauses as COMPLETE text, not summaries:
 
-        2. LOOK FOR THESE SPECIFIC ELEMENTS:
-        - Project overview and background
-        - Specific tasks to be performed
-        - Deliverables with descriptions
-        - Technical specifications
-        - Performance requirements
-        - Timeline with phases
-        - Resource requirements
-        - Quality standards
-        - Testing procedures
-        - Documentation requirements
+1. Intellectual Property - Complete ownership rights, licenses, patents
+2. Confidentiality - Full non-disclosure terms, duration, exceptions
+3. Liability & Indemnification - Complete liability limits, indemnity clauses
+4. Termination - All termination triggers, notice periods, consequences
+5. Renewal Options - Automatic renewal, extension terms, conditions
+6. Dispute Resolution - Arbitration, mediation, litigation details
+7. Governing Law - Jurisdiction, applicable laws, venue
+8. Force Majeure - Complete clause with specific events
+9. Warranties - All representations and warranties
+10. Assignment - Transfer rights, restrictions
+11. Notices - Complete notice procedures, addresses
+12. Severability - Clause text
+13. Entire Agreement - Complete integration clause
+14. Amendment - Modification procedures
+15. Key Obligations - Array of specific obligations
+16. Restrictions - Array of specific restrictions
 
-        3. EXTRACT FROM THESE SECTIONS:
-        - 'Scope of Work'
-        - 'Services to be Provided'
-        - 'Work Description'
-        - 'Technical Approach'
-        - 'Methodology'
-        - 'Deliverables Schedule'
-        - Any section containing work/task descriptions
+H. COMPLIANCE REQUIREMENTS (ALL REQUIREMENTS)
+Extract ALL compliance obligations:
 
-        4. PRESERVE STRUCTURE:
-        - Keep bullet points and numbered lists
-        - Preserve hierarchical structure
-        - Include all specifications and requirements
-        - Capture conditional requirements
-        - Include dependencies between tasks
+1. Audit Rights - Complete audit procedures, frequency, access
+2. Record Keeping - Documentation requirements, retention period
+3. Regulatory Compliance - All applicable laws, regulations
+4. Ethics Requirements - Code of ethics, conduct standards
+5. Environmental Compliance - Environmental standards, impact assessment
+6. Safety Requirements - Health and safety obligations
+7. Accessibility Requirements - Accessibility standards
+8. Data Protection - Privacy, data security, GDPR compliance
+9. Conflict of Interest - Disclosure requirements, management
+10. Code of Conduct - Specific conduct rules
+11. Monitoring & Evaluation - Performance monitoring requirements
 
-        5. IF SCOPE IS IN TABLES: Extract ALL table data including headers and rows.
 
-        6. USE THIS STRUCTURE FOR DETAILED SCOPE:
-        project_description: Full narrative description
-        main_activities: List of primary work areas
-        deliverables_list: Complete list of outputs
-        tasks_and_responsibilities: Specific tasks for each role
-        timeline_phases: Project phases with durations
-        technical_requirements: Technical specs and standards
-        performance_standards: Quality and performance criteria
-        work_breakdown_structure: Hierarchical task breakdown
-        key_milestones: Major project milestones
-        resources_required: Personnel, equipment, materials
-        assumptions_and_constraints: Project assumptions and limitations
+CRITICAL RULES:
+1. For dates: Convert any format to YYYY-MM-DD
+2. For amounts: Extract numbers, remove currency symbols
+3. For missing fields: Use "Not specified" or empty array
+4. If information is in tables: Extract ALL table rows and columns
+5. Focus on EXACT text from document, don't infer or create data
 
-        LOGO AND HEADER EXTRACTION GUIDANCE:
-        1. CONTRACT TITLE OFTEN APPEARS IN:
-           - The first all-caps line before "BETWEEN"
-           - Centered text at the top of the document
-           - Text that appears to be in a logo area
-           - Bold or larger font text at the beginning
+TABLES ARE CRITICAL:
+- Payment schedule tables: Extract every row
+- Budget tables: Extract all categories and amounts
+- Milestone tables: Extract all milestones
 
-        2. SPECIFIC PATTERNS TO LOOK FOR:
-           - "AGREEMENT BETWEEN [Party A] AND [Party B] FOR [Project Name]"
-           - "THIS GRANT AGREEMENT (the 'Agreement') is made for [Project Name]"
-           - Logo text followed by project description
-           - Header: "[PROJECT NAME] GRANT AGREEMENT"
+Return ONLY valid JSON matching this exact structure:
+{json_structure}
 
-        3. IF YOU SEE FORMATTED TEXT AT THE BEGINNING, EXTRACT IT AS CONTRACT NAME
+Contract text (first 12000 characters):
+{text}"""
 
-        4. NEVER SKIP THE CONTRACT NAME - if uncertain, use the most descriptive line from first 10 lines
-
-        CRITICAL - EXTRACT THESE SPECIFIC FIELDS THAT ARE OFTEN MISSED:
-
-        1. RISK MANAGEMENT: Extract ALL risk-related clauses including:
-           - Risk assessment procedures
-           - Risk mitigation strategies
-           - Risk allocation between parties
-           - Insurance requirements
-           - Risk reporting obligations
-
-        2. SCOPE OF WORK: Extract the complete scope including:
-           - Detailed project description
-           - Specific tasks and activities
-           - Deliverables and outputs
-           - Performance standards
-           - Technical specifications
-           - Work breakdown structure if available
-
-        3. GRANT REFERENCE: Look for ALL reference numbers including:
-           - Grant reference numbers
-           - Award numbers
-           - Project codes
-           - Application numbers
-           - File numbers
-           - Any alphanumeric identifiers starting with: GR, G, AW, PRJ, REF
-
-        4. REPORTING REQUIREMENTS: Extract ALL reporting obligations:
-           - Report types (progress, financial, technical, final)
-           - Reporting frequency (monthly, quarterly, annually)
-           - Specific due dates for reports
-           - Report formats and templates required
-           - Submission methods and recipients
-
-        5. CONFIDENTIALITY: Extract ALL confidentiality clauses:
-           - Non-disclosure agreements
-           - Confidential information definition
-           - Duration of confidentiality
-           - Exceptions to confidentiality
-           - Return/destruction of confidential materials
-
-        6. RENEWAL OPTIONS: Extract ALL renewal/extension terms:
-           - Automatic renewal clauses
-           - Option to renew/extend
-           - Renewal procedures and deadlines
-           - Conditions for renewal
-           - Renewal terms and duration
-
-        7. DISPUTE RESOLUTION: Extract ALL dispute mechanisms:
-           - Negotiation/mediation procedures
-           - Arbitration clauses (location, rules, language)
-           - Litigation provisions
-           - Jurisdiction and venue
-           - Escalation procedures
-           - Expert determination clauses
-
-        8. GOVERNING LAW: Extract ALL legal framework details:
-           - Applicable law (country, state)
-           - Legal system specified
-           - Choice of law clauses
-           - International law references if any
-
-        9. FORCE MAJEURE: Extract ALL force majeure clauses:
-           - Definition of force majeure events
-           - Specific events listed (natural disasters, war, etc.)
-           - Notification requirements
-           - Consequences (suspension, termination, extension)
-           - Mitigation obligations
-
-        10. SIGNATURE DATES & SIGNATORIES: Extract ALL signature information:
-            - Date of signing (may be different from effective date)
-            - Names and titles of all signatories
-            - Signatory authority details
-            - Witness information if present
-            - Multiple signature dates if parties sign separately
-
-        11. OBJECTIVES: Extract ALL project objectives including:
-            - Primary objectives
-            - Secondary objectives
-            - SMART objectives (Specific, Measurable, Achievable, Relevant, Time-bound)
-            - Program goals
-            - Expected outcomes and impacts
-
-        12. ADDITIONAL FIELD - KEY DATES: Also extract:
-            - Proposal submission date
-            - Approval date
-            - Notification date
-            - Commencement date
-            - Any other milestone dates mentioned
-
-        PAY SPECIAL ATTENTION TO:
-        - Look in headers, footers, signature blocks, and appendices
-        - Extract even if information is spread across multiple sections
-        - Include partial information if complete info not available
-        - Use "See attached" or "Refer to Appendix" if referenced elsewhere
-        - Extract ALL dates in any format and convert to YYYY-MM-DD
-
-        Return ONLY valid JSON in this exact format:
-        {{
-        "metadata": {{
-            "document_type": "string",
-            "extraction_confidence": "number",
-            "pages_extracted_from": "number",
-            "extraction_timestamp": "string"
-        }},
-        "parties": {{
-            "grantor": {{
-            "organization_name": "string",
-            "address": "string",
-            "contact_person": "string",
-            "email": "string",
-            "phone": "string",
-            "signatory_name": "string",
-            "signatory_title": "string",
-            "signature_date": "string"
-            }},
-            "grantee": {{
-            "organization_name": "string",
-            "address": "string",
-            "contact_person": "string",
-            "email": "string",
-            "phone": "string",
-            "signatory_name": "string",
-            "signatory_title": "string",
-            "signature_date": "string"
-            }},
-            "other_parties": [
-            {{
-                "role": "string",
-                "name": "string",
-                "details": "string",
-                "signatory_name": "string",
-                "signature_date": "string"
-            }}
-            ]
-        }},
-        "contract_details": {{
-            "contract_number": "string",
-            "grant_name": "string",
-            "grant_reference": "string",
-            "agreement_type": "string",
-            "effective_date": "string",
-            "signature_date": "string",
-            "start_date": "string",
-            "end_date": "string",
-            "duration": "string",
-            "purpose": "string",
-            "objectives": ["array of strings"],
-            "scope_of_work": "string",
-            "detailed_scope_of_work": {{
-                "project_description": "string",
-                "main_activities": ["array"],
-                "deliverables_list": ["array"],
-                "tasks_and_responsibilities": ["array"],
-                "timeline_phases": ["array"],
-                "technical_requirements": ["array"],
-                "performance_standards": ["array"],
-                "work_breakdown_structure": ["array"],
-                "key_milestones": ["array"],
-                "resources_required": ["array"],
-                "assumptions_and_constraints": ["array"]
-            }},
-            "geographic_scope": "string",
-            "risk_management": "string",
-            "key_dates": {{
-                "proposal_submission_date": "string",
-                "approval_date": "string",
-                "notification_date": "string"
-            }}
-        }},
-        "financial_details": {{
-            "total_grant_amount": "number",
-            "currency": "string",
-            "additional_currencies": ["array"],
-            "payment_schedule": {{
-                "schedule_type": "string",
-                "installments": [
-                {{
-                    "installment_number": "number",
-                    "amount": "number",
-                    "currency": "string",
-                    "due_date": "string",
-                    "trigger_condition": "string",
-                    "description": "string"
-                }}
-                ],
-                "milestones": [
-                {{
-                    "milestone_name": "string",
-                    "amount": "number",
-                    "currency": "string",
-                    "due_date": "string",
-                    "deliverable": "string",
-                    "description": "string"
-                }}
-                ],
-                "reimbursements": [
-                {{
-                    "category": "string",
-                    "amount": "number",
-                    "currency": "string",
-                    "conditions": "string"
-                }}
-                ]
-            }},
-            "budget_breakdown": {{
-                "personnel": "number",
-                "equipment": "number",
-                "travel": "string",
-                "materials": "number",
-                "indirect_costs": "number",
-                "other": "number",
-                "contingency": "number",
-                "overhead": "number",
-                "subcontractors": "number"
-            }},
-            "additional_budget_items": [
-            {{
-                "category": "string",
-                "amount": "number",
-                "description": "string"
-            }}
-            ],
-            "financial_reporting_requirements": "string",
-            "financial_tables_summary": "string",
-            "total_installments_amount": "number",
-            "total_milestones_amount": "number",
-            "payment_terms": "string"
-        }},
-        "deliverables": {{
-            "items": [
-            {{
-                "deliverable_name": "string",
-                "description": "string",
-                "due_date": "string",
-                "status": "string",
-                "milestone_linked": "string"
-            }}
-            ],
-            "reporting_requirements": {{
-            "frequency": "string",
-            "report_types": ["array"],
-            "due_dates": ["array"],
-            "format_requirements": "string",
-            "submission_method": "string"
-            }}
-        }},
-        "terms_conditions": {{
-            "intellectual_property": "string",
-            "confidentiality": "string",
-            "liability": "string",
-            "termination_clauses": "string",
-            "renewal_options": "string",
-            "dispute_resolution": "string",
-            "governing_law": "string",
-            "force_majeure": "string",
-            "key_obligations": ["array"],
-            "restrictions": ["array"]
-        }},
-        "compliance": {{
-            "audit_requirements": "string",
-            "record_keeping": "string",
-            "regulatory_compliance": "string",
-            "ethics_requirements": "string"
-        }},
-        "summary": {{
-            "executive_summary": "string",
-            "key_dates_summary": "string",
-            "financial_summary": "string",
-            "risk_assessment": "string",
-            "total_contract_value": "string",
-            "payment_timeline_summary": "string"
-        }},
-        "extended_data": {{
-            "all_dates_found": [
-            {{
-                "date": "string",
-                "context": "string",
-                "type": "string"
-            }}
-            ],
-            "all_amounts_found": [
-            {{
-                "amount": "number",
-                "currency": "string",
-                "context": "string",
-                "type": "string"
-            }}
-            ],
-            "table_data_extracted": [
-            {{
-                "table_type": "string",
-                "data": "string"
-            }}
-            ],
-            "signatures_found": [
-            {{
-                "name": "string",
-                "title": "string",
-                "organization": "string",
-                "date": "string",
-                "context": "string"
-            }}
-            ]
-        }}
-        }}
-        CRITICAL FINANCIAL CALCULATION RULES:
-
-        1. "Amount Received" MUST be calculated ONLY as:
-            Sum of payment amounts whose payment date is BEFORE or ON today's date.
-
-        2. NEVER calculate received percentage using:
-            - Number of installments
-            - Number of milestones
-            - Number of periods
-            - Assumed equal splits
-
-        3. Percent received MUST be:
-            (Total amount received ÷ Total grant amount) × 100
-        
-        TEMPORAL PAYMENT VALIDATION:
-        - If a payment date is in the FUTURE relative to extraction date, it MUST NOT be counted as "received"
-        - Such payments must be classified as: "pending", "scheduled", or "future"
-
-        CRITICAL INSTRUCTIONS FOR MISSING FIELDS:
-        
-        1. FOR TERMS & CONDITIONS: Extract ALL legal clauses including:
-           - Intellectual Property rights and ownership
-           - Confidentiality obligations and NDAs
-           - Liability and indemnification clauses
-           - Termination conditions and procedures
-           - Dispute resolution methods (arbitration, mediation, etc.)
-           - Governing law and jurisdiction
-           - Force majeure provisions
-           - Any restrictions or limitations
-
-        2. FOR COMPLIANCE: Extract ALL compliance requirements:
-           - Audit rights and procedures
-           - Record keeping requirements
-           - Regulatory compliance obligations
-           - Ethics and code of conduct requirements
-
-        3. FOR CONTRACT NAME: If "grant_name" is not explicitly stated, look for:
-           - Document titles at the beginning
-           - "This Agreement" followed by a description
-           - Project names or initiative names
-           - Funding program names
-
-        4. ALWAYS include these sections even if partially empty. Use "Not specified" for missing information.
-
-        IMPORTANT: FOCUS ON EXTRACTING TABULAR DATA FROM FINANCIAL TABLES, PAYMENT SCHEDULES, AND BUDGETS.
-
-        SPECIFIC INSTRUCTIONS:
-        1. EXTRACT ALL DATES IN ANY FORMAT - convert to YYYY-MM-DD format
-        2. EXTRACT ALL MONETARY AMOUNTS - look for currency symbols
-        3. PAY SPECIAL ATTENTION TO TABLES - extract every row and column
-        4. For tables with installments: extract installment number, due date, amount, description
-        5. For budget tables: extract each budget category and amount
-
-        Contract text (including all tables):
-        {text}"""
-    
     def _clean_environment(self):
         """Clean proxy environment variables"""
-        proxy_vars = [
-            'HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy',
-            'ALL_PROXY', 'all_proxy', 'NO_PROXY', 'no_proxy'
-        ]
+        proxy_vars = ['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy']
         for var in proxy_vars:
             if var in os.environ:
                 del os.environ[var]
     
     def _create_openai_client(self):
-        """Create OpenAI client without proxy issues"""
+        """Create OpenAI client"""
         try:
             return openai.OpenAI(
                 api_key=self.api_key,
-                timeout=60.0  # Increased timeout for comprehensive extraction
+                timeout=90.0  # Increased timeout
             )
         except Exception as e:
             print(f"Client creation failed: {e}")
-            os.environ['OPENAI_API_KEY'] = self.api_key
-            return openai.OpenAI()
+            return None
     
-    def _extract_detailed_scope_of_work(self, text: str) -> Dict[str, Any]:
-        """Extract detailed scope of work with structured breakdown"""
-        import re
-        
-        detailed_scope = {
-            "project_description": "",
-            "main_activities": [],
-            "deliverables_list": [],
-            "tasks_and_responsibilities": [],
-            "timeline_phases": [],
-            "technical_requirements": [],
-            "performance_standards": [],
-            "work_breakdown_structure": [],
-            "key_milestones": [],
-            "resources_required": [],
-            "assumptions_and_constraints": []
-        }
-        
-        # Look for scope of work patterns in the text
-        scope_keywords = [
-            r'(?:Scope\s+of\s+Work|Scope\s+of\s+Services|Work\s+Scope|Project\s+Scope)[:\s]*([\s\S]+?)(?=\n\n|SECTION|ARTICLE|\d+\.|$)',
-            r'(?:The\s+scope\s+of\s+work\s+includes|Scope\s+includes|Work\s+shall\s+include)[:\s]*([\s\S]+?)(?=\n\n|\.\s+[A-Z]|$)',
-            r'(?:Services\s+to\s+be\s+Provided|Work\s+to\s+be\s+Performed)[:\s]*([\s\S]+?)(?=\n\n|SECTION|ARTICLE)'
-        ]
-        
-        scope_text = ""
-        for pattern in scope_keywords:
-            match = re.search(pattern, text, re.IGNORECASE | re.MULTILINE)
-            if match:
-                scope_text = match.group(1).strip()
-                break
-        
-        if not scope_text:
-            # Try to find by section headers
-            sections = re.findall(r'(?:SECTION|ARTICLE|CLAUSE)\s+\d+[\.\s]*([\s\S]+?)(?=\n\n[SECTION|ARTICLE|CLAUSE])', text, re.IGNORECASE)
-            for section in sections:
-                if any(keyword in section.lower() for keyword in ['scope', 'work', 'services', 'deliverables']):
-                    scope_text = section
-                    break
-        
-        if scope_text:
-            # Clean and structure the scope text
-            scope_text = re.sub(r'\s+', ' ', scope_text).strip()
-            
-            # Extract main activities (bullet points or numbered lists)
-            activities = re.findall(r'(?:•|\d+\.|\-)\s*([^\.]+?\.?)', scope_text)
-            if activities:
-                detailed_scope["main_activities"] = [act.strip() for act in activities if len(act.strip()) > 10]
-            
-            # Extract deliverables
-            deliverable_patterns = [
-                r'(?:deliver|provide|submit|produce)\s+(?:a|an|the)?\s*([A-Z][^\.]+?(?:report|document|plan|analysis|assessment))',
-                r'(?:deliverable|output|product|result)\s*(?:is|are|includes?)[:\s]*([^\.]+)',
-                r'Deliverable[s]?[:\s]*([^\.]+)'
-            ]
-            
-            deliverables = []
-            for pattern in deliverable_patterns:
-                matches = re.findall(pattern, scope_text, re.IGNORECASE)
-                deliverables.extend([match.strip() for match in matches if len(match.strip()) > 5])
-            
-            detailed_scope["deliverables_list"] = list(set(deliverables))[:20]  # Limit to 20
-            
-            # Extract tasks and responsibilities
-            task_patterns = [
-                r'(?:task|activity|responsibility)[:\s]*([^\.]+?\.)',
-                r'(?:shall|will|must)\s+(?:[^\.]+?\.)',
-                r'(?:The\s+[A-Za-z]+\s+shall|The\s+[A-Za-z]+\s+will)[^\.]+\.'
-            ]
-            
-            tasks = []
-            for pattern in task_patterns:
-                matches = re.findall(pattern, scope_text, re.IGNORECASE)
-                tasks.extend([match.strip() for match in matches if len(match.strip()) > 15])
-            
-            detailed_scope["tasks_and_responsibilities"] = tasks[:15]
-            
-            # Extract timeline phases
-            timeline_matches = re.findall(r'(?:Phase|Stage|Month|Quarter|Year)\s+\d+[:\s]*([^\.]+)', scope_text, re.IGNORECASE)
-            detailed_scope["timeline_phases"] = [match.strip() for match in timeline_matches if len(match.strip()) > 5]
-            
-            # Extract technical requirements
-            tech_patterns = [
-                r'(?:technical|technology|software|hardware|equipment)[\s\S]+?(?=\n\n|\.\s+[A-Z])',
-                r'(?:comply\s+with|meet\s+the\s+requirements\s+of)[^\.]+\.'
-            ]
-            
-            tech_requirements = []
-            for pattern in tech_patterns:
-                matches = re.findall(pattern, scope_text, re.IGNORECASE)
-                tech_requirements.extend([match.strip() for match in matches if len(match.strip()) > 10])
-            
-            detailed_scope["technical_requirements"] = tech_requirements[:10]
-            
-            # If we have a lot of text but not much structured extraction, use the full scope
-            if not any(detailed_scope.values()):
-                detailed_scope["project_description"] = scope_text[:2000]  # Limit to 2000 chars
-        
-        return detailed_scope
-
+    def _get_json_structure(self):
+        """Return the JSON structure for the prompt"""
+        return json.dumps({
+            "metadata": {
+                "document_type": "string",
+                "extraction_confidence": "number",
+                "pages_extracted_from": "number",
+                "extraction_timestamp": "string"
+            },
+            "parties": {
+                "grantor": {
+                    "organization_name": "string",
+                    "address": "string",
+                    "contact_person": "string",
+                    "email": "string",
+                    "phone": "string",
+                    "signatory_name": "string",
+                    "signatory_title": "string",
+                    "signature_date": "string"
+                },
+                "grantee": {
+                    "organization_name": "string",
+                    "address": "string",
+                    "contact_person": "string",
+                    "email": "string",
+                    "phone": "string",
+                    "signatory_name": "string",
+                    "signatory_title": "string",
+                    "signature_date": "string"
+                }
+            },
+            "contract_details": {
+                "contract_number": "string",
+                "grant_name": "string",
+                "grant_reference": "string",
+                "agreement_type": "string",
+                "effective_date": "string",
+                "signature_date": "string",
+                "start_date": "string",
+                "end_date": "string",
+                "duration": "string",
+                "purpose": "string",
+                "objectives": ["array of strings"],
+                "scope_of_work": "string",
+                "geographic_scope": "string",
+                "risk_management": "string"
+            },
+            "financial_details": {
+                "total_grant_amount": "number",
+                "currency": "string",
+                "payment_schedule": {
+                    "schedule_type": "string",
+                    "installments": [
+                        {
+                            "installment_number": "number",
+                            "amount": "number",
+                            "currency": "string",
+                            "due_date": "string",
+                            "description": "string"
+                        }
+                    ],
+                    "milestones": [
+                        {
+                            "milestone_name": "string",
+                            "amount": "number",
+                            "currency": "string",
+                            "due_date": "string",
+                            "description": "string"
+                        }
+                    ]
+                },
+                "budget_breakdown": {
+                    "personnel": "number",
+                    "equipment": "number",
+                    "travel": "number",
+                    "materials": "number",
+                    "other": "number"
+                }
+            },
+"deliverables": {
+            "items": [
+                {
+                    "deliverable_name": "string",
+                    "description": "string",
+                    "due_date": "YYYY-MM-DD",
+                    "status": "pending"
+                }
+            ],
+            "reporting_requirements": {
+                "frequency": "string",
+                "report_types": ["array of strings"],
+                "due_dates": ["array of YYYY-MM-DD"],
+                "format_requirements": "string",
+                "submission_method": "string",
+                "recipients": ["array of strings"]
+            }
+        },
+        }, indent=2)
+    
     def extract_contract_data(self, text: str) -> Dict[str, Any]:
-        """Extract comprehensive structured data from contract text with focus on tables"""
+        """Extract comprehensive structured data from contract text"""
         try:
             # Check API key
             if not self.api_key or self.api_key == "your-openai-api-key-here":
                 print("ERROR: Please set OPENAI_API_KEY in .env file")
                 return self._get_empty_result()
             
-            # Pre-process text to highlight tables
-            # Look for table markers in the text
-            table_markers = ["=== TABLES ===", "Table", "Schedule", "Payment", "Budget", "Milestone"]
-            has_tables = any(marker in text for marker in table_markers)
+            if not self.client:
+                print("ERROR: OpenAI client not initialized")
+                return self._get_empty_result()
             
-            # Add context about tables if found
-            if has_tables:
-                print("Detected tables in text, extracting with special attention...")
+            # Pre-process text
+            processed_text = self._preprocess_text(text)
             
-            # Use gpt-4o-mini for comprehensive extraction
+            # Use GPT-4o for better extraction (faster and more accurate than gpt-4o-mini)
             response = self.client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-4o",  # CHANGED FROM gpt-4o-mini TO gpt-4o
                 messages=[
                     {
                         "role": "system",
-                        "content": """You are a contract analysis expert with special expertise in document structure recognition AND financial contract analysis.
-
-                ULTRA-IMPORTANT FOR CONTRACT NAMES:
-                1. Scan the VERY BEGINNING of the document for logo text (often all caps)
-                2. Look for document titles BEFORE the "BETWEEN" clause
-                3. Extract text from header lines and formatted sections
-                4. Find the project name in phrases like "for the [Project Name]" after party names
-                5. If you see centered, bold, or all-caps text at the top, it's likely the contract name
-
-                DOCUMENT STRUCTURE AWARENESS:
-                - Recognize that logos often contain the project/program name
-                - Headers typically contain the document title
-                - The first substantive paragraph often names the project
-                - Signature blocks may repeat the contract name
-
-                CONTRACT NAME EXTRACTION RULES:
-                1. ALWAYS extract a contract name
-                2. Prefer descriptive names over generic ones
-                3. Look for names in quotes or after colons
-                4. If multiple candidates, choose the most specific one
-                5. Document where you found the name for validation
-
-                CRITICAL: DO NOT MISS THESE FIELDS:
-                1. Risk Management clauses
-                2. Scope of Work (detailed description)
-                3. Grant Reference numbers
-                4. Reporting Requirements (frequency, types, due dates)
-                5. Confidentiality provisions
-                6. Renewal Options
-                7. Dispute Resolution mechanisms
-                8. Governing Law
-                9. Force Majeure clauses
-                10. Signature Dates and Signatories
-                11. Project Objectives
-
-                PAY SPECIAL ATTENTION TO:
-                - TABLES: extract all rows, columns, and data from any tables you find
-                - FINANCIAL DATA: extract ALL amounts with their currencies
-                - DATES: extract ALL dates in any format and convert to YYYY-MM-DD when possible
-                - SIGNATURES: extract names, titles, and dates from signature blocks
-
-                Be extremely thorough with ALL sections, not just financial data.
-                Be extremely thorough with numerical data and dates.
-                
-                IMPORTANT: Return your response as a JSON object only."""
+                        "content": """You are a contract analysis expert. Extract ALL information from grant contracts.
+                        Be extremely thorough. Extract dates, amounts, names, clauses, tables, schedules.
+                        If information is missing, use "Not specified".
+                        Convert dates to YYYY-MM-DD format.
+                        Return ONLY valid JSON."""
                     },
                     {
                         "role": "user", 
-                        "content": self.extraction_prompt.format(text=text[:15000])  # Increased limit for table data
+                        "content": self.extraction_prompt.format(
+                            json_structure=self._get_json_structure(),
+                            text=processed_text[:12000]  # Increased limit
+                        )
                     }
                 ],
-                temperature=0.1,  # Lower temperature for more consistent extraction
+                temperature=0.1,
                 response_format={"type": "json_object"},
-                max_tokens=6000  # Increased for comprehensive table extraction
+                max_tokens=4000  # Enough for comprehensive extraction
             )
             
+            # Parse response
             result = json.loads(response.choices[0].message.content)
             
-            reference_ids = self.extract_reference_ids(text, result.get("contract_details", {}))
-        
-            result["reference_ids"] = reference_ids
-
-            detailed_scope = self._extract_detailed_scope_of_work(text)
-        
-            # Add detailed scope to contract_details
-            if "contract_details" in result:
-                result["contract_details"]["detailed_scope_of_work"] = detailed_scope
-                
-                # Also keep the original scope_of_work field for backward compatibility
-                if not result["contract_details"].get("scope_of_work"):
-                    # Create a summary from detailed scope
-                    summary_parts = []
-                    if detailed_scope["project_description"]:
-                        summary_parts.append(detailed_scope["project_description"][:500])
-                    elif detailed_scope["main_activities"]:
-                        summary_parts.append("; ".join(detailed_scope["main_activities"][:3]))
-                    elif detailed_scope["deliverables_list"]:
-                        summary_parts.append("Deliverables include: " + ", ".join(detailed_scope["deliverables_list"][:5]))
-                    
-                    result["contract_details"]["scope_of_work"] = " ".join(summary_parts) if summary_parts else "Not specified in contract"
-
-            # Add timestamp if not present
-            import datetime
-            if "metadata" in result and "extraction_timestamp" not in result["metadata"]:
-                result["metadata"]["extraction_timestamp"] = datetime.datetime.now().isoformat()
+            # Add timestamp
+            result["metadata"]["extraction_timestamp"] = datetime.now().isoformat()
             
-            # Validate and clean the extracted data
-            result = self._validate_extracted_data(result, text[:5000])
+            # Add reference IDs
+            result["reference_ids"] = self.extract_reference_ids(text, result.get("contract_details", {}))
+            
+            # Add detailed scope extraction
+            if "contract_details" in result:
+                if "scope_of_work" not in result["contract_details"] or not result["contract_details"]["scope_of_work"]:
+                    result["contract_details"]["scope_of_work"] = self._extract_scope_from_text(text)
+                
+                # Add detailed scope structure
+                result["contract_details"]["detailed_scope_of_work"] = self._extract_detailed_scope(text)
+            
+            # Post-process and validate
+            result = self._validate_and_enhance_data(result, text)
+            
+            # Add summary section
+            result["summary"] = self._generate_summary(result)
+            
+            # Add extended data section
+            result["extended_data"] = self._extract_extended_data(text, result)
+            
             return result
             
         except json.JSONDecodeError as e:
             print(f"JSON Decode Error: {e}")
-            # Try to extract and fix JSON
+            # Try to fix JSON
             try:
                 import re
                 json_match = re.search(r'\{.*\}', response.choices[0].message.content, re.DOTALL)
                 if json_match:
                     fixed_json = json_match.group()
                     # Clean common JSON issues
-                    fixed_json = fixed_json.replace('\n', ' ').replace('\r', ' ')
                     fixed_json = re.sub(r',\s*}', '}', fixed_json)
                     fixed_json = re.sub(r',\s*]', ']', fixed_json)
                     result = json.loads(fixed_json)
-                    result = self._validate_extracted_data(result, text[:5000])
-                    return result
+                    return self._validate_and_enhance_data(result, text)
             except:
                 pass
             return self._get_empty_result()
@@ -765,9 +342,568 @@ class AIExtractor:
             import traceback
             traceback.print_exc()
             return self._get_empty_result()
+    
+    def _preprocess_text(self, text: str) -> str:
+        """Pre-process text for better extraction"""
+        # Remove excessive whitespace
+        text = re.sub(r'\s+', ' ', text)
+        
+        # Fix common OCR issues
+        text = re.sub(r'(\d),(\d)', r'\1\2', text)  # Remove commas in numbers
+        
+        # Extract and mark tables
+        lines = text.split('\n')
+        processed_lines = []
+        
+        for line in lines:
+            # Check if line looks like table data
+            if '|' in line or ('  ' in line and len(line.split()) >= 3 and any(char.isdigit() for char in line)):
+                processed_lines.append(f"[TABLE ROW]: {line}")
+            else:
+                processed_lines.append(line)
+        
+        return '\n'.join(processed_lines)
+    
+    def _extract_scope_from_text(self, text: str) -> str:
+        """Extract scope of work from text using regex"""
+        scope_patterns = [
+            r'(?:Scope\s+of\s+Work|Scope\s+of\s+Services)[:\s]*(.+?)(?=\n\n|SECTION|ARTICLE|\d+\.)',
+            r'(?:WORK\s+SCOPE|PROJECT\s+SCOPE)[:\s]*(.+?)(?=\n\n|\.\s+[A-Z])',
+            r'(?:Services\s+to\s+be\s+Provided)[:\s]*(.+?)(?=\n\n|SECTION)'
+        ]
+        
+        for pattern in scope_patterns:
+            match = re.search(pattern, text, re.IGNORECASE | re.DOTALL)
+            if match:
+                scope_text = match.group(1).strip()
+                if len(scope_text) > 50:  # Ensure meaningful content
+                    return scope_text[:2000]  # Limit length
+        
+        # Fallback: Look for "shall" sentences which often describe work
+        sentences = re.split(r'[.!?]', text)
+        scope_sentences = []
+        for sentence in sentences:
+            if ('shall' in sentence.lower() or 'will provide' in sentence.lower() or 
+                'deliverables' in sentence.lower() or 'services' in sentence.lower()):
+                if len(sentence.strip()) > 30:
+                    scope_sentences.append(sentence.strip())
+        
+        if scope_sentences:
+            return ". ".join(scope_sentences[:10])
+        
+        return "Scope not explicitly specified in contract"
+    
+    def _extract_detailed_scope(self, text: str) -> Dict[str, Any]:
+        """Extract detailed scope structure"""
+        detailed_scope = {
+            "project_description": "",
+            "main_activities": [],
+            "deliverables_list": [],
+            "timeline_phases": [],
+            "technical_requirements": [],
+            "key_milestones": [],
+            "resources_required": []
+        }
+        
+        # Extract from text using patterns
+        # Project description (first paragraph often contains this)
+        paragraphs = text.split('\n\n')
+        if paragraphs:
+            detailed_scope["project_description"] = paragraphs[0][:500]
+        
+        # Extract deliverables
+        deliverable_patterns = [
+            r'deliverable[s]?[:\s]+(.+?)(?=\n|\.)',
+            r'(?:shall\s+deliver|will\s+provide)[:\s]+(.+?)(?=\n|\.)',
+            r'Deliverable\s+\d+[:\s]+(.+?)(?=\n|\.)'
+        ]
+        
+        for pattern in deliverable_patterns:
+            matches = re.findall(pattern, text, re.IGNORECASE)
+            for match in matches:
+                if len(match.strip()) > 10:
+                    detailed_scope["deliverables_list"].append(match.strip())
+        
+        # Extract activities
+        activity_patterns = [
+            r'(?:activity|task)\s+\d+[:\s]+(.+?)(?=\n|\.)',
+            r'(?:shall|will)\s+(?:perform|conduct|implement)[:\s]+(.+?)(?=\n|\.)'
+        ]
+        
+        for pattern in activity_patterns:
+            matches = re.findall(pattern, text, re.IGNORECASE)
+            for match in matches:
+                if len(match.strip()) > 15:
+                    detailed_scope["main_activities"].append(match.strip())
+        
+        # Limit arrays to reasonable sizes
+        detailed_scope["deliverables_list"] = detailed_scope["deliverables_list"][:20]
+        detailed_scope["main_activities"] = detailed_scope["main_activities"][:15]
+        
+        return detailed_scope
+    
+    def _validate_and_enhance_data(self, data: Dict[str, Any], original_text: str) -> Dict[str, Any]:
+        """Validate and enhance extracted data"""
+        # Ensure all sections exist
+        required_sections = [
+            "metadata", "parties", "contract_details", "financial_details",
+            "deliverables", "terms_conditions", "compliance"
+        ]
+        
+        for section in required_sections:
+            if section not in data:
+                data[section] = self._get_empty_section(section)
+        
+        # Fix contract name if missing
+        if "contract_details" in data:
+            contract_details = data["contract_details"]
+            
+            if not contract_details.get("grant_name"):
+                # Try to extract from text
+                name_patterns = [
+                    r'AGREEMENT\s+(?:FOR|RELATING TO)\s+(.+?)(?:\n|;)',
+                    r'GRANT\s+AGREEMENT\s+(?:FOR|BETWEEN)\s+(.+?)(?:\n|;)',
+                    r'THIS\s+(?:GRANT\s+)?AGREEMENT\s+(?:IS\s+MADE\s+)?(?:FOR|ENTITLED)[:\s]+(.+?)(?:\n|;)'
+                ]
+                
+                for pattern in name_patterns:
+                    match = re.search(pattern, original_text[:1000], re.IGNORECASE)
+                    if match:
+                        contract_details["grant_name"] = match.group(1).strip()
+                        break
+                
+                # Fallback to filename or generic
+                if not contract_details.get("grant_name"):
+                    contract_details["grant_name"] = "Grant Contract"
+            
+            # Ensure scope exists
+            if not contract_details.get("scope_of_work"):
+                contract_details["scope_of_work"] = self._extract_scope_from_text(original_text)
+        
+        # Fix financial amounts
+        if "financial_details" in data:
+            financial = data["financial_details"]
+            
+            # Ensure payment_schedule exists
+            if "payment_schedule" not in financial:
+                financial["payment_schedule"] = {
+                    "schedule_type": "Not specified",
+                    "installments": [],
+                    "milestones": []
+                }
+            
+            # Try to extract payment info from text if missing
+            if not financial.get("total_grant_amount"):
+                amount_patterns = [
+                    r'\$?\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)',
+                    r'Amount[\s:]*\$?\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)',
+                    r'Total[\s:]*\$?\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)'
+                ]
+                
+                for pattern in amount_patterns:
+                    match = re.search(pattern, original_text, re.IGNORECASE)
+                    if match:
+                        try:
+                            amount_str = match.group(1).replace(',', '')
+                            financial["total_grant_amount"] = float(amount_str)
+                            financial["currency"] = financial.get("currency", "USD")
+                            break
+                        except:
+                            pass
 
+        if "deliverables" in data:
+            deliverables = data["deliverables"]
+            
+            # Ensure reporting_requirements has all fields
+            if "reporting_requirements" not in deliverables:
+                deliverables["reporting_requirements"] = {}
+            
+            reporting = deliverables["reporting_requirements"]
+            
+            # Add missing fields with defaults
+            required_fields = {
+                "frequency": "Not specified",
+                "report_types": [],
+                "due_dates": [],
+                "format_requirements": "Not specified",
+                "submission_method": "Not specified",
+                "recipients": []
+            }
+            
+            for field, default in required_fields.items():
+                if field not in reporting:
+                    reporting[field] = default
+            
+            # Extract additional report types from text
+            if not reporting["report_types"] or len(reporting["report_types"]) == 0:
+                reporting["report_types"] = self._extract_report_types(original_text)
+            
+            # Ensure each deliverable has status
+            if "items" in deliverables:
+                for item in deliverables["items"]:
+                    if "status" not in item:
+                        item["status"] = "pending"
+
+
+        if "terms_conditions" not in data:
+            data["terms_conditions"] = {}
+        
+        terms = data["terms_conditions"]
+        
+        # Define all required terms fields with defaults
+        terms_fields = {
+            "intellectual_property": "Not specified",
+            "confidentiality": "Not specified", 
+            "liability": "Not specified",
+            "indemnification": "Not specified",
+            "termination_clauses": "Not specified",
+            "renewal_options": "Not specified",
+            "dispute_resolution": "Not specified",
+            "governing_law": "Not specified",
+            "force_majeure": "Not specified",
+            "warranties": "Not specified",
+            "assignment": "Not specified",
+            "notices": "Not specified",
+            "severability": "Not specified",
+            "entire_agreement": "Not specified",
+            "amendment": "Not specified",
+            "key_obligations": [],
+            "restrictions": []
+        }
+        
+        for field, default in terms_fields.items():
+            if field not in terms:
+                terms[field] = default
+        
+        # Extract key obligations from text if missing
+        if not terms.get("key_obligations") or len(terms["key_obligations"]) == 0:
+            terms["key_obligations"] = self._extract_key_obligations(original_text)
+        
+        # Extract restrictions from text if missing  
+        if not terms.get("restrictions") or len(terms["restrictions"]) == 0:
+            terms["restrictions"] = self._extract_restrictions(original_text)
+        
+        # Ensure compliance section exists
+        if "compliance" not in data:
+            data["compliance"] = {}
+        
+        compliance = data["compliance"]
+        
+        # Define all compliance fields with defaults
+        compliance_fields = {
+            "audit_requirements": "Not specified",
+            "record_keeping": "Not specified",
+            "regulatory_compliance": "Not specified",
+            "ethics_requirements": "Not specified",
+            "environmental_compliance": "Not specified",
+            "safety_requirements": "Not specified",
+            "accessibility_requirements": "Not specified",
+            "data_protection": "Not specified",
+            "conflict_of_interest": "Not specified",
+            "code_of_conduct": "Not specified",
+            "monitoring_evaluation": "Not specified"
+        }
+        
+        for field, default in compliance_fields.items():
+            if field not in compliance:
+                compliance[field] = default
+            
+        return data
+    
+
+    def _extract_key_obligations(self, text: str) -> List[str]:
+        """Extract key obligations from text"""
+        obligations = []
+        
+        # Look for obligation patterns
+        obligation_patterns = [
+            r'(?:shall|must|will)\s+(?:[^\.]+?\.)',
+            r'(?:obligation|duty|responsibility)[\s:]+(.+?)(?=\n|\.)',
+            r'(?:is\s+required\s+to|are\s+required\s+to)\s+(.+?)(?=\n|\.)'
+        ]
+        
+        for pattern in obligation_patterns:
+            matches = re.findall(pattern, text, re.IGNORECASE)
+            for match in matches:
+                if isinstance(match, str):
+                    obligation = match.strip()
+                    if len(obligation) > 20 and len(obligation) < 200:
+                        obligations.append(obligation)
+        
+        # Remove duplicates
+        seen = set()
+        unique_obligations = []
+        for obligation in obligations:
+            if obligation not in seen:
+                seen.add(obligation)
+                unique_obligations.append(obligation)
+        
+        return unique_obligations[:15]  # Limit to 15 obligations
+
+    def _extract_restrictions(self, text: str) -> List[str]:
+        """Extract restrictions from text"""
+        restrictions = []
+        
+        # Look for restriction patterns
+        restriction_patterns = [
+            r'(?:shall\s+not|must\s+not|cannot|may\s+not)\s+(.+?)(?=\n|\.)',
+            r'(?:restriction|limitation|prohibition)[\s:]+(.+?)(?=\n|\.)',
+            r'(?:not\s+permitted\s+to|not\s+allowed\s+to)\s+(.+?)(?=\n|\.)'
+        ]
+        
+        for pattern in restriction_patterns:
+            matches = re.findall(pattern, text, re.IGNORECASE)
+            for match in matches:
+                if isinstance(match, str):
+                    restriction = match.strip()
+                    if len(restriction) > 15 and len(restriction) < 200:
+                        restrictions.append(restriction)
+        
+        # Remove duplicates
+        seen = set()
+        unique_restrictions = []
+        for restriction in restrictions:
+            if restriction not in seen:
+                seen.add(restriction)
+                unique_restrictions.append(restriction)
+        
+        return unique_restrictions[:10]  # Limit to 10 restrictions
+
+
+    def _extract_report_types(self, text: str) -> List[str]:
+        """Extract all report types from text"""
+        report_types = []
+        
+        # Look for report patterns
+        report_patterns = [
+            r'(?:submit|provide|deliver)\s+(?:a|an|the)?\s*(.+?)\s*(?:report|document)',
+            r'(?:quarterly|monthly|annual|progress|financial|technical|final)\s+report',
+            r'Report\s+types?[:\s]+(.+?)(?=\n|\.)',
+            r'(?:shall|will)\s+submit\s+(?:a|an)?\s*(.+?)\s+report'
+        ]
+        
+        for pattern in report_patterns:
+            matches = re.findall(pattern, text, re.IGNORECASE)
+            for match in matches:
+                if isinstance(match, str):
+                    report_name = match.strip()
+                    if report_name and len(report_name) > 3:
+                        # Clean up the report name
+                        if 'report' not in report_name.lower():
+                            report_name = f"{report_name} Report"
+                        report_types.append(report_name)
+        
+        # Remove duplicates
+        seen = set()
+        unique_reports = []
+        for report in report_types:
+            if report not in seen:
+                seen.add(report)
+                unique_reports.append(report)
+        
+        return unique_reports[:10]  # Limit to 10 report types
+
+
+
+    def _generate_summary(self, data: Dict[str, Any]) -> Dict[str, str]:
+        """Generate summary sections"""
+        summary = {
+            "executive_summary": "",
+            "key_dates_summary": "",
+            "financial_summary": "",
+            "risk_assessment": "No specific risk assessment found"
+        }
+        
+        # Generate executive summary
+        contract_details = data.get("contract_details", {})
+        parties = data.get("parties", {})
+        financial = data.get("financial_details", {})
+        
+        grantor = parties.get("grantor", {}).get("organization_name", "Unknown Grantor")
+        grantee = parties.get("grantee", {}).get("organization_name", "Unknown Grantee")
+        grant_name = contract_details.get("grant_name", "Grant Agreement")
+        total_amount = financial.get("total_grant_amount", 0)
+        currency = financial.get("currency", "USD")
+        
+        summary["executive_summary"] = (
+            f"{grant_name} between {grantor} and {grantee}. "
+            f"Total grant amount: {currency} {total_amount:,.2f}. "
+            f"Purpose: {contract_details.get('purpose', 'Not specified')[:200]}"
+        )
+        
+        # Key dates summary
+        dates = []
+        if contract_details.get("start_date"):
+            dates.append(f"Start: {contract_details['start_date']}")
+        if contract_details.get("end_date"):
+            dates.append(f"End: {contract_details['end_date']}")
+        if contract_details.get("signature_date"):
+            dates.append(f"Signed: {contract_details['signature_date']}")
+        
+        summary["key_dates_summary"] = "; ".join(dates) if dates else "No dates specified"
+        
+        # Financial summary
+        if total_amount:
+            summary["financial_summary"] = f"Total grant: {currency} {total_amount:,.2f}"
+            payment_schedule = financial.get("payment_schedule", {})
+            if payment_schedule.get("installments"):
+                summary["financial_summary"] += f" ({len(payment_schedule['installments'])} installments)"
+            elif payment_schedule.get("milestones"):
+                summary["financial_summary"] += f" ({len(payment_schedule['milestones'])} milestones)"
+        
+        return summary
+    
+    def _extract_extended_data(self, text: str, main_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Extract additional data not in main structure"""
+        extended_data = {
+            "all_dates_found": self._extract_all_dates(text),
+            "all_amounts_found": self._extract_all_amounts(text),
+            "table_data_extracted": self._extract_table_data(text),
+            "signatures_found": self._extract_signatures(text)
+        }
+        
+        return extended_data
+    
+    def _extract_all_dates(self, text: str) -> List[Dict]:
+        """Extract all dates from text"""
+        dates = []
+        date_patterns = [
+            (r'\d{4}-\d{2}-\d{2}', 'YYYY-MM-DD'),
+            (r'\d{2}/\d{2}/\d{4}', 'MM/DD/YYYY'),
+            (r'\d{2}-\d{2}-\d{4}', 'DD-MM-YYYY'),
+            (r'(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]* \d{1,2},? \d{4}', 'Month DD, YYYY'),
+            (r'\d{1,2} (?:January|February|March|April|May|June|July|August|September|October|November|December) \d{4}', 'DD Month YYYY')
+        ]
+        
+        for pattern, format_type in date_patterns:
+            matches = re.findall(pattern, text, re.IGNORECASE)
+            for match in matches:
+                # Get context (surrounding text)
+                context_start = max(0, text.find(match) - 100)
+                context_end = min(len(text), text.find(match) + len(match) + 100)
+                context = text[context_start:context_end]
+                
+                dates.append({
+                    "date": match,
+                    "context": context.replace('\n', ' '),
+                    "type": format_type
+                })
+        
+        return dates[:50]  # Limit to 50 dates
+    
+    def _extract_all_amounts(self, text: str) -> List[Dict]:
+        """Extract all monetary amounts from text"""
+        amounts = []
+        amount_patterns = [
+            r'\$?\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)',
+            r'(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\s*(?:USD|EUR|GBP|JPY|CAD|AUD)',
+            r'Amount[\s:]*\$?\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)'
+        ]
+        
+        for pattern in amount_patterns:
+            matches = re.findall(pattern, text, re.IGNORECASE)
+            for match in matches:
+                try:
+                    amount = float(match.replace(',', ''))
+                    
+                    # Get context
+                    match_str = match if '$' in match else f"${match}"
+                    context_start = max(0, text.find(match_str) - 100)
+                    context_end = min(len(text), text.find(match_str) + len(match_str) + 100)
+                    context = text[context_start:context_end]
+                    
+                    amounts.append({
+                        "amount": amount,
+                        "currency": "USD",  # Default, could be enhanced
+                        "context": context.replace('\n', ' '),
+                        "type": "monetary_amount"
+                    })
+                except:
+                    continue
+        
+        return amounts[:50]  # Limit to 50 amounts
+    
+    def _extract_table_data(self, text: str) -> List[Dict]:
+        """Extract table-like data from text"""
+        tables = []
+        lines = text.split('\n')
+        
+        # Look for tables
+        table_start = -1
+        for i, line in enumerate(lines):
+            # Check if line looks like table header (has multiple columns)
+            if '|' in line or ('  ' in line and len(line.split()) >= 3):
+                if table_start == -1:
+                    table_start = i
+            elif table_start != -1:
+                # End of table
+                table_data = lines[table_start:i]
+                if len(table_data) >= 2:  # At least header and one row
+                    tables.append({
+                        "table_type": "detected_table",
+                        "data": "\n".join(table_data),
+                        "row_count": len(table_data) - 1
+                    })
+                table_start = -1
+        
+        return tables[:10]  # Limit to 10 tables
+    
+    def _extract_signatures(self, text: str) -> List[Dict]:
+        """Extract signature information"""
+        signatures = []
+        
+        # Look for signature blocks
+        sig_patterns = [
+            r'(?:SIGNED|SIGNATURE)[\s:]*([^\.]+?)(?:\n|\.)',
+            r'(?:By|Per):\s*(.+?)\s*\n\s*(.+?)\s*\n\s*(?:Date|Dated)[:\s]*(\d{4}-\d{2}-\d{2}|\d{2}/\d{2}/\d{4})',
+            r'Name:\s*(.+?)\s*\nTitle:\s*(.+?)\s*\nDate:\s*(.+?)(?:\n|$)'
+        ]
+        
+        for pattern in sig_patterns:
+            matches = re.findall(pattern, text, re.IGNORECASE | re.MULTILINE)
+            for match in matches:
+                if isinstance(match, tuple):
+                    if len(match) >= 3:
+                        signatures.append({
+                            "name": match[0].strip(),
+                            "title": match[1].strip(),
+                            "date": match[2].strip(),
+                            "context": "Signature block"
+                        })
+                else:
+                    signatures.append({
+                        "name": match.strip(),
+                        "title": "Not specified",
+                        "date": "Not specified",
+                        "context": "Signature mentioned"
+                    })
+        
+        return signatures[:10]  # Limit to 10 signatures
+    
+    def _get_empty_section(self, section_name: str) -> Any:
+        """Get empty structure for a section"""
+        empty_sections = {
+            "metadata": {
+                "document_type": "grant_contract",
+                "extraction_confidence": 0.0,
+                "pages_extracted_from": 1,
+                "extraction_timestamp": datetime.now().isoformat()
+            },
+            "parties": {
+                "grantor": {},
+                "grantee": {}
+            },
+            "contract_details": {},
+            "financial_details": {},
+            "deliverables": {"items": [], "reporting_requirements": {}},
+            "terms_conditions": {},
+            "compliance": {}
+        }
+        
+        return empty_sections.get(section_name, {})
+    
     def extract_reference_ids(self, text: str, contract_details: Dict[str, Any]) -> Dict[str, Any]:
-        """Extract investment, project, and grant IDs from contract text"""
+        """Extract reference IDs from contract text"""
         import re
         
         extracted_ids = {
@@ -777,36 +913,23 @@ class AIExtractor:
             "extracted_reference_ids": []
         }
         
-        # Common patterns for reference IDs
         patterns = {
             "investment_id": [
                 r'Investment\s*(?:ID|Number|No\.?)[:\s]*([A-Z0-9\-/#]+)',
                 r'INV-\d+',
-                r'INV[:\s]*([A-Z0-9\-]+)',
-                r'\bINVESTMENT[:\s]+([A-Z0-9\-/#]+)'
+                r'INV[:\s]*([A-Z0-9\-]+)'
             ],
             "project_id": [
                 r'Project\s*(?:ID|Number|No\.?|Code)[:\s]*([A-Z0-9\-/#]+)',
                 r'PRJ-\d+',
-                r'PRJ[:\s]*([A-Z0-9\-]+)',
-                r'\bPROJECT[:\s]+([A-Z0-9\-/#]+)',
-                r'P-\d+'
+                r'PRJ[:\s]*([A-Z0-9\-]+)'
             ],
             "grant_id": [
                 r'Grant\s*(?:ID|Number|No\.?|Reference)[:\s]*([A-Z0-9\-/#]+)',
                 r'GR-\d+',
-                r'GRANT[:\s]+([A-Z0-9\-/#]+)',
-                r'G-\d+',
-                r'GRNT-\d+'
+                r'GRANT[:\s]+([A-Z0-9\-/#]+)'
             ]
         }
-        
-        # Combine contract details text with extracted text for better searching
-        search_text = text.lower()
-        
-        # Also search in contract_details if available
-        if contract_details:
-            search_text += " " + json.dumps(contract_details).lower()
         
         for id_type, id_patterns in patterns.items():
             for pattern in id_patterns:
@@ -820,456 +943,102 @@ class AIExtractor:
                             "value": extracted_value.strip(),
                             "pattern": pattern
                         })
-                        break  # Use first match for each type
-        
-        # Fallback: Check if contract_number looks like an ID
-        if not extracted_ids["investment_id"] and contract_details.get("contract_number"):
-            contract_num = contract_details["contract_number"]
-            if any(term in contract_num.upper() for term in ['INV', 'INVESTMENT']):
-                extracted_ids["investment_id"] = contract_num
-                extracted_ids["extracted_reference_ids"].append({
-                    "type": "investment_id",
-                    "value": contract_num,
-                    "source": "contract_number"
-                })
-            elif any(term in contract_num.upper() for term in ['PRJ', 'PROJECT', 'P-']):
-                extracted_ids["project_id"] = contract_num
-                extracted_ids["extracted_reference_ids"].append({
-                    "type": "project_id",
-                    "value": contract_num,
-                    "source": "contract_number"
-                })
-            elif any(term in contract_num.upper() for term in ['GR', 'GRANT', 'G-']):
-                extracted_ids["grant_id"] = contract_num
-                extracted_ids["extracted_reference_ids"].append({
-                    "type": "grant_id",
-                    "value": contract_num,
-                    "source": "contract_number"
-                })
-        
-        return extracted_ids
-
-    def _post_process_extracted_data(self, data: Dict[str, Any], original_text: str) -> Dict[str, Any]:
-        """Post-process extracted data to fill missing fields"""
-        import re
-        
-        # If contract name is missing, try to extract from text
-        if not data.get("contract_details", {}).get("grant_name"):
-            # Look for common contract name patterns
-            patterns = [
-                r'GRANT\s+AGREEMENT\s+(?:FOR|RELATING TO|REGARDING)\s+(.+?)(?:\n|;)',
-                r'CONTRACT\s+(?:NO\.|NUMBER)[:\s]*[A-Z0-9-]+\s+(?:FOR|RELATING TO)\s+(.+?)(?:\n|;)',
-                r'AGREEMENT\s+(?:BETWEEN|AMONG).+?AND.+?FOR\s+(.+?)(?:\n|;)',
-                r'PROJECT\s+NAME[:\s]+(.+?)(?:\n|;)',
-                r'TITLE[:\s]+(.+?)(?:\n|;)'
-            ]
-            
-            for pattern in patterns:
-                match = re.search(pattern, original_text[:2000], re.IGNORECASE)
-                if match:
-                    data["contract_details"]["grant_name"] = match.group(1).strip()
-                    break
-        
-        # Ensure terms_conditions section exists
-        if "terms_conditions" not in data:
-            data["terms_conditions"] = self._get_empty_result()["terms_conditions"]
-        
-        # Ensure compliance section exists
-        if "compliance" not in data:
-            data["compliance"] = self._get_empty_result()["compliance"]
-        
-        return data
-
-    def _validate_extracted_data(self, data: Dict[str, Any], original_text: str = "") -> Dict[str, Any]:
-        """Validate and clean extracted data"""
-        import re
-        
-        # 1. ENHANCED CONTRACT NAME EXTRACTION
-        if not data.get("contract_details", {}).get("grant_name"):
-            contract_details = data.setdefault("contract_details", {})
-            
-            # Strategy 1: Look for document titles BEFORE "BETWEEN" or "AGREEMENT BETWEEN"
-            patterns_pre_between = [
-                # Pattern: Title before "BETWEEN"
-                r'^(.*?)\s*(?:GRANT\s+)?(?:AGREEMENT|CONTRACT|MEMORANDUM OF UNDERSTANDING)\s*(?:NO\.?[:\s]*[A-Z0-9-]+)?\s*(?:BETWEEN|AMONG)\s+',
-                # Pattern: "THIS" followed by agreement type and name
-                r'THIS\s+(?:GRANT\s+)?(?:AGREEMENT|CONTRACT|MEMORANDUM)\s+(?:IS\s+MADE\s+)?(?:FOR|ENTITLED|TITLED)[:\s]+["\']?(.+?)["\']?(?:\s+BY\s+AND\s+BETWEEN|\s+BETWEEN|\.|$)',
-                # Pattern: Logo text detection (often all caps)
-                r'\n([A-Z][A-Z\s&,\-\'\(\)]{10,60})\n\s*(?:Logo|L O G O|\\/\\s*logo\\s*\\/\\s*)?\n',
-                # Pattern: Header lines (often centered or bold)
-                r'\n\s*([A-Z][A-Za-z0-9\s&,\-:\(\)]{10,80})\n\s*[-=~*_]{10,}\n',
-            ]
-            
-            # Check first 500 characters (where titles usually are)
-            first_section = original_text[:500]
-            for pattern in patterns_pre_between:
-                match = re.search(pattern, first_section, re.IGNORECASE | re.DOTALL)
-                if match:
-                    potential_name = match.group(1).strip()
-                    # Clean the extracted name
-                    if len(potential_name) > 5 and len(potential_name) < 100:
-                        # Remove common prefixes/suffixes
-                        clean_name = re.sub(r'^(?:THE\s+|A\s+|AN\s+|THIS\s+)', '', potential_name, flags=re.IGNORECASE)
-                        clean_name = re.sub(r'\s+(?:AGREEMENT|CONTRACT|GRANT|PROJECT|PROGRAM)$', '', clean_name, flags=re.IGNORECASE)
-                        if clean_name and not re.search(r'^\d+$', clean_name):  # Not just numbers
-                            contract_details["grant_name"] = clean_name
-                            contract_details["name_extraction_method"] = "pre_between_pattern"
-                            break
-            
-            # Strategy 2: Look for "Project:" or "Title:" markers
-            if not contract_details.get("grant_name"):
-                marker_patterns = [
-                    r'(?:Project\s*Name|Title|Grant\s*Title)[:\s]+["\']?(.+?)["\']?(?:\n|\.|;)',
-                    r'RE:\s*["\']?(.+?)["\']?(?:\n|\.|;)',
-                    r'SUBJECT:\s*["\']?(.+?)["\']?(?:\n|\.|;)',
-                    r'^[A-Z\s]{10,50}\n(?:for|regarding)\s+["\']?(.+?)["\']?(?:\n|\.|$)',
-                ]
-                
-                for pattern in marker_patterns:
-                    match = re.search(pattern, first_section, re.IGNORECASE)
-                    if match:
-                        potential_name = match.group(1).strip()
-                        if 5 < len(potential_name) < 100:
-                            contract_details["grant_name"] = potential_name
-                            contract_details["name_extraction_method"] = "marker_pattern"
-                            break
-            
-            # Strategy 3: Extract from between parties (common format)
-            if not contract_details.get("grant_name"):
-                between_pattern = r'(?:BETWEEN|AMONG)\s+(.+?)\s+(?:AND|&)\s+(.+?)(?:\s+for\s+["\']?(.+?)["\']?|\s+relating\s+to\s+["\']?(.+?)["\']?|\s+regarding\s+["\']?(.+?)["\']?|\s+concerning\s+["\']?(.+?)["\']?)'
-                match = re.search(between_pattern, first_section, re.IGNORECASE)
-                if match:
-                    for i in range(3, 7):  # Check groups 3-6 (the "for X" parts)
-                        if match.group(i):
-                            potential_name = match.group(i).strip()
-                            if 5 < len(potential_name) < 100:
-                                contract_details["grant_name"] = potential_name
-                                contract_details["name_extraction_method"] = "between_parties_pattern"
-                                break
-            
-            # Strategy 4: Look for funding program names
-            if not contract_details.get("grant_name"):
-                program_patterns = [
-                    r'(?:under|pursuant to|as part of)\s+(?:the\s+)?["\']?(.+?Program|.+?Initiative|.+?Project|.+?Grant)["\']?',
-                    r'funded\s+(?:by|under)\s+(?:the\s+)?["\']?(.+?)["\']?(?:\s+Program|\s+Initiative)?',
-                    r'(?:Program|Initiative|Project)[:\s]+["\']?(.+?)["\']?(?:\n|\.|;)',
-                ]
-                
-                for pattern in program_patterns:
-                    match = re.search(pattern, original_text[:1500], re.IGNORECASE)
-                    if match:
-                        potential_name = match.group(1).strip()
-                        if 5 < len(potential_name) < 100:
-                            contract_details["grant_name"] = potential_name
-                            contract_details["name_extraction_method"] = "program_pattern"
-                            break
-            
-            # Strategy 5: Smart fallback - Use the most descriptive line from first paragraph
-            if not contract_details.get("grant_name"):
-                # Get the first paragraph (before first double newline)
-                first_para_match = re.search(r'^(.+?)(?:\n\s*\n|$)', original_text[:1000], re.DOTALL)
-                if first_para_match:
-                    first_para = first_para_match.group(1)
-                    # Find the most meaningful line (not too short, not too long, contains keywords)
-                    lines = [line.strip() for line in first_para.split('\n') if line.strip()]
-                    for line in lines:
-                        if (30 < len(line) < 200 and 
-                            not re.search(r'^\d', line) and  # Doesn't start with number
-                            not re.search(r'page|confidential|proprietary', line, re.IGNORECASE) and
-                            re.search(r'\b(?:grant|project|initiative|program|agreement|contract)\b', line, re.IGNORECASE)):
-                            contract_details["grant_name"] = line
-                            contract_details["name_extraction_method"] = "first_paragraph_fallback"
-                            break
-            
-            # Final fallback: Use first meaningful line
-            if not contract_details.get("grant_name"):
-                lines = [line.strip() for line in original_text[:300].split('\n') if line.strip()]
-                for line in lines:
-                    if (10 < len(line) < 150 and 
-                        not re.search(r'^\s*$', line) and
-                        not re.search(r'^\d', line) and
-                        not re.search(r'^(?:to|and|the|of|in|for|by|with|from|at|on|as|is|was|be|are|were|have|has|had|do|does|did|will|would|should|could|can|may|might|must)$', line, re.IGNORECASE)):
-                        contract_details["grant_name"] = line
-                        contract_details["name_extraction_method"] = "first_line_fallback"
                         break
         
-        # 4. ENHANCE THE VALIDATION FOR CONTRACT NAME
-        # Ensure contract name is meaningful
-        if "contract_details" in data and data["contract_details"].get("grant_name"):
-            name = data["contract_details"]["grant_name"]
-            # Clean up the name
-            name = re.sub(r'\s+', ' ', name).strip()
-            # Remove common prefixes
-            name = re.sub(r'^(?:MEMORANDUM OF UNDERSTANDING|GRANT AGREEMENT|CONTRACT|AGREEMENT)\s*[:-]?\s*', '', name, flags=re.IGNORECASE)
-            # Remove quotes
-            name = re.sub(r'^["\']|["\']$', '', name)
-            
-            # If name is still valid, keep it
-            if 3 <= len(name) <= 200:
-                data["contract_details"]["grant_name"] = name
-            else:
-                # Name is too short or too long, try to find better one
-                data["contract_details"]["grant_name"] = None
-        
-        # 5. ADD METADATA ABOUT NAME EXTRACTION
-        if "contract_details" in data:
-            contract_details = data["contract_details"]
-
-            if "detailed_scope_of_work" not in contract_details:
-                contract_details["detailed_scope_of_work"] = self._get_empty_scope_structure()
-        
-            # If scope_of_work is missing but we have detailed scope, create a summary
-            if not contract_details.get("scope_of_work") and contract_details.get("detailed_scope_of_work"):
-                detailed = contract_details["detailed_scope_of_work"]
-                summary_parts = []
-                
-                if detailed.get("project_description"):
-                    summary_parts.append(detailed["project_description"][:300])
-                elif detailed.get("main_activities"):
-                    summary_parts.append("Key activities: " + ", ".join(detailed["main_activities"][:3]))
-                
-                if detailed.get("deliverables_list"):
-                    summary_parts.append("Deliverables: " + ", ".join(detailed["deliverables_list"][:3]))
-                
-                contract_details["scope_of_work"] = ". ".join(summary_parts) if summary_parts else "Scope detailed in structured format"
-
-            if "name_extraction_method" not in contract_details:
-                contract_details["name_extraction_method"] = "AI_extraction" if contract_details.get("grant_name") else "not_found"
-            
-            # Add confidence score for name extraction
-            if "grant_name" in contract_details:
-                # Calculate confidence based on extraction method
-                confidence_map = {
-                    "pre_between_pattern": 0.9,
-                    "marker_pattern": 0.8,
-                    "between_parties_pattern": 0.7,
-                    "program_pattern": 0.6,
-                    "first_paragraph_fallback": 0.5,
-                    "first_line_fallback": 0.4,
-                    "AI_extraction": 0.85
-                }
-                method = contract_details.get("name_extraction_method", "AI_extraction")
-                contract_details["name_extraction_confidence"] = confidence_map.get(method, 0.5)
-
-        # Ensure financial amounts are numbers
-        if "financial_details" in data:
-            financial = data["financial_details"]
-            
-            # Ensure payment_schedule exists
-            if "payment_schedule" not in financial:
-                financial["payment_schedule"] = {
-                    "schedule_type": None,
-                    "installments": [],
-                    "milestones": [],
-                    "reimbursements": []
-                }
-            
-            payment_schedule = financial["payment_schedule"]
-            
-            # Ensure all sub-sections exist
-            for key in ["installments", "milestones", "reimbursements"]:
-                if key not in payment_schedule:
-                    payment_schedule[key] = []
-                elif payment_schedule[key] is None:
-                    payment_schedule[key] = []
-            
-            # Try to extract payment info from text if missing
-            if (not payment_schedule.get("installments") and 
-                not payment_schedule.get("milestones")):
-                payment_schedule.update(self._extract_payment_info_from_text(original_text))
-                
-            # Convert total_grant_amount to number if it's a string
-            if isinstance(data["financial_details"].get("total_grant_amount"), str):
-                try:
-                    # Remove currency symbols and commas
-                    amount_str = data["financial_details"]["total_grant_amount"]
-                    amount_str = re.sub(r'[^\d.]', '', amount_str)
-                    data["financial_details"]["total_grant_amount"] = float(amount_str)
-                except:
-                    data["financial_details"]["total_grant_amount"] = None
-            
-            # Process installments and milestones
-            payment_schedule = data["financial_details"].get("payment_schedule", {})
-            
-            for installment in payment_schedule.get("installments", []):
-                if isinstance(installment.get("amount"), str):
-                    try:
-                        amount_str = installment["amount"]
-                        amount_str = re.sub(r'[^\d.]', '', amount_str)
-                        installment["amount"] = float(amount_str)
-                    except:
-                        installment["amount"] = None
-            
-            for milestone in payment_schedule.get("milestones", []):
-                if isinstance(milestone.get("amount"), str):
-                    try:
-                        amount_str = milestone["amount"]
-                        amount_str = re.sub(r'[^\d.]', '', amount_str)
-                        milestone["amount"] = float(amount_str)
-                    except:
-                        milestone["amount"] = None
-        
-        # ADD THIS: Validate terms_conditions and compliance sections
-        if "terms_conditions" in data:
-            terms = data["terms_conditions"]
-            # Ensure all fields exist with at least empty strings
-            required_terms_fields = [
-                "intellectual_property", "confidentiality", "liability", 
-                "termination_clauses", "renewal_options", "dispute_resolution", 
-                "governing_law", "force_majeure", "key_obligations", "restrictions"
-            ]
-            for field in required_terms_fields:
-                if field not in terms or terms[field] is None:
-                    terms[field] = "" if field.endswith("s") else []
-        
-        if "compliance" in data:
-            compliance = data["compliance"]
-            # Ensure all fields exist with at least empty strings
-            required_compliance_fields = [
-                "audit_requirements", "record_keeping", 
-                "regulatory_compliance", "ethics_requirements"
-            ]
-            for field in required_compliance_fields:
-                if field not in compliance or compliance[field] is None:
-                    compliance[field] = ""
-        
-        if "contract_details" in data:
-            contract_details = data["contract_details"]
-
-            if "scope_of_work" not in contract_details or not contract_details["scope_of_work"]:
-                contract_details["scope_of_work"] = "Not specified in contract"
-        
-            # Ensure grant_reference is extracted
-            if "grant_reference" not in contract_details:
-                contract_details["grant_reference"] = None
-            
-            # Ensure risk_management is extracted
-            if "risk_management" not in contract_details:
-                contract_details["risk_management"] = "Not specified in contract"
-            
-            # Ensure objectives is an array
-            if "objectives" not in contract_details:
-                contract_details["objectives"] = []
-            elif not isinstance(contract_details["objectives"], list):
-                # If it's a string, convert to array
-                if isinstance(contract_details["objectives"], str):
-                    contract_details["objectives"] = [contract_details["objectives"]]
-                else:
-                    contract_details["objectives"] = []
-        
-        # Ensure deliverables has enhanced reporting_requirements
-        if "deliverables" in data and "reporting_requirements" in data["deliverables"]:
-            reporting = data["deliverables"]["reporting_requirements"]
-            if "format_requirements" not in reporting:
-                reporting["format_requirements"] = "Not specified"
-            if "submission_method" not in reporting:
-                reporting["submission_method"] = "Not specified"
-        
-        # Ensure parties have signatory information
-        if "parties" in data:
-            for party_type in ["grantor", "grantee"]:
-                if party_type in data["parties"]:
-                    party = data["parties"][party_type]
-                    if "signatory_name" not in party:
-                        party["signatory_name"] = None
-                    if "signatory_title" not in party:
-                        party["signatory_title"] = None
-                    if "signature_date" not in party:
-                        party["signature_date"] = None
-        
-        # Ensure terms_conditions has all fields with proper defaults
-        if "terms_conditions" in data:
-            terms = data["terms_conditions"]
-            
-            # Fields that should be strings (not arrays)
-            string_fields = [
-                "confidentiality", "renewal_options", "dispute_resolution",
-                "governing_law", "force_majeure"
-            ]
-            
-            for field in string_fields:
-                if field not in terms or terms[field] is None:
-                    terms[field] = "Not specified in contract"
-                elif isinstance(terms[field], list):
-                    # If somehow it's a list, join it
-                    terms[field] = ". ".join(terms[field])
-        
-        # Ensure extended_data has signatures_found
-        if "extended_data" in data and "signatures_found" not in data["extended_data"]:
-            data["extended_data"]["signatures_found"] = []
-            
-            if not contract_details.get("grant_name") and not contract_details.get("contract_number"):
-                # Try to find contract name in text if not extracted
-                # Look for common patterns in the original text
-                contract_details["extraction_notes"] = "Contract name not explicitly found in standard fields"
-        
-        return data
-
-    def _extract_payment_info_from_text(self, text: str) -> Dict[str, Any]:
-        """Fallback extraction of payment information from text"""
-        import re
-        
-        payment_info = {
-            "schedule_type": None,
-            "installments": [],
-            "milestones": [],
-            "reimbursements": []
-        }
-        
-        # Look for payment patterns
-        patterns = {
-            "installment": r'(?:installment|payment)\s+(?:no\.?\s*)?(\d+)[:\s]*\$?\s*([\d,]+(?:\.\d{2})?)[^.]*?(?:on|by|due)?\s+([A-Za-z]+\s+\d{1,2},?\s+\d{4}|\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})',
-            "milestone": r'(?:milestone|deliverable)\s+["\']?(.+?)["\']?[:\s]*\$?\s*([\d,]+(?:\.\d{2})?)[^.]*?(?:on|by|due)?\s+([A-Za-z]+\s+\d{1,2},?\s+\d{4}|\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})',
-            "schedule": r'(?:payment\s+schedule|schedule\s+of\s+payments)[:\s]*([^.]+\.[^.]*\.)',
-            "quarterly": r'(?:quarterly|annual|monthly)\s+payments?\s+of\s+\$?\s*([\d,]+(?:\.\d{2})?)'
-        }
-        
-        # Extract installments
-        for match in re.finditer(patterns["installment"], text, re.IGNORECASE):
-            payment_info["installments"].append({
-                "installment_number": int(match.group(1)),
-                "amount": float(match.group(2).replace(',', '')),
-                "due_date": match.group(3),
-                "description": f"Installment {match.group(1)}"
-            })
-        
-        # Extract milestones
-        for match in re.finditer(patterns["milestone"], text, re.IGNORECASE):
-            payment_info["milestones"].append({
-                "milestone_name": match.group(1),
-                "amount": float(match.group(2).replace(',', '')),
-                "due_date": match.group(3),
-                "description": f"Payment for {match.group(1)}"
-            })
-        
-        # Determine schedule type
-        if payment_info["installments"]:
-            payment_info["schedule_type"] = "Installment-based"
-        elif payment_info["milestones"]:
-            payment_info["schedule_type"] = "Milestone-based"
-        elif re.search(patterns["quarterly"], text, re.IGNORECASE):
-            payment_info["schedule_type"] = "Periodic payments"
-        
-        return payment_info
-
-    def _get_empty_scope_structure(self) -> Dict[str, Any]:
-        """Return empty detailed scope structure"""
+        return extracted_ids
+    
+    def _get_empty_result(self) -> Dict[str, Any]:
+        """Return empty result structure"""
         return {
-            "project_description": "",
-            "main_activities": [],
-            "deliverables_list": [],
-            "tasks_and_responsibilities": [],
-            "timeline_phases": [],
-            "technical_requirements": [],
-            "performance_standards": [],
-            "work_breakdown_structure": [],
-            "key_milestones": [],
-            "resources_required": [],
-            "assumptions_and_constraints": []
+            "metadata": {
+                "document_type": "grant_contract",
+                "extraction_confidence": 0.0,
+                "pages_extracted_from": 1,
+                "extraction_timestamp": datetime.now().isoformat()
+            },
+            "parties": {
+                "grantor": {},
+                "grantee": {}
+            },
+            "contract_details": {
+                "grant_name": "Grant Contract",
+                "scope_of_work": "Not specified"
+            },
+            "financial_details": {
+                "total_grant_amount": 0,
+                "currency": "USD",
+                "payment_schedule": {
+                    "schedule_type": "Not specified",
+                    "installments": [],
+                    "milestones": []
+                }
+            },
+                   "deliverables": {
+                    "items": [],
+                    "reporting_requirements": {
+                        "frequency": "Not specified",
+                        "report_types": [],
+                        "due_dates": [],
+                        "format_requirements": "Not specified",
+                        "submission_method": "Not specified",
+                        "recipients": []
+            }
+        },
+         "terms_conditions": {
+            "intellectual_property": "string",
+            "confidentiality": "string",
+            "liability": "string",
+            "indemnification": "string",
+            "termination_clauses": "string",
+            "renewal_options": "string",
+            "dispute_resolution": "string",
+            "governing_law": "string",
+            "force_majeure": "string",
+            "warranties": "string",
+            "assignment": "string",
+            "notices": "string",
+            "severability": "string",
+            "entire_agreement": "string",
+            "amendment": "string",
+            "key_obligations": ["array of strings"],
+            "restrictions": ["array of strings"]
+        },
+        
+        # Add compliance section (AFTER terms_conditions):
+        "compliance": {
+            "audit_requirements": "string",
+            "record_keeping": "string",
+            "regulatory_compliance": "string",
+            "ethics_requirements": "string",
+            "environmental_compliance": "string",
+            "safety_requirements": "string",
+            "accessibility_requirements": "string",
+            "data_protection": "string",
+            "conflict_of_interest": "string",
+            "code_of_conduct": "string",
+            "monitoring_evaluation": "string"
+        },
+            "reference_ids": {
+                "investment_id": None,
+                "project_id": None,
+                "grant_id": None,
+                "extracted_reference_ids": []
+            },
+            "summary": {
+                "executive_summary": "No data extracted",
+                "key_dates_summary": "No dates found",
+                "financial_summary": "No financial data found"
+            },
+            "extended_data": {
+                "all_dates_found": [],
+                "all_amounts_found": [],
+                "table_data_extracted": [],
+                "signatures_found": []
+            }
         }
-
-    def get_embedding(self, text: str) -> list:
-        """Get vector embedding for text - used for ChromaDB"""
+    
+    def get_embedding(self, text: str) -> List[float]:
+        """Get vector embedding for text"""
         try:
             if not self.api_key or self.api_key == "your-openai-api-key-here":
                 print("ERROR: Please set OPENAI_API_KEY in .env file")
@@ -1283,1515 +1052,3 @@ class AIExtractor:
         except Exception as e:
             print(f"Embedding error: {e}")
             return []
-    
-    def _get_empty_result(self) -> Dict[str, Any]:
-        """Return comprehensive empty result structure"""
-        import datetime
-        return {
-            "metadata": {
-                "document_type": None,
-                "extraction_confidence": 0.0,
-                "pages_extracted_from": None,
-                "extraction_timestamp": datetime.datetime.now().isoformat()
-            },
-            "parties": {
-                "grantor": {
-                    "organization_name": None,
-                    "address": None,
-                    "contact_person": None,
-                    "email": None,
-                    "phone": None,
-                    "signatory_name": None,
-                    "signatory_title": None,
-                    "signature_date": None
-                },
-                "grantee": {
-                    "organization_name": None,
-                    "address": None,
-                    "contact_person": None,
-                    "email": None,
-                    "phone": None,
-                    "signatory_name": None,
-                    "signatory_title": None,
-                    "signature_date": None
-                },
-                "other_parties": []
-            },
-            "contract_details": {
-                "contract_number": None,
-                "grant_name": None,
-                "grant_reference": None,
-                "agreement_type": None,
-                "effective_date": None,
-                "signature_date": None,
-                "start_date": None,
-                "end_date": None,
-                "duration": None,
-                "purpose": None,
-                "objectives": [],
-                "scope_of_work": None,
-                "detailed_scope_of_work": self._get_empty_scope_structure(),
-                "geographic_scope": None,
-                "risk_management": None,
-                "key_dates": {
-                    "proposal_submission_date": None,
-                    "approval_date": None,
-                    "notification_date": None
-                }
-            },
-            "financial_details": {
-                "total_grant_amount": None,
-                "currency": "USD",
-                "additional_currencies": [],
-                "payment_schedule": {
-                    "schedule_type": None,
-                    "installments": [],
-                    "milestones": [],
-                    "reimbursements": []
-                },
-                "budget_breakdown": {
-                    "personnel": None,
-                    "equipment": None,
-                    "travel": None,
-                    "materials": None,
-                    "indirect_costs": None,
-                    "other": None,
-                    "contingency": None,
-                    "overhead": None,
-                    "subcontractors": None
-                },
-                "additional_budget_items": [],
-                "financial_reporting_requirements": None,
-                "financial_tables_summary": None,
-                "total_installments_amount": None,
-                "total_milestones_amount": None,
-                "payment_terms": None
-            },
-            "deliverables": {
-                "items": [],
-                "reporting_requirements": {
-                    "frequency": None,
-                    "report_types": [],
-                    "due_dates": [],
-                    "format_requirements": None,
-                    "submission_method": None
-                }
-            },
-            "terms_conditions": {
-                "intellectual_property": None,
-                "confidentiality": None,
-                "liability": None,
-                "termination_clauses": None,
-                "renewal_options": None,
-                "dispute_resolution": None,
-                "governing_law": None,
-                "force_majeure": None,
-                "key_obligations": [],
-                "restrictions": []
-            },
-            "compliance": {
-                "audit_requirements": None,
-                "record_keeping": None,
-                "regulatory_compliance": None,
-                "ethics_requirements": None
-            },
-            "summary": {
-                "executive_summary": "No summary available",
-                "key_dates_summary": "No date information extracted",
-                "financial_summary": "No financial information extracted",
-                "risk_assessment": "No risk assessment available",
-                "total_contract_value": "No total value extracted",
-                "payment_timeline_summary": "No payment timeline extracted"
-            },
-            "extended_data": {
-                "all_dates_found": [],
-                "all_amounts_found": [],
-                "table_data_extracted": [],
-                "signatures_found": []
-            }
-        }
-
-
-# import openai
-# import json
-# from typing import Dict, Any
-# from app.config import settings
-# import os
-
-# # Apply proxy fix at module level
-# import sys
-# sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-# # Import and apply the patch
-# try:
-#     from openai_patch import *
-# except ImportError:
-#     # If patch doesn't exist, manually clean proxy env vars
-#     for var in ['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy']:
-#         os.environ.pop(var, None)
-
-# class AIExtractor:
-#     def __init__(self):
-#         # Clean environment
-#         self._clean_environment()
-        
-#         # Set API key
-#         self.api_key = settings.OPENAI_API_KEY
-        
-#         # Initialize client with minimal configuration
-#         self.client = self._create_openai_client()
-        
-#         # Enhanced prompt for comprehensive extraction with focus on tables
-        
-#         self.extraction_prompt = """ANALYZE THIS GRANT CONTRACT THOROUGHLY AND EXTRACT ALL INFORMATION.
-    
-
-#         PAYMENT SCHEDULE EXTRACTION - CRITICAL:
-#         1. LOOK FOR THESE SPECIFIC PAYMENT TERMS:
-#            - "Payment Schedule"
-#            - "Schedule of Payments"
-#            - "Installment Payments"
-#            - "Milestone Payments"
-#            - "Disbursement Schedule"
-#            - "Payment Terms"
-#            - Any section with payment amounts and dates
-
-#         2. EXTRACT ALL PAYMENT DETAILS:
-#            - Installment numbers
-#            - Payment amounts (with currency)
-#            - Due dates (convert to YYYY-MM-DD)
-#            - Trigger conditions (e.g., "upon signing", "after delivery")
-#            - Payment descriptions
-#            - Milestone-linked payments
-#            - Reimbursement details
-
-#         3. TABLES ARE CRITICAL FOR PAYMENTS:
-#            - Extract EVERY row from payment tables
-#            - Include ALL columns: installment number, date, amount, description
-#            - Capture the table structure exactly as it appears
-#            - If amounts are in different currencies, note each one
-
-#         4. PAYMENT PATTERNS TO LOOK FOR:
-#            - "The Grantor shall pay $X on [date]"
-#            - "Payments shall be made as follows:"
-#            - "First installment: $X payable on [date]"
-#            - "50% upon signing, 50% upon completion"
-#            - Quarterly/Annual payments
-#            - Advance payments and final payments
-
-#         5. FINANCIAL TABLES EXTRACTION:
-#            - "Budget Table" - extract all categories and amounts
-#            - "Payment Schedule Table" - extract all rows
-#            - "Milestone Payment Table" - extract all milestones
-#            - "Disbursement Schedule" - extract all disbursements
-
-#         CRITICAL FOR SCOPE OF WORK EXTRACTION:
-
-#         1. EXTRACT THE ENTIRE SCOPE SECTION: Don't summarize or shorten. Include all details.
-
-#         2. LOOK FOR THESE SPECIFIC ELEMENTS:
-#         - Project overview and background
-#         - Specific tasks to be performed
-#         - Deliverables with descriptions
-#         - Technical specifications
-#         - Performance requirements
-#         - Timeline with phases
-#         - Resource requirements
-#         - Quality standards
-#         - Testing procedures
-#         - Documentation requirements
-
-#         3. EXTRACT FROM THESE SECTIONS:
-#         - 'Scope of Work'
-#         - 'Services to be Provided'
-#         - 'Work Description'
-#         - 'Technical Approach'
-#         - 'Methodology'
-#         - 'Deliverables Schedule'
-#         - Any section containing work/task descriptions
-
-#         4. PRESERVE STRUCTURE:
-#         - Keep bullet points and numbered lists
-#         - Preserve hierarchical structure
-#         - Include all specifications and requirements
-#         - Capture conditional requirements
-#         - Include dependencies between tasks
-
-#         5. IF SCOPE IS IN TABLES: Extract ALL table data including headers and rows.
-
-#         6. USE THIS STRUCTURE FOR DETAILED SCOPE:
-#         project_description: Full narrative description
-#         main_activities: List of primary work areas
-#         deliverables_list: Complete list of outputs
-#         tasks_and_responsibilities: Specific tasks for each role
-#         timeline_phases: Project phases with durations
-#         technical_requirements: Technical specs and standards
-#         performance_standards: Quality and performance criteria
-#         work_breakdown_structure: Hierarchical task breakdown
-#         key_milestones: Major project milestones
-#         resources_required: Personnel, equipment, materials
-#         assumptions_and_constraints: Project assumptions and limitations
-
-#         LOGO AND HEADER EXTRACTION GUIDANCE:
-#         1. CONTRACT TITLE OFTEN APPEARS IN:
-#            - The first all-caps line before "BETWEEN"
-#            - Centered text at the top of the document
-#            - Text that appears to be in a logo area
-#            - Bold or larger font text at the beginning
-
-#         2. SPECIFIC PATTERNS TO LOOK FOR:
-#            - "AGREEMENT BETWEEN [Party A] AND [Party B] FOR [Project Name]"
-#            - "THIS GRANT AGREEMENT (the 'Agreement') is made for [Project Name]"
-#            - Logo text followed by project description
-#            - Header: "[PROJECT NAME] GRANT AGREEMENT"
-
-#         3. IF YOU SEE FORMATTED TEXT AT THE BEGINNING, EXTRACT IT AS CONTRACT NAME
-
-#         4. NEVER SKIP THE CONTRACT NAME - if uncertain, use the most descriptive line from first 10 lines
-
-#         CRITICAL - EXTRACT THESE SPECIFIC FIELDS THAT ARE OFTEN MISSED:
-
-#         1. RISK MANAGEMENT: Extract ALL risk-related clauses including:
-#            - Risk assessment procedures
-#            - Risk mitigation strategies
-#            - Risk allocation between parties
-#            - Insurance requirements
-#            - Risk reporting obligations
-
-#         2. SCOPE OF WORK: Extract the complete scope including:
-#            - Detailed project description
-#            - Specific tasks and activities
-#            - Deliverables and outputs
-#            - Performance standards
-#            - Technical specifications
-#            - Work breakdown structure if available
-
-#         3. GRANT REFERENCE: Look for ALL reference numbers including:
-#            - Grant reference numbers
-#            - Award numbers
-#            - Project codes
-#            - Application numbers
-#            - File numbers
-#            - Any alphanumeric identifiers starting with: GR, G, AW, PRJ, REF
-
-#         4. REPORTING REQUIREMENTS: Extract ALL reporting obligations:
-#            - Report types (progress, financial, technical, final)
-#            - Reporting frequency (monthly, quarterly, annually)
-#            - Specific due dates for reports
-#            - Report formats and templates required
-#            - Submission methods and recipients
-
-#         5. CONFIDENTIALITY: Extract ALL confidentiality clauses:
-#            - Non-disclosure agreements
-#            - Confidential information definition
-#            - Duration of confidentiality
-#            - Exceptions to confidentiality
-#            - Return/destruction of confidential materials
-
-#         6. RENEWAL OPTIONS: Extract ALL renewal/extension terms:
-#            - Automatic renewal clauses
-#            - Option to renew/extend
-#            - Renewal procedures and deadlines
-#            - Conditions for renewal
-#            - Renewal terms and duration
-
-#         7. DISPUTE RESOLUTION: Extract ALL dispute mechanisms:
-#            - Negotiation/mediation procedures
-#            - Arbitration clauses (location, rules, language)
-#            - Litigation provisions
-#            - Jurisdiction and venue
-#            - Escalation procedures
-#            - Expert determination clauses
-
-#         8. GOVERNING LAW: Extract ALL legal framework details:
-#            - Applicable law (country, state)
-#            - Legal system specified
-#            - Choice of law clauses
-#            - International law references if any
-
-#         9. FORCE MAJEURE: Extract ALL force majeure clauses:
-#            - Definition of force majeure events
-#            - Specific events listed (natural disasters, war, etc.)
-#            - Notification requirements
-#            - Consequences (suspension, termination, extension)
-#            - Mitigation obligations
-
-#         10. SIGNATURE DATES & SIGNATORIES: Extract ALL signature information:
-#             - Date of signing (may be different from effective date)
-#             - Names and titles of all signatories
-#             - Signatory authority details
-#             - Witness information if present
-#             - Multiple signature dates if parties sign separately
-
-#         11. OBJECTIVES: Extract ALL project objectives including:
-#             - Primary objectives
-#             - Secondary objectives
-#             - SMART objectives (Specific, Measurable, Achievable, Relevant, Time-bound)
-#             - Program goals
-#             - Expected outcomes and impacts
-
-#         12. ADDITIONAL FIELD - KEY DATES: Also extract:
-#             - Proposal submission date
-#             - Approval date
-#             - Notification date
-#             - Commencement date
-#             - Any other milestone dates mentioned
-
-#         PAY SPECIAL ATTENTION TO:
-#         - Look in headers, footers, signature blocks, and appendices
-#         - Extract even if information is spread across multiple sections
-#         - Include partial information if complete info not available
-#         - Use "See attached" or "Refer to Appendix" if referenced elsewhere
-#         - Extract ALL dates in any format and convert to YYYY-MM-DD
-
-#         Return ONLY valid JSON in this exact format:
-#         {{
-#         "metadata": {{
-#             "document_type": "string",
-#             "extraction_confidence": "number",
-#             "pages_extracted_from": "number",
-#             "extraction_timestamp": "string"
-#         }},
-#         "parties": {{
-#             "grantor": {{
-#             "organization_name": "string",
-#             "address": "string",
-#             "contact_person": "string",
-#             "email": "string",
-#             "phone": "string",
-#             "signatory_name": "string",
-#             "signatory_title": "string",
-#             "signature_date": "string"
-#             }},
-#             "grantee": {{
-#             "organization_name": "string",
-#             "address": "string",
-#             "contact_person": "string",
-#             "email": "string",
-#             "phone": "string",
-#             "signatory_name": "string",
-#             "signatory_title": "string",
-#             "signature_date": "string"
-#             }},
-#             "other_parties": [
-#             {{
-#                 "role": "string",
-#                 "name": "string",
-#                 "details": "string",
-#                 "signatory_name": "string",
-#                 "signature_date": "string"
-#             }}
-#             ]
-#         }},
-#         "contract_details": {{
-#             "contract_number": "string",
-#             "grant_name": "string",
-#             "grant_reference": "string",
-#             "agreement_type": "string",
-#             "effective_date": "string",
-#             "signature_date": "string",
-#             "start_date": "string",
-#             "end_date": "string",
-#             "duration": "string",
-#             "purpose": "string",
-#             "objectives": ["array of strings"],
-#             "scope_of_work": "string",
-#             "detailed_scope_of_work": {{
-#                 "project_description": "string",
-#                 "main_activities": ["array"],
-#                 "deliverables_list": ["array"],
-#                 "tasks_and_responsibilities": ["array"],
-#                 "timeline_phases": ["array"],
-#                 "technical_requirements": ["array"],
-#                 "performance_standards": ["array"],
-#                 "work_breakdown_structure": ["array"],
-#                 "key_milestones": ["array"],
-#                 "resources_required": ["array"],
-#                 "assumptions_and_constraints": ["array"]
-#             }},
-#             "geographic_scope": "string",
-#             "risk_management": "string",
-#             "key_dates": {{
-#                 "proposal_submission_date": "string",
-#                 "approval_date": "string",
-#                 "notification_date": "string"
-#             }}
-#         }},
-#         "financial_details": {{
-#             "total_grant_amount": "number",
-#             "currency": "string",
-#             "additional_currencies": ["array"],
-#             "payment_schedule": {{
-#                 "schedule_type": "string",
-#                 "installments": [
-#                 {{
-#                     "installment_number": "number",
-#                     "amount": "number",
-#                     "currency": "string",
-#                     "due_date": "string",
-#                     "trigger_condition": "string",
-#                     "description": "string"
-#                 }}
-#                 ],
-#                 "milestones": [
-#                 {{
-#                     "milestone_name": "string",
-#                     "amount": "number",
-#                     "currency": "string",
-#                     "due_date": "string",
-#                     "deliverable": "string",
-#                     "description": "string"
-#                 }}
-#                 ],
-#                 "reimbursements": [
-#                 {{
-#                     "category": "string",
-#                     "amount": "number",
-#                     "currency": "string",
-#                     "conditions": "string"
-#                 }}
-#                 ]
-#             }},
-#             "budget_breakdown": {{
-#                 "personnel": "number",
-#                 "equipment": "number",
-#                 "travel": "string",
-#                 "materials": "number",
-#                 "indirect_costs": "number",
-#                 "other": "number",
-#                 "contingency": "number",
-#                 "overhead": "number",
-#                 "subcontractors": "number"
-#             }},
-#             "additional_budget_items": [
-#             {{
-#                 "category": "string",
-#                 "amount": "number",
-#                 "description": "string"
-#             }}
-#             ],
-#             "financial_reporting_requirements": "string",
-#             "financial_tables_summary": "string",
-#             "total_installments_amount": "number",
-#             "total_milestones_amount": "number",
-#             "payment_terms": "string"
-#         }},
-#         "deliverables": {{
-#             "items": [
-#             {{
-#                 "deliverable_name": "string",
-#                 "description": "string",
-#                 "due_date": "string",
-#                 "status": "string",
-#                 "milestone_linked": "string"
-#             }}
-#             ],
-#             "reporting_requirements": {{
-#             "frequency": "string",
-#             "report_types": ["array"],
-#             "due_dates": ["array"],
-#             "format_requirements": "string",
-#             "submission_method": "string"
-#             }}
-#         }},
-#         "terms_conditions": {{
-#             "intellectual_property": "string",
-#             "confidentiality": "string",
-#             "liability": "string",
-#             "termination_clauses": "string",
-#             "renewal_options": "string",
-#             "dispute_resolution": "string",
-#             "governing_law": "string",
-#             "force_majeure": "string",
-#             "key_obligations": ["array"],
-#             "restrictions": ["array"]
-#         }},
-#         "compliance": {{
-#             "audit_requirements": "string",
-#             "record_keeping": "string",
-#             "regulatory_compliance": "string",
-#             "ethics_requirements": "string"
-#         }},
-#         "summary": {{
-#             "executive_summary": "string",
-#             "key_dates_summary": "string",
-#             "financial_summary": "string",
-#             "risk_assessment": "string",
-#             "total_contract_value": "string",
-#             "payment_timeline_summary": "string"
-#         }},
-#         "extended_data": {{
-#             "all_dates_found": [
-#             {{
-#                 "date": "string",
-#                 "context": "string",
-#                 "type": "string"
-#             }}
-#             ],
-#             "all_amounts_found": [
-#             {{
-#                 "amount": "number",
-#                 "currency": "string",
-#                 "context": "string",
-#                 "type": "string"
-#             }}
-#             ],
-#             "table_data_extracted": [
-#             {{
-#                 "table_type": "string",
-#                 "data": "string"
-#             }}
-#             ],
-#             "signatures_found": [
-#             {{
-#                 "name": "string",
-#                 "title": "string",
-#                 "organization": "string",
-#                 "date": "string",
-#                 "context": "string"
-#             }}
-#             ]
-#         }}
-#         }}
-
-#         CRITICAL INSTRUCTIONS FOR MISSING FIELDS:
-        
-#         1. FOR TERMS & CONDITIONS: Extract ALL legal clauses including:
-#            - Intellectual Property rights and ownership
-#            - Confidentiality obligations and NDAs
-#            - Liability and indemnification clauses
-#            - Termination conditions and procedures
-#            - Dispute resolution methods (arbitration, mediation, etc.)
-#            - Governing law and jurisdiction
-#            - Force majeure provisions
-#            - Any restrictions or limitations
-
-#         2. FOR COMPLIANCE: Extract ALL compliance requirements:
-#            - Audit rights and procedures
-#            - Record keeping requirements
-#            - Regulatory compliance obligations
-#            - Ethics and code of conduct requirements
-
-#         3. FOR CONTRACT NAME: If "grant_name" is not explicitly stated, look for:
-#            - Document titles at the beginning
-#            - "This Agreement" followed by a description
-#            - Project names or initiative names
-#            - Funding program names
-
-#         4. ALWAYS include these sections even if partially empty. Use "Not specified" for missing information.
-
-#         IMPORTANT: FOCUS ON EXTRACTING TABULAR DATA FROM FINANCIAL TABLES, PAYMENT SCHEDULES, AND BUDGETS.
-
-#         SPECIFIC INSTRUCTIONS:
-#         1. EXTRACT ALL DATES IN ANY FORMAT - convert to YYYY-MM-DD format
-#         2. EXTRACT ALL MONETARY AMOUNTS - look for currency symbols
-#         3. PAY SPECIAL ATTENTION TO TABLES - extract every row and column
-#         4. For tables with installments: extract installment number, due date, amount, description
-#         5. For budget tables: extract each budget category and amount
-
-#         Contract text (including all tables):
-#         {text}"""
-    
-#     def _clean_environment(self):
-#         """Clean proxy environment variables"""
-#         proxy_vars = [
-#             'HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy',
-#             'ALL_PROXY', 'all_proxy', 'NO_PROXY', 'no_proxy'
-#         ]
-#         for var in proxy_vars:
-#             if var in os.environ:
-#                 del os.environ[var]
-    
-#     def _create_openai_client(self):
-#         """Create OpenAI client without proxy issues"""
-#         try:
-#             return openai.OpenAI(
-#                 api_key=self.api_key,
-#                 timeout=60.0  # Increased timeout for comprehensive extraction
-#             )
-#         except Exception as e:
-#             print(f"Client creation failed: {e}")
-#             os.environ['OPENAI_API_KEY'] = self.api_key
-#             return openai.OpenAI()
-    
-#     def _extract_detailed_scope_of_work(self, text: str) -> Dict[str, Any]:
-#         """Extract detailed scope of work with structured breakdown"""
-#         import re
-        
-#         detailed_scope = {
-#             "project_description": "",
-#             "main_activities": [],
-#             "deliverables_list": [],
-#             "tasks_and_responsibilities": [],
-#             "timeline_phases": [],
-#             "technical_requirements": [],
-#             "performance_standards": [],
-#             "work_breakdown_structure": [],
-#             "key_milestones": [],
-#             "resources_required": [],
-#             "assumptions_and_constraints": []
-#         }
-        
-#         # Look for scope of work patterns in the text
-#         scope_keywords = [
-#             r'(?:Scope\s+of\s+Work|Scope\s+of\s+Services|Work\s+Scope|Project\s+Scope)[:\s]*([\s\S]+?)(?=\n\n|SECTION|ARTICLE|\d+\.|$)',
-#             r'(?:The\s+scope\s+of\s+work\s+includes|Scope\s+includes|Work\s+shall\s+include)[:\s]*([\s\S]+?)(?=\n\n|\.\s+[A-Z]|$)',
-#             r'(?:Services\s+to\s+be\s+Provided|Work\s+to\s+be\s+Performed)[:\s]*([\s\S]+?)(?=\n\n|SECTION|ARTICLE)'
-#         ]
-        
-#         scope_text = ""
-#         for pattern in scope_keywords:
-#             match = re.search(pattern, text, re.IGNORECASE | re.MULTILINE)
-#             if match:
-#                 scope_text = match.group(1).strip()
-#                 break
-        
-#         if not scope_text:
-#             # Try to find by section headers
-#             sections = re.findall(r'(?:SECTION|ARTICLE|CLAUSE)\s+\d+[\.\s]*([\s\S]+?)(?=\n\n[SECTION|ARTICLE|CLAUSE])', text, re.IGNORECASE)
-#             for section in sections:
-#                 if any(keyword in section.lower() for keyword in ['scope', 'work', 'services', 'deliverables']):
-#                     scope_text = section
-#                     break
-        
-#         if scope_text:
-#             # Clean and structure the scope text
-#             scope_text = re.sub(r'\s+', ' ', scope_text).strip()
-            
-#             # Extract main activities (bullet points or numbered lists)
-#             activities = re.findall(r'(?:•|\d+\.|\-)\s*([^\.]+?\.?)', scope_text)
-#             if activities:
-#                 detailed_scope["main_activities"] = [act.strip() for act in activities if len(act.strip()) > 10]
-            
-#             # Extract deliverables
-#             deliverable_patterns = [
-#                 r'(?:deliver|provide|submit|produce)\s+(?:a|an|the)?\s*([A-Z][^\.]+?(?:report|document|plan|analysis|assessment))',
-#                 r'(?:deliverable|output|product|result)\s*(?:is|are|includes?)[:\s]*([^\.]+)',
-#                 r'Deliverable[s]?[:\s]*([^\.]+)'
-#             ]
-            
-#             deliverables = []
-#             for pattern in deliverable_patterns:
-#                 matches = re.findall(pattern, scope_text, re.IGNORECASE)
-#                 deliverables.extend([match.strip() for match in matches if len(match.strip()) > 5])
-            
-#             detailed_scope["deliverables_list"] = list(set(deliverables))[:20]  # Limit to 20
-            
-#             # Extract tasks and responsibilities
-#             task_patterns = [
-#                 r'(?:task|activity|responsibility)[:\s]*([^\.]+?\.)',
-#                 r'(?:shall|will|must)\s+(?:[^\.]+?\.)',
-#                 r'(?:The\s+[A-Za-z]+\s+shall|The\s+[A-Za-z]+\s+will)[^\.]+\.'
-#             ]
-            
-#             tasks = []
-#             for pattern in task_patterns:
-#                 matches = re.findall(pattern, scope_text, re.IGNORECASE)
-#                 tasks.extend([match.strip() for match in matches if len(match.strip()) > 15])
-            
-#             detailed_scope["tasks_and_responsibilities"] = tasks[:15]
-            
-#             # Extract timeline phases
-#             timeline_matches = re.findall(r'(?:Phase|Stage|Month|Quarter|Year)\s+\d+[:\s]*([^\.]+)', scope_text, re.IGNORECASE)
-#             detailed_scope["timeline_phases"] = [match.strip() for match in timeline_matches if len(match.strip()) > 5]
-            
-#             # Extract technical requirements
-#             tech_patterns = [
-#                 r'(?:technical|technology|software|hardware|equipment)[\s\S]+?(?=\n\n|\.\s+[A-Z])',
-#                 r'(?:comply\s+with|meet\s+the\s+requirements\s+of)[^\.]+\.'
-#             ]
-            
-#             tech_requirements = []
-#             for pattern in tech_patterns:
-#                 matches = re.findall(pattern, scope_text, re.IGNORECASE)
-#                 tech_requirements.extend([match.strip() for match in matches if len(match.strip()) > 10])
-            
-#             detailed_scope["technical_requirements"] = tech_requirements[:10]
-            
-#             # If we have a lot of text but not much structured extraction, use the full scope
-#             if not any(detailed_scope.values()):
-#                 detailed_scope["project_description"] = scope_text[:2000]  # Limit to 2000 chars
-        
-#         return detailed_scope
-
-#     def extract_contract_data(self, text: str) -> Dict[str, Any]:
-#         """Extract comprehensive structured data from contract text with focus on tables"""
-#         try:
-#             # Check API key
-#             if not self.api_key or self.api_key == "your-openai-api-key-here":
-#                 print("ERROR: Please set OPENAI_API_KEY in .env file")
-#                 return self._get_empty_result()
-            
-#             # Pre-process text to highlight tables
-#             # Look for table markers in the text
-#             table_markers = ["=== TABLES ===", "Table", "Schedule", "Payment", "Budget", "Milestone"]
-#             has_tables = any(marker in text for marker in table_markers)
-            
-#             # Add context about tables if found
-#             if has_tables:
-#                 print("Detected tables in text, extracting with special attention...")
-            
-#             # Use gpt-4o-mini for comprehensive extraction
-#             response = self.client.chat.completions.create(
-#                 model="gpt-4o-mini",
-#                 messages=[
-#                     {
-#                         "role": "system",
-#                         "content": """You are a contract analysis expert with special expertise in document structure recognition AND financial contract analysis.
-
-#                 ULTRA-IMPORTANT FOR CONTRACT NAMES:
-#                 1. Scan the VERY BEGINNING of the document for logo text (often all caps)
-#                 2. Look for document titles BEFORE the "BETWEEN" clause
-#                 3. Extract text from header lines and formatted sections
-#                 4. Find the project name in phrases like "for the [Project Name]" after party names
-#                 5. If you see centered, bold, or all-caps text at the top, it's likely the contract name
-
-#                 DOCUMENT STRUCTURE AWARENESS:
-#                 - Recognize that logos often contain the project/program name
-#                 - Headers typically contain the document title
-#                 - The first substantive paragraph often names the project
-#                 - Signature blocks may repeat the contract name
-
-#                 CONTRACT NAME EXTRACTION RULES:
-#                 1. ALWAYS extract a contract name
-#                 2. Prefer descriptive names over generic ones
-#                 3. Look for names in quotes or after colons
-#                 4. If multiple candidates, choose the most specific one
-#                 5. Document where you found the name for validation
-
-#                 CRITICAL: DO NOT MISS THESE FIELDS:
-#                 1. Risk Management clauses
-#                 2. Scope of Work (detailed description)
-#                 3. Grant Reference numbers
-#                 4. Reporting Requirements (frequency, types, due dates)
-#                 5. Confidentiality provisions
-#                 6. Renewal Options
-#                 7. Dispute Resolution mechanisms
-#                 8. Governing Law
-#                 9. Force Majeure clauses
-#                 10. Signature Dates and Signatories
-#                 11. Project Objectives
-
-#                 PAY SPECIAL ATTENTION TO:
-#                 - TABLES: extract all rows, columns, and data from any tables you find
-#                 - FINANCIAL DATA: extract ALL amounts with their currencies
-#                 - DATES: extract ALL dates in any format and convert to YYYY-MM-DD when possible
-#                 - SIGNATURES: extract names, titles, and dates from signature blocks
-
-#                 Be extremely thorough with ALL sections, not just financial data.
-#                 Be extremely thorough with numerical data and dates.
-                
-#                 IMPORTANT: Return your response as a JSON object only."""
-#                     },
-#                     {
-#                         "role": "user", 
-#                         "content": self.extraction_prompt.format(text=text[:15000])  # Increased limit for table data
-#                     }
-#                 ],
-#                 temperature=0.1,  # Lower temperature for more consistent extraction
-#                 response_format={"type": "json_object"},
-#                 max_tokens=6000  # Increased for comprehensive table extraction
-#             )
-            
-#             result = json.loads(response.choices[0].message.content)
-            
-#             reference_ids = self.extract_reference_ids(text, result.get("contract_details", {}))
-        
-#             result["reference_ids"] = reference_ids
-
-#             detailed_scope = self._extract_detailed_scope_of_work(text)
-        
-#             # Add detailed scope to contract_details
-#             if "contract_details" in result:
-#                 result["contract_details"]["detailed_scope_of_work"] = detailed_scope
-                
-#                 # Also keep the original scope_of_work field for backward compatibility
-#                 if not result["contract_details"].get("scope_of_work"):
-#                     # Create a summary from detailed scope
-#                     summary_parts = []
-#                     if detailed_scope["project_description"]:
-#                         summary_parts.append(detailed_scope["project_description"][:500])
-#                     elif detailed_scope["main_activities"]:
-#                         summary_parts.append("; ".join(detailed_scope["main_activities"][:3]))
-#                     elif detailed_scope["deliverables_list"]:
-#                         summary_parts.append("Deliverables include: " + ", ".join(detailed_scope["deliverables_list"][:5]))
-                    
-#                     result["contract_details"]["scope_of_work"] = " ".join(summary_parts) if summary_parts else "Not specified in contract"
-
-#             # Add timestamp if not present
-#             import datetime
-#             if "metadata" in result and "extraction_timestamp" not in result["metadata"]:
-#                 result["metadata"]["extraction_timestamp"] = datetime.datetime.now().isoformat()
-            
-#             # Validate and clean the extracted data
-#             result = self._validate_extracted_data(result, text[:5000])
-#             return result
-            
-#         except json.JSONDecodeError as e:
-#             print(f"JSON Decode Error: {e}")
-#             # Try to extract and fix JSON
-#             try:
-#                 import re
-#                 json_match = re.search(r'\{.*\}', response.choices[0].message.content, re.DOTALL)
-#                 if json_match:
-#                     fixed_json = json_match.group()
-#                     # Clean common JSON issues
-#                     fixed_json = fixed_json.replace('\n', ' ').replace('\r', ' ')
-#                     fixed_json = re.sub(r',\s*}', '}', fixed_json)
-#                     fixed_json = re.sub(r',\s*]', ']', fixed_json)
-#                     result = json.loads(fixed_json)
-#                     result = self._validate_extracted_data(result, text[:5000])
-#                     return result
-#             except:
-#                 pass
-#             return self._get_empty_result()
-#         except Exception as e:
-#             print(f"Extraction error: {e}")
-#             import traceback
-#             traceback.print_exc()
-#             return self._get_empty_result()
-
-#     def extract_reference_ids(self, text: str, contract_details: Dict[str, Any]) -> Dict[str, Any]:
-#         """Extract investment, project, and grant IDs from contract text"""
-#         import re
-        
-#         extracted_ids = {
-#             "investment_id": None,
-#             "project_id": None,
-#             "grant_id": None,
-#             "extracted_reference_ids": []
-#         }
-        
-#         # Common patterns for reference IDs
-#         patterns = {
-#             "investment_id": [
-#                 r'Investment\s*(?:ID|Number|No\.?)[:\s]*([A-Z0-9\-/#]+)',
-#                 r'INV-\d+',
-#                 r'INV[:\s]*([A-Z0-9\-]+)',
-#                 r'\bINVESTMENT[:\s]+([A-Z0-9\-/#]+)'
-#             ],
-#             "project_id": [
-#                 r'Project\s*(?:ID|Number|No\.?|Code)[:\s]*([A-Z0-9\-/#]+)',
-#                 r'PRJ-\d+',
-#                 r'PRJ[:\s]*([A-Z0-9\-]+)',
-#                 r'\bPROJECT[:\s]+([A-Z0-9\-/#]+)',
-#                 r'P-\d+'
-#             ],
-#             "grant_id": [
-#                 r'Grant\s*(?:ID|Number|No\.?|Reference)[:\s]*([A-Z0-9\-/#]+)',
-#                 r'GR-\d+',
-#                 r'GRANT[:\s]+([A-Z0-9\-/#]+)',
-#                 r'G-\d+',
-#                 r'GRNT-\d+'
-#             ]
-#         }
-        
-#         # Combine contract details text with extracted text for better searching
-#         search_text = text.lower()
-        
-#         # Also search in contract_details if available
-#         if contract_details:
-#             search_text += " " + json.dumps(contract_details).lower()
-        
-#         for id_type, id_patterns in patterns.items():
-#             for pattern in id_patterns:
-#                 match = re.search(pattern, text, re.IGNORECASE)
-#                 if match:
-#                     extracted_value = match.group(1) if len(match.groups()) > 0 else match.group(0)
-#                     if extracted_value:
-#                         extracted_ids[id_type] = extracted_value.strip()
-#                         extracted_ids["extracted_reference_ids"].append({
-#                             "type": id_type,
-#                             "value": extracted_value.strip(),
-#                             "pattern": pattern
-#                         })
-#                         break  # Use first match for each type
-        
-#         # Fallback: Check if contract_number looks like an ID
-#         if not extracted_ids["investment_id"] and contract_details.get("contract_number"):
-#             contract_num = contract_details["contract_number"]
-#             if any(term in contract_num.upper() for term in ['INV', 'INVESTMENT']):
-#                 extracted_ids["investment_id"] = contract_num
-#                 extracted_ids["extracted_reference_ids"].append({
-#                     "type": "investment_id",
-#                     "value": contract_num,
-#                     "source": "contract_number"
-#                 })
-#             elif any(term in contract_num.upper() for term in ['PRJ', 'PROJECT', 'P-']):
-#                 extracted_ids["project_id"] = contract_num
-#                 extracted_ids["extracted_reference_ids"].append({
-#                     "type": "project_id",
-#                     "value": contract_num,
-#                     "source": "contract_number"
-#                 })
-#             elif any(term in contract_num.upper() for term in ['GR', 'GRANT', 'G-']):
-#                 extracted_ids["grant_id"] = contract_num
-#                 extracted_ids["extracted_reference_ids"].append({
-#                     "type": "grant_id",
-#                     "value": contract_num,
-#                     "source": "contract_number"
-#                 })
-        
-#         return extracted_ids
-
-#     def _post_process_extracted_data(self, data: Dict[str, Any], original_text: str) -> Dict[str, Any]:
-#         """Post-process extracted data to fill missing fields"""
-#         import re
-        
-#         # If contract name is missing, try to extract from text
-#         if not data.get("contract_details", {}).get("grant_name"):
-#             # Look for common contract name patterns
-#             patterns = [
-#                 r'GRANT\s+AGREEMENT\s+(?:FOR|RELATING TO|REGARDING)\s+(.+?)(?:\n|;)',
-#                 r'CONTRACT\s+(?:NO\.|NUMBER)[:\s]*[A-Z0-9-]+\s+(?:FOR|RELATING TO)\s+(.+?)(?:\n|;)',
-#                 r'AGREEMENT\s+(?:BETWEEN|AMONG).+?AND.+?FOR\s+(.+?)(?:\n|;)',
-#                 r'PROJECT\s+NAME[:\s]+(.+?)(?:\n|;)',
-#                 r'TITLE[:\s]+(.+?)(?:\n|;)'
-#             ]
-            
-#             for pattern in patterns:
-#                 match = re.search(pattern, original_text[:2000], re.IGNORECASE)
-#                 if match:
-#                     data["contract_details"]["grant_name"] = match.group(1).strip()
-#                     break
-        
-#         # Ensure terms_conditions section exists
-#         if "terms_conditions" not in data:
-#             data["terms_conditions"] = self._get_empty_result()["terms_conditions"]
-        
-#         # Ensure compliance section exists
-#         if "compliance" not in data:
-#             data["compliance"] = self._get_empty_result()["compliance"]
-        
-#         return data
-
-#     def _validate_extracted_data(self, data: Dict[str, Any], original_text: str = "") -> Dict[str, Any]:
-#         """Validate and clean extracted data"""
-#         import re
-        
-#         # 1. ENHANCED CONTRACT NAME EXTRACTION
-#         if not data.get("contract_details", {}).get("grant_name"):
-#             contract_details = data.setdefault("contract_details", {})
-            
-#             # Strategy 1: Look for document titles BEFORE "BETWEEN" or "AGREEMENT BETWEEN"
-#             patterns_pre_between = [
-#                 # Pattern: Title before "BETWEEN"
-#                 r'^(.*?)\s*(?:GRANT\s+)?(?:AGREEMENT|CONTRACT|MEMORANDUM OF UNDERSTANDING)\s*(?:NO\.?[:\s]*[A-Z0-9-]+)?\s*(?:BETWEEN|AMONG)\s+',
-#                 # Pattern: "THIS" followed by agreement type and name
-#                 r'THIS\s+(?:GRANT\s+)?(?:AGREEMENT|CONTRACT|MEMORANDUM)\s+(?:IS\s+MADE\s+)?(?:FOR|ENTITLED|TITLED)[:\s]+["\']?(.+?)["\']?(?:\s+BY\s+AND\s+BETWEEN|\s+BETWEEN|\.|$)',
-#                 # Pattern: Logo text detection (often all caps)
-#                 r'\n([A-Z][A-Z\s&,\-\'\(\)]{10,60})\n\s*(?:Logo|L O G O|\\/\\s*logo\\s*\\/\\s*)?\n',
-#                 # Pattern: Header lines (often centered or bold)
-#                 r'\n\s*([A-Z][A-Za-z0-9\s&,\-:\(\)]{10,80})\n\s*[-=~*_]{10,}\n',
-#             ]
-            
-#             # Check first 500 characters (where titles usually are)
-#             first_section = original_text[:500]
-#             for pattern in patterns_pre_between:
-#                 match = re.search(pattern, first_section, re.IGNORECASE | re.DOTALL)
-#                 if match:
-#                     potential_name = match.group(1).strip()
-#                     # Clean the extracted name
-#                     if len(potential_name) > 5 and len(potential_name) < 100:
-#                         # Remove common prefixes/suffixes
-#                         clean_name = re.sub(r'^(?:THE\s+|A\s+|AN\s+|THIS\s+)', '', potential_name, flags=re.IGNORECASE)
-#                         clean_name = re.sub(r'\s+(?:AGREEMENT|CONTRACT|GRANT|PROJECT|PROGRAM)$', '', clean_name, flags=re.IGNORECASE)
-#                         if clean_name and not re.search(r'^\d+$', clean_name):  # Not just numbers
-#                             contract_details["grant_name"] = clean_name
-#                             contract_details["name_extraction_method"] = "pre_between_pattern"
-#                             break
-            
-#             # Strategy 2: Look for "Project:" or "Title:" markers
-#             if not contract_details.get("grant_name"):
-#                 marker_patterns = [
-#                     r'(?:Project\s*Name|Title|Grant\s*Title)[:\s]+["\']?(.+?)["\']?(?:\n|\.|;)',
-#                     r'RE:\s*["\']?(.+?)["\']?(?:\n|\.|;)',
-#                     r'SUBJECT:\s*["\']?(.+?)["\']?(?:\n|\.|;)',
-#                     r'^[A-Z\s]{10,50}\n(?:for|regarding)\s+["\']?(.+?)["\']?(?:\n|\.|$)',
-#                 ]
-                
-#                 for pattern in marker_patterns:
-#                     match = re.search(pattern, first_section, re.IGNORECASE)
-#                     if match:
-#                         potential_name = match.group(1).strip()
-#                         if 5 < len(potential_name) < 100:
-#                             contract_details["grant_name"] = potential_name
-#                             contract_details["name_extraction_method"] = "marker_pattern"
-#                             break
-            
-#             # Strategy 3: Extract from between parties (common format)
-#             if not contract_details.get("grant_name"):
-#                 between_pattern = r'(?:BETWEEN|AMONG)\s+(.+?)\s+(?:AND|&)\s+(.+?)(?:\s+for\s+["\']?(.+?)["\']?|\s+relating\s+to\s+["\']?(.+?)["\']?|\s+regarding\s+["\']?(.+?)["\']?|\s+concerning\s+["\']?(.+?)["\']?)'
-#                 match = re.search(between_pattern, first_section, re.IGNORECASE)
-#                 if match:
-#                     for i in range(3, 7):  # Check groups 3-6 (the "for X" parts)
-#                         if match.group(i):
-#                             potential_name = match.group(i).strip()
-#                             if 5 < len(potential_name) < 100:
-#                                 contract_details["grant_name"] = potential_name
-#                                 contract_details["name_extraction_method"] = "between_parties_pattern"
-#                                 break
-            
-#             # Strategy 4: Look for funding program names
-#             if not contract_details.get("grant_name"):
-#                 program_patterns = [
-#                     r'(?:under|pursuant to|as part of)\s+(?:the\s+)?["\']?(.+?Program|.+?Initiative|.+?Project|.+?Grant)["\']?',
-#                     r'funded\s+(?:by|under)\s+(?:the\s+)?["\']?(.+?)["\']?(?:\s+Program|\s+Initiative)?',
-#                     r'(?:Program|Initiative|Project)[:\s]+["\']?(.+?)["\']?(?:\n|\.|;)',
-#                 ]
-                
-#                 for pattern in program_patterns:
-#                     match = re.search(pattern, original_text[:1500], re.IGNORECASE)
-#                     if match:
-#                         potential_name = match.group(1).strip()
-#                         if 5 < len(potential_name) < 100:
-#                             contract_details["grant_name"] = potential_name
-#                             contract_details["name_extraction_method"] = "program_pattern"
-#                             break
-            
-#             # Strategy 5: Smart fallback - Use the most descriptive line from first paragraph
-#             if not contract_details.get("grant_name"):
-#                 # Get the first paragraph (before first double newline)
-#                 first_para_match = re.search(r'^(.+?)(?:\n\s*\n|$)', original_text[:1000], re.DOTALL)
-#                 if first_para_match:
-#                     first_para = first_para_match.group(1)
-#                     # Find the most meaningful line (not too short, not too long, contains keywords)
-#                     lines = [line.strip() for line in first_para.split('\n') if line.strip()]
-#                     for line in lines:
-#                         if (30 < len(line) < 200 and 
-#                             not re.search(r'^\d', line) and  # Doesn't start with number
-#                             not re.search(r'page|confidential|proprietary', line, re.IGNORECASE) and
-#                             re.search(r'\b(?:grant|project|initiative|program|agreement|contract)\b', line, re.IGNORECASE)):
-#                             contract_details["grant_name"] = line
-#                             contract_details["name_extraction_method"] = "first_paragraph_fallback"
-#                             break
-            
-#             # Final fallback: Use first meaningful line
-#             if not contract_details.get("grant_name"):
-#                 lines = [line.strip() for line in original_text[:300].split('\n') if line.strip()]
-#                 for line in lines:
-#                     if (10 < len(line) < 150 and 
-#                         not re.search(r'^\s*$', line) and
-#                         not re.search(r'^\d', line) and
-#                         not re.search(r'^(?:to|and|the|of|in|for|by|with|from|at|on|as|is|was|be|are|were|have|has|had|do|does|did|will|would|should|could|can|may|might|must)$', line, re.IGNORECASE)):
-#                         contract_details["grant_name"] = line
-#                         contract_details["name_extraction_method"] = "first_line_fallback"
-#                         break
-        
-#         # 4. ENHANCE THE VALIDATION FOR CONTRACT NAME
-#         # Ensure contract name is meaningful
-#         if "contract_details" in data and data["contract_details"].get("grant_name"):
-#             name = data["contract_details"]["grant_name"]
-#             # Clean up the name
-#             name = re.sub(r'\s+', ' ', name).strip()
-#             # Remove common prefixes
-#             name = re.sub(r'^(?:MEMORANDUM OF UNDERSTANDING|GRANT AGREEMENT|CONTRACT|AGREEMENT)\s*[:-]?\s*', '', name, flags=re.IGNORECASE)
-#             # Remove quotes
-#             name = re.sub(r'^["\']|["\']$', '', name)
-            
-#             # If name is still valid, keep it
-#             if 3 <= len(name) <= 200:
-#                 data["contract_details"]["grant_name"] = name
-#             else:
-#                 # Name is too short or too long, try to find better one
-#                 data["contract_details"]["grant_name"] = None
-        
-#         # 5. ADD METADATA ABOUT NAME EXTRACTION
-#         if "contract_details" in data:
-#             contract_details = data["contract_details"]
-
-#             if "detailed_scope_of_work" not in contract_details:
-#                 contract_details["detailed_scope_of_work"] = self._get_empty_scope_structure()
-        
-#             # If scope_of_work is missing but we have detailed scope, create a summary
-#             if not contract_details.get("scope_of_work") and contract_details.get("detailed_scope_of_work"):
-#                 detailed = contract_details["detailed_scope_of_work"]
-#                 summary_parts = []
-                
-#                 if detailed.get("project_description"):
-#                     summary_parts.append(detailed["project_description"][:300])
-#                 elif detailed.get("main_activities"):
-#                     summary_parts.append("Key activities: " + ", ".join(detailed["main_activities"][:3]))
-                
-#                 if detailed.get("deliverables_list"):
-#                     summary_parts.append("Deliverables: " + ", ".join(detailed["deliverables_list"][:3]))
-                
-#                 contract_details["scope_of_work"] = ". ".join(summary_parts) if summary_parts else "Scope detailed in structured format"
-
-#             if "name_extraction_method" not in contract_details:
-#                 contract_details["name_extraction_method"] = "AI_extraction" if contract_details.get("grant_name") else "not_found"
-            
-#             # Add confidence score for name extraction
-#             if "grant_name" in contract_details:
-#                 # Calculate confidence based on extraction method
-#                 confidence_map = {
-#                     "pre_between_pattern": 0.9,
-#                     "marker_pattern": 0.8,
-#                     "between_parties_pattern": 0.7,
-#                     "program_pattern": 0.6,
-#                     "first_paragraph_fallback": 0.5,
-#                     "first_line_fallback": 0.4,
-#                     "AI_extraction": 0.85
-#                 }
-#                 method = contract_details.get("name_extraction_method", "AI_extraction")
-#                 contract_details["name_extraction_confidence"] = confidence_map.get(method, 0.5)
-
-#         # Ensure financial amounts are numbers
-#         if "financial_details" in data:
-#             financial = data["financial_details"]
-            
-#             # Ensure payment_schedule exists
-#             if "payment_schedule" not in financial:
-#                 financial["payment_schedule"] = {
-#                     "schedule_type": None,
-#                     "installments": [],
-#                     "milestones": [],
-#                     "reimbursements": []
-#                 }
-            
-#             payment_schedule = financial["payment_schedule"]
-            
-#             # Ensure all sub-sections exist
-#             for key in ["installments", "milestones", "reimbursements"]:
-#                 if key not in payment_schedule:
-#                     payment_schedule[key] = []
-#                 elif payment_schedule[key] is None:
-#                     payment_schedule[key] = []
-            
-#             # Try to extract payment info from text if missing
-#             if (not payment_schedule.get("installments") and 
-#                 not payment_schedule.get("milestones")):
-#                 payment_schedule.update(self._extract_payment_info_from_text(original_text))
-                
-#             # Convert total_grant_amount to number if it's a string
-#             if isinstance(data["financial_details"].get("total_grant_amount"), str):
-#                 try:
-#                     # Remove currency symbols and commas
-#                     amount_str = data["financial_details"]["total_grant_amount"]
-#                     amount_str = re.sub(r'[^\d.]', '', amount_str)
-#                     data["financial_details"]["total_grant_amount"] = float(amount_str)
-#                 except:
-#                     data["financial_details"]["total_grant_amount"] = None
-            
-#             # Process installments and milestones
-#             payment_schedule = data["financial_details"].get("payment_schedule", {})
-            
-#             for installment in payment_schedule.get("installments", []):
-#                 if isinstance(installment.get("amount"), str):
-#                     try:
-#                         amount_str = installment["amount"]
-#                         amount_str = re.sub(r'[^\d.]', '', amount_str)
-#                         installment["amount"] = float(amount_str)
-#                     except:
-#                         installment["amount"] = None
-            
-#             for milestone in payment_schedule.get("milestones", []):
-#                 if isinstance(milestone.get("amount"), str):
-#                     try:
-#                         amount_str = milestone["amount"]
-#                         amount_str = re.sub(r'[^\d.]', '', amount_str)
-#                         milestone["amount"] = float(amount_str)
-#                     except:
-#                         milestone["amount"] = None
-        
-#         # ADD THIS: Validate terms_conditions and compliance sections
-#         if "terms_conditions" in data:
-#             terms = data["terms_conditions"]
-#             # Ensure all fields exist with at least empty strings
-#             required_terms_fields = [
-#                 "intellectual_property", "confidentiality", "liability", 
-#                 "termination_clauses", "renewal_options", "dispute_resolution", 
-#                 "governing_law", "force_majeure", "key_obligations", "restrictions"
-#             ]
-#             for field in required_terms_fields:
-#                 if field not in terms or terms[field] is None:
-#                     terms[field] = "" if field.endswith("s") else []
-        
-#         if "compliance" in data:
-#             compliance = data["compliance"]
-#             # Ensure all fields exist with at least empty strings
-#             required_compliance_fields = [
-#                 "audit_requirements", "record_keeping", 
-#                 "regulatory_compliance", "ethics_requirements"
-#             ]
-#             for field in required_compliance_fields:
-#                 if field not in compliance or compliance[field] is None:
-#                     compliance[field] = ""
-        
-#         if "contract_details" in data:
-#             contract_details = data["contract_details"]
-
-#             if "scope_of_work" not in contract_details or not contract_details["scope_of_work"]:
-#                 contract_details["scope_of_work"] = "Not specified in contract"
-        
-#             # Ensure grant_reference is extracted
-#             if "grant_reference" not in contract_details:
-#                 contract_details["grant_reference"] = None
-            
-#             # Ensure risk_management is extracted
-#             if "risk_management" not in contract_details:
-#                 contract_details["risk_management"] = "Not specified in contract"
-            
-#             # Ensure objectives is an array
-#             if "objectives" not in contract_details:
-#                 contract_details["objectives"] = []
-#             elif not isinstance(contract_details["objectives"], list):
-#                 # If it's a string, convert to array
-#                 if isinstance(contract_details["objectives"], str):
-#                     contract_details["objectives"] = [contract_details["objectives"]]
-#                 else:
-#                     contract_details["objectives"] = []
-        
-#         # Ensure deliverables has enhanced reporting_requirements
-#         if "deliverables" in data and "reporting_requirements" in data["deliverables"]:
-#             reporting = data["deliverables"]["reporting_requirements"]
-#             if "format_requirements" not in reporting:
-#                 reporting["format_requirements"] = "Not specified"
-#             if "submission_method" not in reporting:
-#                 reporting["submission_method"] = "Not specified"
-        
-#         # Ensure parties have signatory information
-#         if "parties" in data:
-#             for party_type in ["grantor", "grantee"]:
-#                 if party_type in data["parties"]:
-#                     party = data["parties"][party_type]
-#                     if "signatory_name" not in party:
-#                         party["signatory_name"] = None
-#                     if "signatory_title" not in party:
-#                         party["signatory_title"] = None
-#                     if "signature_date" not in party:
-#                         party["signature_date"] = None
-        
-#         # Ensure terms_conditions has all fields with proper defaults
-#         if "terms_conditions" in data:
-#             terms = data["terms_conditions"]
-            
-#             # Fields that should be strings (not arrays)
-#             string_fields = [
-#                 "confidentiality", "renewal_options", "dispute_resolution",
-#                 "governing_law", "force_majeure"
-#             ]
-            
-#             for field in string_fields:
-#                 if field not in terms or terms[field] is None:
-#                     terms[field] = "Not specified in contract"
-#                 elif isinstance(terms[field], list):
-#                     # If somehow it's a list, join it
-#                     terms[field] = ". ".join(terms[field])
-        
-#         # Ensure extended_data has signatures_found
-#         if "extended_data" in data and "signatures_found" not in data["extended_data"]:
-#             data["extended_data"]["signatures_found"] = []
-            
-#             if not contract_details.get("grant_name") and not contract_details.get("contract_number"):
-#                 # Try to find contract name in text if not extracted
-#                 # Look for common patterns in the original text
-#                 contract_details["extraction_notes"] = "Contract name not explicitly found in standard fields"
-        
-#         return data
-
-#     def _extract_payment_info_from_text(self, text: str) -> Dict[str, Any]:
-#         """Fallback extraction of payment information from text"""
-#         import re
-        
-#         payment_info = {
-#             "schedule_type": None,
-#             "installments": [],
-#             "milestones": [],
-#             "reimbursements": []
-#         }
-        
-#         # Look for payment patterns
-#         patterns = {
-#             "installment": r'(?:installment|payment)\s+(?:no\.?\s*)?(\d+)[:\s]*\$?\s*([\d,]+(?:\.\d{2})?)[^.]*?(?:on|by|due)?\s+([A-Za-z]+\s+\d{1,2},?\s+\d{4}|\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})',
-#             "milestone": r'(?:milestone|deliverable)\s+["\']?(.+?)["\']?[:\s]*\$?\s*([\d,]+(?:\.\d{2})?)[^.]*?(?:on|by|due)?\s+([A-Za-z]+\s+\d{1,2},?\s+\d{4}|\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})',
-#             "schedule": r'(?:payment\s+schedule|schedule\s+of\s+payments)[:\s]*([^.]+\.[^.]*\.)',
-#             "quarterly": r'(?:quarterly|annual|monthly)\s+payments?\s+of\s+\$?\s*([\d,]+(?:\.\d{2})?)'
-#         }
-        
-#         # Extract installments
-#         for match in re.finditer(patterns["installment"], text, re.IGNORECASE):
-#             payment_info["installments"].append({
-#                 "installment_number": int(match.group(1)),
-#                 "amount": float(match.group(2).replace(',', '')),
-#                 "due_date": match.group(3),
-#                 "description": f"Installment {match.group(1)}"
-#             })
-        
-#         # Extract milestones
-#         for match in re.finditer(patterns["milestone"], text, re.IGNORECASE):
-#             payment_info["milestones"].append({
-#                 "milestone_name": match.group(1),
-#                 "amount": float(match.group(2).replace(',', '')),
-#                 "due_date": match.group(3),
-#                 "description": f"Payment for {match.group(1)}"
-#             })
-        
-#         # Determine schedule type
-#         if payment_info["installments"]:
-#             payment_info["schedule_type"] = "Installment-based"
-#         elif payment_info["milestones"]:
-#             payment_info["schedule_type"] = "Milestone-based"
-#         elif re.search(patterns["quarterly"], text, re.IGNORECASE):
-#             payment_info["schedule_type"] = "Periodic payments"
-        
-#         return payment_info
-
-#     def _get_empty_scope_structure(self) -> Dict[str, Any]:
-#         """Return empty detailed scope structure"""
-#         return {
-#             "project_description": "",
-#             "main_activities": [],
-#             "deliverables_list": [],
-#             "tasks_and_responsibilities": [],
-#             "timeline_phases": [],
-#             "technical_requirements": [],
-#             "performance_standards": [],
-#             "work_breakdown_structure": [],
-#             "key_milestones": [],
-#             "resources_required": [],
-#             "assumptions_and_constraints": []
-#         }
-
-#     def get_embedding(self, text: str) -> list:
-#         """Get vector embedding for text - used for ChromaDB"""
-#         try:
-#             if not self.api_key or self.api_key == "your-openai-api-key-here":
-#                 print("ERROR: Please set OPENAI_API_KEY in .env file")
-#                 return []
-            
-#             response = self.client.embeddings.create(
-#                 model="text-embedding-3-small",
-#                 input=text[:8000]
-#             )
-#             return response.data[0].embedding
-#         except Exception as e:
-#             print(f"Embedding error: {e}")
-#             return []
-    
-#     def _get_empty_result(self) -> Dict[str, Any]:
-#         """Return comprehensive empty result structure"""
-#         import datetime
-#         return {
-#             "metadata": {
-#                 "document_type": None,
-#                 "extraction_confidence": 0.0,
-#                 "pages_extracted_from": None,
-#                 "extraction_timestamp": datetime.datetime.now().isoformat()
-#             },
-#             "parties": {
-#                 "grantor": {
-#                     "organization_name": None,
-#                     "address": None,
-#                     "contact_person": None,
-#                     "email": None,
-#                     "phone": None,
-#                     "signatory_name": None,
-#                     "signatory_title": None,
-#                     "signature_date": None
-#                 },
-#                 "grantee": {
-#                     "organization_name": None,
-#                     "address": None,
-#                     "contact_person": None,
-#                     "email": None,
-#                     "phone": None,
-#                     "signatory_name": None,
-#                     "signatory_title": None,
-#                     "signature_date": None
-#                 },
-#                 "other_parties": []
-#             },
-#             "contract_details": {
-#                 "contract_number": None,
-#                 "grant_name": None,
-#                 "grant_reference": None,
-#                 "agreement_type": None,
-#                 "effective_date": None,
-#                 "signature_date": None,
-#                 "start_date": None,
-#                 "end_date": None,
-#                 "duration": None,
-#                 "purpose": None,
-#                 "objectives": [],
-#                 "scope_of_work": None,
-#                 "detailed_scope_of_work": self._get_empty_scope_structure(),
-#                 "geographic_scope": None,
-#                 "risk_management": None,
-#                 "key_dates": {
-#                     "proposal_submission_date": None,
-#                     "approval_date": None,
-#                     "notification_date": None
-#                 }
-#             },
-#             "financial_details": {
-#                 "total_grant_amount": None,
-#                 "currency": "USD",
-#                 "additional_currencies": [],
-#                 "payment_schedule": {
-#                     "schedule_type": None,
-#                     "installments": [],
-#                     "milestones": [],
-#                     "reimbursements": []
-#                 },
-#                 "budget_breakdown": {
-#                     "personnel": None,
-#                     "equipment": None,
-#                     "travel": None,
-#                     "materials": None,
-#                     "indirect_costs": None,
-#                     "other": None,
-#                     "contingency": None,
-#                     "overhead": None,
-#                     "subcontractors": None
-#                 },
-#                 "additional_budget_items": [],
-#                 "financial_reporting_requirements": None,
-#                 "financial_tables_summary": None,
-#                 "total_installments_amount": None,
-#                 "total_milestones_amount": None,
-#                 "payment_terms": None
-#             },
-#             "deliverables": {
-#                 "items": [],
-#                 "reporting_requirements": {
-#                     "frequency": None,
-#                     "report_types": [],
-#                     "due_dates": [],
-#                     "format_requirements": None,
-#                     "submission_method": None
-#                 }
-#             },
-#             "terms_conditions": {
-#                 "intellectual_property": None,
-#                 "confidentiality": None,
-#                 "liability": None,
-#                 "termination_clauses": None,
-#                 "renewal_options": None,
-#                 "dispute_resolution": None,
-#                 "governing_law": None,
-#                 "force_majeure": None,
-#                 "key_obligations": [],
-#                 "restrictions": []
-#             },
-#             "compliance": {
-#                 "audit_requirements": None,
-#                 "record_keeping": None,
-#                 "regulatory_compliance": None,
-#                 "ethics_requirements": None
-#             },
-#             "summary": {
-#                 "executive_summary": "No summary available",
-#                 "key_dates_summary": "No date information extracted",
-#                 "financial_summary": "No financial information extracted",
-#                 "risk_assessment": "No risk assessment available",
-#                 "total_contract_value": "No total value extracted",
-#                 "payment_timeline_summary": "No payment timeline extracted"
-#             },
-#             "extended_data": {
-#                 "all_dates_found": [],
-#                 "all_amounts_found": [],
-#                 "table_data_extracted": [],
-#                 "signatures_found": []
-#             }
-#         }

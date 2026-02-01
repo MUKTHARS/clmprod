@@ -199,49 +199,49 @@ function ProgramManagerReview() {
     }
   };
 
-  const handleSubmitReview = async () => {
-    if (!reviewSummary.review_summary.trim()) {
-      alert('Please provide a review summary');
-      return;
-    }
+const handleSubmitReview = async () => {
+  if (!reviewSummary.review_summary.trim()) {
+    alert('Please provide a review summary');
+    return;
+  }
 
-    if (!reviewSummary.overall_recommendation) {
-      alert('Please select an overall recommendation');
-      return;
-    }
+  if (!reviewSummary.overall_recommendation) {
+    alert('Please select an overall recommendation');
+    return;
+  }
 
-    setSubmitting(true);
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_CONFIG.BASE_URL}/api/contracts/${contractId}/program-manager/submit-review`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          ...reviewSummary,
-          contract_id: parseInt(contractId),
-          comments: comments.filter(c => !c.id) // Only send new comments
-        })
-      });
+  setSubmitting(true);
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_CONFIG.BASE_URL}/api/contracts/${contractId}/program-manager/submit-review`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        ...reviewSummary,
+        contract_id: parseInt(contractId),
+        comments: comments.filter(c => !c.id) // Only send new comments
+      })
+    });
 
-      if (response.ok) {
-        const result = await response.json();
-        alert(result.message);
-        setShowSubmitModal(false);
-        navigate('/my-reviews'); // Redirect to reviews list
-      } else {
-        const error = await response.json();
-        alert(`Failed to submit review: ${error.detail}`);
-      }
-    } catch (error) {
-      console.error('Failed to submit review:', error);
-      alert('Failed to submit review');
-    } finally {
-      setSubmitting(false);
+    if (response.ok) {
+      const result = await response.json();
+      alert(result.message);
+      setShowSubmitModal(false);
+      navigate('/review'); 
+    } else {
+      const error = await response.json();
+      alert(`Failed to submit review: ${error.detail}`);
     }
-  };
+  } catch (error) {
+    console.error('Failed to submit review:', error);
+    alert('Failed to submit review');
+  } finally {
+    setSubmitting(false);
+  }
+};
 
   const formatCurrency = (amount) => {
     if (!amount && amount !== 0) return '-';
@@ -358,7 +358,7 @@ function ProgramManagerReview() {
       {/* Header */}
       <div className="review-header">
         <div className="header-left">
-          {/* <button className="btn-back" onClick={() => navigate('/my-reviews')}>
+          {/* <button className="btn-back" onClick={() => navigate('/review')}>
             <ArrowLeft size={20} />
             Back to Reviews
           </button> */}
