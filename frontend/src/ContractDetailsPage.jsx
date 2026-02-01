@@ -1105,40 +1105,16 @@ function ContractDetailsPage({ user = null }) {
             {expandedSections.terms && (
               <div className="expandable-content">
                 <div className="fields-grid terms-conditions-grid single-column">
-                  {renderField('Intellectual Property', terms.intellectual_property, <FileText size={16} />, 'text', true)}
+                  {/* {renderField('Intellectual Property', terms.intellectual_property, <FileText size={16} />, 'text', true)}
                   {renderField('Confidentiality', terms.confidentiality, <Shield size={16} />, 'text', true)}
                   {renderField('Liability', terms.liability, <AlertCircle size={16} />, 'text', true)}
                   {renderField('Termination Clauses', terms.termination_clauses, <FileText size={16} />, 'text', true)}
                   {renderField('Renewal Options', terms.renewal_options, <Clock size={16} />, 'text', true)}
                   {renderField('Dispute Resolution', terms.dispute_resolution, <Shield size={16} />, 'text', true)}
                   {renderField('Governing Law', terms.governing_law, <FileText size={16} />, 'text', true)}
-                  {renderField('Force Majeure', terms.force_majeure, <AlertCircle size={16} />, 'text', true)}
+                  {renderField('Force Majeure', terms.force_majeure, <AlertCircle size={16} />, 'text', true)} */}
                   {renderField('Key Obligations', terms.key_obligations, <CheckCircle size={16} />, 'array', true)}
                   {renderField('Restrictions', terms.restrictions, <AlertCircle size={16} />, 'array', true)}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Compliance - Single column, each field in its own row */}
-          <div className="expandable-section">
-            <div 
-              className="section-title expandable-header"
-              onClick={() => toggleSection('compliance')}
-            >
-              <div className="expand-icon">
-                {expandedSections.compliance ? <Minus size={18} /> : <Plus size={18} />}
-              </div>
-              <ShieldCheck size={20} />
-              <h4>Compliance Requirements</h4>
-            </div>
-            {expandedSections.compliance && (
-              <div className="expandable-content">
-                <div className="fields-grid compliance-grid single-column">
-                  {renderField('Audit Requirements', compliance.audit_requirements, <FileCheck size={16} />, 'text', true)}
-                  {renderField('Record Keeping', compliance.record_keeping, <FileText size={16} />, 'text', true)}
-                  {renderField('Regulatory Compliance', compliance.regulatory_compliance, <ShieldCheck size={16} />, 'text', true)}
-                  {renderField('Ethics Requirements', compliance.ethics_requirements, <Users size={16} />, 'text', true)}
                 </div>
               </div>
             )}
