@@ -48,27 +48,68 @@ function ProgramManagerDirectorDecisions() {
     fetchDirectorDecisions();
   }, []);
 
-  const fetchDirectorDecisions = async () => {
-    try {
-      setLoading(true);
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_CONFIG.BASE_URL}/api/contracts/program-manager/reviewed-by-director`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
+const fetchDirectorDecisions = async () => {
+  try {
+    setLoading(true);
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_CONFIG.BASE_URL}/api/contracts/program-manager/reviewed-by-director`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      setContracts(data.contracts || []);
+      setStats(data.summary || { approved: 0, rejected: 0, total: 0 });
+    }
+  } catch (error) {
+    console.error('Failed to fetch director decisions:', error);
+    // Try the fallback endpoint for approved contracts
+    await fetchApprovedContractsFallback();
+  } finally {
+    setLoading(false);
+  }
+};
+
+// Add this fallback function
+const fetchApprovedContractsFallback = async () => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_CONFIG.BASE_URL}/api/contracts/status/approved`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    
+    if (response.ok) {
+      const approvedContracts = await response.json();
+      
+      // Filter for contracts where current user is a program manager
+      const userContracts = approvedContracts.filter(contract => {
+        // Check comprehensive data for program manager review
+        if (contract.comprehensive_data?.program_manager_review) {
+          return true;
         }
+        
+        // Check if user has review comments on this contract
+        return contract.comprehensive_data?.review_history?.some(history => 
+          history.by_user_id === user?.id || 
+          history.by_user_role === "program_manager"
+        );
       });
       
-      if (response.ok) {
-        const data = await response.json();
-        setContracts(data.contracts || []);
-        setStats(data.summary || { approved: 0, rejected: 0, total: 0 });
-      }
-    } catch (error) {
-      console.error('Failed to fetch director decisions:', error);
-    } finally {
-      setLoading(false);
+      setContracts(userContracts);
+      setStats({
+        approved: userContracts.length,
+        rejected: 0,
+        total: userContracts.length
+      });
     }
-  };
+  } catch (error) {
+    console.error('Failed to fetch approved contracts fallback:', error);
+  }
+};
 
   const viewDirectorReview = async (contractId) => {
     try {
