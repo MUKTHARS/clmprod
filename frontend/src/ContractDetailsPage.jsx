@@ -841,24 +841,20 @@ function ContractDetailsPage({ user = null }) {
                     </div>
                   </div>
                 )} */}
-                {/* Objectives - Display like other fields */}
+{/* Objective - Show only the first objective */}
 {contractDetails.objectives && contractDetails.objectives.length > 0 && (
   <div className="objectives-section">
-    {contractDetails.objectives.map((obj, idx) => (
-      <div key={idx} className="field-card">
-        <div className="field-header">
-          <Target size={16} />
-          <label className="field-label">
-            Objective {idx + 1}
-          </label>
-        </div>
-        <div className="field-value-container">
-          <span className="field-value">
-            {obj}
-          </span>
-        </div>
+    <div className="field-card">
+      <div className="field-header">
+        <Target size={16} />
+        <label className="field-label">Objective</label>
       </div>
-    ))}
+      <div className="field-value-container">
+        <span className="field-value">
+          {contractDetails.objectives[0]}
+        </span>
+      </div>
+    </div>
   </div>
 )}
                 
