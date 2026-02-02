@@ -60,7 +60,7 @@ function AppContent({ user, isAuthenticated, loading, contracts, onLogin, onLogo
             <Route 
               path="/upload" 
               element={
-                <PrivateRoute user={user} requiredRoles={['project_manager', 'director']}>
+                <PrivateRoute user={user} requiredRoles={['project_manager', 'program_manager','director']}>
                   <UploadPage 
                     setLoading={() => {}} 
                     onUploadComplete={onUploadComplete}

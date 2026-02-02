@@ -125,6 +125,10 @@ CRITICAL RULES:
 4. If information is in tables: Extract ALL table rows and columns
 5. Focus on EXACT text from document, don't infer or create data
 
+IMPORTANT: 
+1. For Terms & Conditions: Provide a SINGLE PARAGRAPH summary (max 300 words) covering all key legal clauses
+2. For Objectives: Provide a SINGLE comprehensive objective that summarizes all project goals
+
 TABLES ARE CRITICAL:
 - Payment schedule tables: Extract every row
 - Budget tables: Extract all categories and amounts
@@ -196,7 +200,7 @@ Contract text (first 12000 characters):
                 "end_date": "string",
                 "duration": "string",
                 "purpose": "string",
-                "objectives": ["array of strings"],
+                "single_objective": "string",
                 "scope_of_work": "string",
                 "geographic_scope": "string",
                 "risk_management": "string"
@@ -545,44 +549,34 @@ Contract text (first 12000 characters):
                         item["status"] = "pending"
 
 
-        if "terms_conditions" not in data:
-            data["terms_conditions"] = {}
-        
-        terms = data["terms_conditions"]
-        
-        # Define all required terms fields with defaults
-        terms_fields = {
-            "intellectual_property": "Not specified",
-            "confidentiality": "Not specified", 
-            "liability": "Not specified",
-            "indemnification": "Not specified",
-            "termination_clauses": "Not specified",
-            "renewal_options": "Not specified",
-            "dispute_resolution": "Not specified",
-            "governing_law": "Not specified",
-            "force_majeure": "Not specified",
-            "warranties": "Not specified",
-            "assignment": "Not specified",
-            "notices": "Not specified",
-            "severability": "Not specified",
-            "entire_agreement": "Not specified",
-            "amendment": "Not specified",
-            "key_obligations": [],
-            "restrictions": []
-        }
-        
-        for field, default in terms_fields.items():
-            if field not in terms:
-                terms[field] = default
-        
-        # Extract key obligations from text if missing
-        if not terms.get("key_obligations") or len(terms["key_obligations"]) == 0:
-            terms["key_obligations"] = self._extract_key_obligations(original_text)
-        
-        # Extract restrictions from text if missing  
-        if not terms.get("restrictions") or len(terms["restrictions"]) == 0:
-            terms["restrictions"] = self._extract_restrictions(original_text)
-        
+            if "terms_conditions" in data:
+                    terms = data["terms_conditions"]
+                    
+                    # Ensure summary exists
+                    if not terms.get("summary"):
+                        # Create summary from detailed clauses
+                        summary_parts = []
+                        
+                        # Add key clauses to summary
+                        key_clauses = [
+                            ("intellectual_property", "intellectual property rights"),
+                            ("confidentiality", "confidentiality obligations"),
+                            ("liability", "liability and indemnification"),
+                            ("termination_clauses", "termination conditions"),
+                            ("dispute_resolution", "dispute resolution mechanisms"),
+                            ("governing_law", "governing law and jurisdiction")
+                        ]
+                        
+                        for clause_key, clause_text in key_clauses:
+                            clause_value = terms.get(clause_key)
+                            if clause_value and clause_value != "Not specified" and len(str(clause_value)) > 20:
+                                summary_parts.append(clause_text)
+                        
+                        if summary_parts:
+                            terms["summary"] = f"This agreement includes provisions for {', '.join(summary_parts)}."
+                        else:
+                            terms["summary"] = "Standard contractual terms and conditions apply as specified in the agreement."
+                    
         # Ensure compliance section exists
         if "compliance" not in data:
             data["compliance"] = {}
@@ -985,6 +979,8 @@ Contract text (first 12000 characters):
             }
         },
          "terms_conditions": {
+             "summary": "string", 
+             "detailed_clauses": {
             "intellectual_property": "string",
             "confidentiality": "string",
             "liability": "string",
@@ -1002,7 +998,8 @@ Contract text (first 12000 characters):
             "amendment": "string",
             "key_obligations": ["array of strings"],
             "restrictions": ["array of strings"]
-        },
+          }
+          },
         
         # Add compliance section (AFTER terms_conditions):
         "compliance": {
