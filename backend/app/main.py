@@ -74,7 +74,7 @@ app = FastAPI(title=settings.APP_NAME)
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:4000", "http://localhost:4001", "http://44.219.56.85:4000", "http://44.219.56.85:4001"],
+    allow_origins=["http://localhost:5173", "http://localhost:4000", "http://localhost:4001", "http://44.219.56.85:4000", "http://localhost:4001"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -505,11 +505,11 @@ async def upload_contract(
     db: Session = Depends(get_db),
     request: Request = None
 ):
-    """Upload and process PDF contract - Only Project Managers and Directors can upload"""
-    if current_user.role not in ["project_manager", "director"]:
+    """Upload and process PDF contract - Only Project Managers, Program Managers and Directors can upload"""
+    if current_user.role not in ["project_manager", "program_manager", "director"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only Project Managers and Directors can upload contracts"
+            detail="Only Project Managers, Program Managers and Directors can upload contracts"
         )
     
     try:
