@@ -1568,3 +1568,537 @@
     transform: rotate(360deg);
   }
 }
+
+
+
+
+
+
+
+
+
+/* File Upload Styles */
+.file-input-hidden {
+  display: none;
+}
+
+.file-upload-area {
+  border: 2px dashed #cbd5e1;
+  border-radius: 8px;
+  padding: 32px 16px;
+  text-align: center;
+  background: #f8fafc;
+  transition: all 0.2s ease;
+  margin-top: 8px;
+}
+
+.file-upload-area:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+.file-upload-area svg {
+  color: #64748b;
+  margin-bottom: 12px;
+}
+
+.file-upload-area p {
+  margin: 4px 0;
+  color: #475569;
+}
+
+.file-hint {
+  font-size: 14px;
+  color: #94a3b8;
+}
+
+.file-types, .file-size {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.selected-file-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 4px;
+  margin-top: 8px;
+}
+
+.selected-file-info strong {
+  color: #0369a1;
+}
+
+#selected-file-name {
+  color: #0c4a6e;
+  font-weight: 500;
+}
+
+
+
+/* ====== ADD THESE STYLES AT THE BOTTOM OF YOUR CSS FILE ====== */
+
+/* PDF View Button Styles */
+.header-actions-right .btn-secondary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background-color: #e5e7eb;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  color: #374151;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.header-actions-right .btn-secondary:hover {
+  background-color: #d1d5db;
+  border-color: #9ca3af;
+}
+
+.header-actions-right .btn-secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background-color: #e5e7eb;
+}
+
+.header-actions-right .btn-secondary svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Ensure header actions are properly aligned */
+.header-actions-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* PDF Loading indicator */
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* PDF Viewer Modal Styles */
+.pdf-viewer-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  backdrop-filter: blur(4px);
+}
+
+.pdf-viewer-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.75);
+}
+
+.pdf-viewer-container {
+  position: relative;
+  width: 95%;
+  height: 90%;
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  z-index: 10000;
+  overflow: hidden;
+}
+
+.pdf-viewer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background-color: #1f2937;
+  color: white;
+  border-bottom: 1px solid #374151;
+  flex-shrink: 0;
+}
+
+.pdf-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+  font-weight: 500;
+  max-width: 60%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pdf-title svg {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+}
+
+.pdf-viewer-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pdf-action-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 6px;
+  color: white;
+  padding: 6px 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
+  width: 36px;
+  height: 36px;
+}
+
+.pdf-action-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.pdf-action-btn.close-btn {
+  background: rgba(239, 68, 68, 0.2);
+}
+
+.pdf-action-btn.close-btn:hover {
+  background: rgba(239, 68, 68, 0.3);
+}
+
+.zoom-level {
+  font-size: 13px;
+  font-weight: 500;
+  min-width: 45px;
+  text-align: center;
+  color: #d1d5db;
+}
+
+.pdf-viewer-content {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background-color: #f9fafb;
+}
+
+.pdf-loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  color: #6b7280;
+  z-index: 1;
+}
+
+.pdf-loading svg {
+  width: 32px;
+  height: 32px;
+  color: #6b7280;
+}
+
+.pdf-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+}
+
+/* Deliverables Table Actions Cell */
+.actions-cell {
+  display: flex;
+  gap: 4px;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: center;
+}
+
+/* View button for deliverable files */
+.view-btn {
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
+  min-width: 30px;
+  height: 30px;
+}
+
+.view-btn:hover {
+  background-color: #2563eb;
+}
+
+.view-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Ensure the upload button and view button work together */
+.upload-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  height: 30px;
+  min-width: 80px;
+  justify-content: center;
+}
+
+.upload-btn:hover {
+  background-color: #2563eb;
+}
+
+/* Adjust table cell for better button display */
+.data-table td.actions-cell {
+  padding: 8px 4px;
+  min-width: 140px;
+  text-align: center;
+}
+
+/* Upload badge for deliverables */
+.uploaded-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  background-color: #10b981;
+  color: white;
+  border-radius: 50%;
+  font-size: 10px;
+  font-weight: bold;
+  margin-left: 6px;
+  vertical-align: middle;
+  line-height: 1;
+}
+
+/* Fix for header layout */
+.header-top:has(.btn-back) {
+  justify-content: space-between;
+}
+
+.header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .pdf-viewer-container {
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+  }
+  
+  .pdf-viewer-header {
+    padding: 12px 16px;
+  }
+  
+  .pdf-title {
+    font-size: 14px;
+  }
+  
+  .pdf-action-btn {
+    width: 32px;
+    height: 32px;
+    padding: 4px 8px;
+  }
+  
+  .zoom-level {
+    min-width: 40px;
+  }
+  
+  .actions-cell {
+    flex-direction: column;
+    gap: 4px;
+  }
+  
+  .upload-btn, .view-btn {
+    width: 100%;
+    min-width: 60px;
+  }
+  
+  .header-actions-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .header-actions-right .btn-secondary {
+    flex: 1;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .pdf-viewer-header {
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px;
+  }
+  
+  .pdf-title {
+    max-width: 100%;
+    justify-content: center;
+  }
+  
+  .pdf-viewer-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .actions-cell {
+    flex-direction: row;
+  }
+  
+  .upload-btn, .view-btn {
+    min-width: auto;
+    padding: 4px 6px;
+    font-size: 11px;
+  }
+}
+
+
+.status-badge.submitted {
+  background-color: #dcfce7;
+  color: #16a34a;
+  border: 1px solid #bbf7d0;
+}
+
+.uploaded-badge {
+  background-color: #16a34a;
+  color: white;
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+
+
+
+
+
+
+/* Status badge for uploaded deliverables */
+.status-badge.submitted {
+  background-color: #dcfce7;
+  color: #16a34a;
+  border: 1px solid #86efac;
+}
+
+/* View button styling */
+.actions-cell .view-btn {
+  padding: 4px 8px;
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: background-color 0.2s;
+}
+
+.actions-cell .view-btn:hover {
+  background-color: #2563eb;
+}
+
+.actions-cell .view-btn:disabled {
+  background-color: #94a3b8;
+  cursor: not-allowed;
+}
+
+/* Upload button styling */
+.actions-cell .upload-btn {
+  padding: 4px 8px;
+  background-color: #10b981;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: background-color 0.2s;
+}
+
+.actions-cell .upload-btn:hover {
+  background-color: #059669;
+}
+
+/* Uploaded badge */
+.uploaded-badge {
+  margin-left: 8px;
+  background-color: #10b981;
+  color: white;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: bold;
+}
+
+/* Deliverable name with uploaded badge */
+.deliverable-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+

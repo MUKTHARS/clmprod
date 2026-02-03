@@ -1,6 +1,8 @@
 // C:\saple.ai\POC\frontend\src\ContractDetailsPage.jsx
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { Eye } from 'lucide-react'; 
+import PDFViewer from './components/pdf/PDFViewer';
 import {
   ArrowLeft,
   Upload,
@@ -41,7 +43,7 @@ import {
   RefreshCw,
   MessageSquare,
   XCircle,
-  FileUp // Add this import for upload icon
+  FileUp
 } from 'lucide-react';
 import ComprehensiveView from './ComprehensiveView';
 import API_CONFIG from './config';
@@ -63,7 +65,10 @@ function ContractDetailsPage({ user = null }) {
     compliance: true,
     executiveSummary: true
   });
-  
+  const [showPDFViewer, setShowPDFViewer] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState('');
+  const [pdfFilename, setPdfFilename] = useState('');
+  const [loadingPDF, setLoadingPDF] = useState(false);
   // State for comments section
   const [pmComments, setPmComments] = useState([]);
   const [pmCommentsLoading, setPmCommentsLoading] = useState(false);
@@ -75,6 +80,107 @@ function ContractDetailsPage({ user = null }) {
   const [uploading, setUploading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState({}); // Track uploaded files per deliverable
   
+  const handleViewPDF = async () => {
+    if (!contractData?.contract_id) return;
+    
+    try {
+      setLoadingPDF(true);
+      const token = localStorage.getItem('token');
+      const response = await fetch(
+        `${API_CONFIG.BASE_URL}/api/contracts/${contractData.contract_id}/pdf-url`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        setPdfUrl(data.pdf_url);
+        setPdfFilename(data.original_filename || 'document.pdf');
+        setShowPDFViewer(true);
+      } else {
+        alert('PDF not available or you don\'t have permission to view it');
+      }
+    } catch (error) {
+      console.error('Failed to fetch PDF:', error);
+      alert('Failed to load PDF document');
+    } finally {
+      setLoadingPDF(false);
+    }
+  };
+
+  const handleViewDeliverableFile = async (deliverableIndex) => {
+    const uploadedFile = uploadedFiles[deliverableIndex];
+    if (!uploadedFile?.fileId) {
+      alert('No file uploaded for this deliverable');
+      return;
+    }
+
+    try {
+      setLoadingPDF(true);
+      const token = localStorage.getItem('token');
+      const response = await fetch(
+        `${API_CONFIG.BASE_URL}/api/deliverables/${uploadedFile.fileId}/file`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        setPdfUrl(url);
+        setPdfFilename(uploadedFile.fileName || 'deliverable.pdf');
+        setShowPDFViewer(true);
+      } else {
+        alert('File not available or you don\'t have permission to view it');
+      }
+    } catch (error) {
+      console.error('Failed to fetch deliverable file:', error);
+      alert('Failed to load deliverable file');
+    } finally {
+      setLoadingPDF(false);
+    }
+  };
+
+  // Update this useEffect (near the top of your component)
+  useEffect(() => {
+    const fileInput = document.getElementById('file-input-real');
+    const fileInfo = document.getElementById('selected-file-info');
+    const fileNameSpan = document.getElementById('selected-file-name');
+    
+    if (fileInput && fileInfo && fileNameSpan) {
+      // Hide file info initially
+      fileInfo.style.display = 'none';
+      
+      const handleFileChange = function() {
+        if (this.files && this.files[0]) {
+          const file = this.files[0];
+          const fileSizeMB = (file.size / 1024 / 1024).toFixed(2);
+          fileNameSpan.textContent = `${file.name} (${fileSizeMB} MB)`;
+          fileInfo.style.display = 'flex';
+        } else {
+          fileInfo.style.display = 'none';
+        }
+      };
+      
+      fileInput.addEventListener('change', handleFileChange);
+      
+      // Cleanup
+      return () => {
+        if (fileInput) {
+          fileInput.removeEventListener('change', handleFileChange);
+        }
+      };
+    }
+  }, [showUploadModal]); // Run when modal opens/closes
+
   useEffect(() => {
     console.log('ContractDetailsPage mounted with id:', id);
     
@@ -104,19 +210,130 @@ function ContractDetailsPage({ user = null }) {
     }
   }, [contractData, user]);
 
-  // Function to load uploaded files (mock data for now)
-  const loadUploadedFiles = () => {
-    // In a real app, you would fetch this from an API
-    // For now, we'll use localStorage to persist uploaded files
+const loadUploadedFiles = async () => {
+  if (!contractData?.contract_id) {
+    console.log('No contract ID available yet');
+    return;
+  }
+  
+  try {
+    console.log('Loading uploaded files for contract:', contractData.contract_id);
+    const token = localStorage.getItem('token');
+    
+    // Get deliverables from the database
+    const response = await fetch(`${API_CONFIG.BASE_URL}/api/deliverables/contract/${contractData.contract_id}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (response.ok) {
+      const deliverables = await response.json();
+      console.log('Loaded deliverables from database:', deliverables.length, 'items');
+      
+      // Create a mapping of deliverable data
+      const uploadsMap = {};
+      
+      deliverables.forEach(deliverable => {
+        console.log('Processing deliverable from database:', deliverable);
+        
+        // Find the index in the original deliverables array
+        const compData = contractData.comprehensive_data || {};
+        const origDeliverables = compData.deliverables?.items || [];
+        
+        // Try to find by name
+        let index = -1;
+        if (deliverable.deliverable_name) {
+          index = origDeliverables.findIndex(d => 
+            d && d.deliverable_name === deliverable.deliverable_name
+          );
+        }
+        
+        // If not found by name, try to match by position
+        if (index === -1) {
+          // Simple index based on order in database
+          index = deliverables.indexOf(deliverable);
+        }
+        
+        if (deliverable.uploaded_at || deliverable.status === 'submitted' || deliverable.uploaded_file_name) {
+          console.log('Found uploaded deliverable at index:', index, deliverable);
+          uploadsMap[index] = {
+            deliverableId: deliverable.id,
+            deliverableName: deliverable.deliverable_name || `Deliverable ${index + 1}`,
+            uploadDate: deliverable.uploaded_at ? deliverable.uploaded_at.split('T')[0] : new Date().toISOString().split('T')[0],
+            uploadTimestamp: deliverable.uploaded_at || new Date().toISOString(),
+            fileName: deliverable.uploaded_file_name || 'Uploaded file',
+            status: deliverable.status || 'submitted',
+            fileId: deliverable.id,
+            hasFile: true,
+            fileUrl: deliverable.uploaded_file_path,
+            description: deliverable.description || '',
+            uploadedBy: deliverable.uploaded_by
+          };
+        }
+      });
+      
+      console.log('Final uploads map from database:', uploadsMap);
+      setUploadedFiles(uploadsMap);
+      
+      // Save to localStorage for quick access
+      localStorage.setItem(`contract_${contractData.contract_id}_deliverable_uploads`, JSON.stringify(uploadsMap));
+      
+    } else {
+      console.error('Failed to load deliverables from database:', response.status);
+      // Fallback to localStorage
+      const savedUploads = localStorage.getItem(`contract_${contractData.contract_id}_deliverable_uploads`);
+      if (savedUploads) {
+        try {
+          const parsedUploads = JSON.parse(savedUploads);
+          console.log('Using fallback from localStorage:', parsedUploads);
+          setUploadedFiles(parsedUploads);
+        } catch (e) {
+          console.error('Error loading saved uploads:', e);
+          setUploadedFiles({});
+        }
+      } else {
+        setUploadedFiles({});
+      }
+    }
+  } catch (error) {
+    console.error('Error loading uploaded files:', error);
+    // Fallback to localStorage
     const savedUploads = localStorage.getItem(`contract_${id}_deliverable_uploads`);
     if (savedUploads) {
       try {
-        setUploadedFiles(JSON.parse(savedUploads));
+        const parsedUploads = JSON.parse(savedUploads);
+        console.log('Error fallback from localStorage:', parsedUploads);
+        setUploadedFiles(parsedUploads);
       } catch (e) {
-        console.error('Error loading uploaded files:', e);
+        console.error('Error loading saved uploads from error fallback:', e);
+        setUploadedFiles({});
       }
+    } else {
+      setUploadedFiles({});
     }
-  };
+  }
+};
+
+const refreshUploadedFiles = async () => {
+  console.log('Manually refreshing uploaded files...');
+  await loadUploadedFiles();
+};
+
+// And update the useEffect to also load uploaded files for ALL users, not just project managers:
+useEffect(() => {
+  if (contractData) {
+    console.log('Contract data loaded, fetching deliverables for all users');
+    // Load uploaded files for ALL users (Project Manager, Program Manager, Director)
+    loadUploadedFiles();
+    
+    // Only load comments for project managers
+    if (user?.role === "project_manager") {
+      fetchReviewComments();
+    }
+  }
+}, [contractData, id, user?.role]);
 
   // Function to save uploaded files
   const saveUploadedFiles = (files) => {
@@ -413,62 +630,140 @@ function ContractDetailsPage({ user = null }) {
     }
   };
 
-  // Function to handle deliverable upload button click
-  const handleDeliverableUploadClick = (deliverable, index) => {
+  const handleDeliverableUploadClick = (del, idx) => {
     if (user?.role === "project_manager") {
-      setSelectedDeliverable({...deliverable, index});
+      // Create a deliverable object with all necessary properties
+      const deliverableData = {
+        ...del,
+        index: idx,
+        deliverableId: uploadedFiles[idx]?.deliverableId || idx + 1, // Use existing ID or create new one
+        deliverable_name: del.deliverable_name || `Deliverable ${idx + 1}`
+      };
+      
+      setSelectedDeliverable(deliverableData);
       setUploadDate('');
       setShowUploadModal(true);
     }
   };
 
-  // Function to handle file upload
-  const handleFileUpload = async () => {
-    if (!selectedDeliverable || !uploadDate) {
-      alert('Please select a date');
-      return;
+const handleFileUpload = async () => {
+  if (!selectedDeliverable || !uploadDate) {
+    alert('Please select a date');
+    return;
+  }
+
+  const fileInput = document.getElementById('file-input-real');
+  if (!fileInput.files || fileInput.files.length === 0) {
+    alert('Please select a file');
+    return;
+  }
+
+  const file = fileInput.files[0];
+  const fileSizeMB = file.size / 1024 / 1024;
+  
+  if (fileSizeMB > 10) {
+    alert("File size exceeds 10MB limit. Please choose a smaller file.");
+    return;
+  }
+
+  setUploading(true);
+  try {
+    const token = localStorage.getItem('token');
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_date', uploadDate);
+    formData.append('deliverable_name', selectedDeliverable.deliverable_name || `Deliverable ${selectedDeliverable.index + 1}`);
+    
+    if (selectedDeliverable.description) {
+      formData.append('upload_notes', `Deliverable: ${selectedDeliverable.deliverable_name}. ${selectedDeliverable.description}`);
+    } else {
+      formData.append('upload_notes', `Uploaded for deliverable: ${selectedDeliverable.deliverable_name}`);
     }
 
-    setUploading(true);
-    try {
-      // In a real app, you would upload to an API endpoint
-      // For now, we'll simulate the upload
-      await new Promise(resolve => setTimeout(resolve, 1000));
+    console.log('Uploading file to database/S3:', file.name);
+    
+    // Use the deliverable ID if available, otherwise use index
+    const deliverableId = selectedDeliverable.deliverableId || (selectedDeliverable.index + 1);
+    
+    // Add contract_id as query parameter
+    const url = `${API_CONFIG.BASE_URL}/api/deliverables/${deliverableId}/upload?contract_id=${contractData.contract_id}`;
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData
+    });
+
+    if (response.ok) {
+      const result = await response.json();
       
-      // Create a mock file entry
+      console.log('Upload successful:', result);
+      
+      // Update local state with database ID
       const newUpload = {
-        deliverableId: selectedDeliverable.index,
-        deliverableName: selectedDeliverable.deliverable_name || `Deliverable ${selectedDeliverable.index + 1}`,
+        deliverableId: result.id,
+        deliverableName: result.deliverable_name || selectedDeliverable.deliverable_name,
         uploadDate: uploadDate,
-        uploadTimestamp: new Date().toISOString(),
-        fileName: `deliverable_${selectedDeliverable.index + 1}_${new Date().getTime()}.pdf`,
-        status: 'uploaded'
+        uploadTimestamp: result.uploaded_at || new Date().toISOString(),
+        fileName: result.uploaded_file_name || file.name,
+        status: result.status || 'submitted',
+        fileId: result.id,
+        hasFile: true,
+        fileUrl: result.uploaded_file_url // S3 URL if available
       };
       
-      // Update uploaded files
       const updatedUploads = {
         ...uploadedFiles,
         [selectedDeliverable.index]: newUpload
       };
       
-      saveUploadedFiles(updatedUploads);
+      // Update state immediately
+      setUploadedFiles(updatedUploads);
       
-      alert(`File uploaded successfully for ${selectedDeliverable.deliverable_name || `Deliverable ${selectedDeliverable.index + 1}`}`);
+      // Save to localStorage
+      localStorage.setItem(`contract_${contractData.contract_id}_deliverable_uploads`, JSON.stringify(updatedUploads));
+      
+      alert(`✅ File "${result.uploaded_file_name || file.name}" uploaded successfully to database!`);
+      
+      // Close modal and reset
       setShowUploadModal(false);
       setSelectedDeliverable(null);
       setUploadDate('');
-    } catch (error) {
-      console.error('Error uploading file:', error);
-      alert('Failed to upload file');
-    } finally {
-      setUploading(false);
+      fileInput.value = '';
+      
+      // Hide selected file info
+      const fileInfo = document.getElementById('selected-file-info');
+      if (fileInfo) fileInfo.style.display = 'none';
+      
+      // Refresh deliverables data
+      await loadUploadedFiles();
+      
+    } else {
+      const errorText = await response.text();
+      console.error('Upload failed:', response.status, errorText);
+      let errorMessage = 'Upload failed';
+      try {
+        const errorData = JSON.parse(errorText);
+        errorMessage = errorData.detail || errorMessage;
+      } catch (e) {
+        errorMessage = errorText || errorMessage;
+      }
+      throw new Error(errorMessage);
     }
-  };
+  } catch (error) {
+    console.error('Error uploading file:', error);
+    alert(`❌ Failed to upload file: ${error.message}`);
+  } finally {
+    setUploading(false);
+  }
+};
 
   // Function to check if a deliverable has been uploaded
-  const hasDeliverableBeenUploaded = (index) => {
-    return uploadedFiles[index] !== undefined;
-  };
+const hasDeliverableBeenUploaded = (index) => {
+  return uploadedFiles[index] !== undefined;
+};
 
   const formatCurrency = (amount) => {
     if (!amount && amount !== 0) return '-';
@@ -734,28 +1029,42 @@ function ContractDetailsPage({ user = null }) {
           
           <div className="header-actions-right">
             <button 
+              className="btn-secondary"
+              onClick={handleViewPDF}
+              disabled={loadingPDF}
+              title="View Original Contract PDF"
+            >
+              {loadingPDF ? (
+                <Loader2 size={16} className="spinning" />
+              ) : (
+                <Eye size={16} />
+              )}
+              <span>View PDF</span>
+            </button>
+            
+            <button 
               className="btn-primary"
               onClick={() => navigate('/upload')}
             >
-              <Upload size={18} />
+              <Upload size={16} />
               <span>Upload New</span>
             </button>
             
             <div className="quick-actions-mini">
               <button className="action-btn-mini" title="Export PDF">
-                <Download size={16} />
+                <Download size={14} />
               </button>
               <button className="action-btn-mini" title="Copy Details">
-                <Copy size={16} />
+                <Copy size={14} />
               </button>
               <button className="action-btn-mini" title="Share">
-                <Link size={16} />
+                <Link size={14} />
               </button>
               <button className="action-btn-mini" title="Analytics">
-                <BarChart3 size={16} />
+                <BarChart3 size={14} />
               </button>
               <button className="action-btn-mini" title="Reminder">
-                <Bell size={16} />
+                <Bell size={14} />
               </button>
             </div>
           </div>
@@ -1117,42 +1426,55 @@ function ContractDetailsPage({ user = null }) {
                           </tr>
                         </thead>
                         <tbody>
-                          {deliverables.items.map((del, idx) => {
-                            const hasUploaded = hasDeliverableBeenUploaded(idx);
-                            
-                            return (
-                              <tr key={idx}>
-                                <td className="deliverable-name">
-                                  <Target size={14} />
-                                  {del.deliverable_name || `Deliverable ${idx + 1}`}
-                                  {hasUploaded && (
-                                    <span className="uploaded-badge" title="File uploaded">
-                                      ✓
-                                    </span>
-                                  )}
-                                </td>
-                                <td>{del.description || 'Not specified'}</td>
-                                <td>{del.due_date ? formatDate(del.due_date) : 'Not specified'}</td>
-                                <td>
-                                  <span className={`status-badge ${del.status?.toLowerCase() || 'pending'}`}>
-                                    {hasUploaded ? 'Submitted' : (del.status || 'Pending')}
-                                  </span>
-                                </td>
-                                {user?.role === "project_manager" && (
-                                  <td className="actions-cell">
-                                    <button
-                                      className="upload-btn"
-                                      onClick={() => handleDeliverableUploadClick(del, idx)}
-                                      title="Upload file for this deliverable"
-                                    >
-                                      <FileUp size={16} />
-                                      <span>Upload</span>
-                                    </button>
-                                  </td>
-                                )}
-                              </tr>
-                            );
-                          })}
+                   {deliverables.items.map((del, idx) => {
+  const hasUploaded = hasDeliverableBeenUploaded(idx);
+  
+  return (
+    <tr key={idx}>
+      <td className="deliverable-name">
+        <Target size={14} />
+        {del.deliverable_name || `Deliverable ${idx + 1}`}
+        {hasUploaded && (
+          <span className="uploaded-badge" title="File uploaded">
+            ✓
+          </span>
+        )}
+      </td>
+      <td>{del.description || 'Not specified'}</td>
+      <td>{del.due_date ? formatDate(del.due_date) : 'Not specified'}</td>
+      <td>
+        <span className={`status-badge ${hasUploaded ? 'submitted' : (del.status?.toLowerCase() || 'pending')}`}>
+          {hasUploaded ? 'Submitted' : (del.status || 'Pending')}
+        </span>
+      </td>
+      {/* ✅ SHOW VIEW BUTTON FOR ALL USERS WHEN FILE IS UPLOADED */}
+      <td className="actions-cell">
+        {hasUploaded ? (
+          <button
+            className="view-btn"
+            onClick={() => handleViewDeliverableFile(idx)}
+            title="View uploaded file"
+          >
+            <Eye size={12} />
+            <span>View</span>
+          </button>
+        ) : (
+          // Only show upload button for Project Manager
+          user?.role === "project_manager" && (
+            <button
+              className="upload-btn"
+              onClick={() => handleDeliverableUploadClick(del, idx)}
+              title="Upload file for this deliverable"
+            >
+              <FileUp size={12} />
+              <span>Upload</span>
+            </button>
+          )
+        )}
+      </td>
+    </tr>
+  );
+})}
                         </tbody>
                       </table>
                     </div>
@@ -1288,20 +1610,16 @@ function ContractDetailsPage({ user = null }) {
               </button>
             </div>
             <div className="modal-body">
-              {/* <div className="upload-info">
-                <h4>{selectedDeliverable?.deliverable_name || `Deliverable ${selectedDeliverable?.index + 1}`}</h4>
-                <p className="deliverable-description">
-                  {selectedDeliverable?.description || 'No description available'}
-                </p>
+              <div className="deliverable-info">
                 {selectedDeliverable?.due_date && (
                   <p className="due-date-info">
                     <strong>Due Date:</strong> {formatDate(selectedDeliverable.due_date)}
                   </p>
                 )}
-              </div> */}
+              </div>
               
               <div className="form-group">
-                <label htmlFor="upload-date">Select Upload Date *</label>
+                <label htmlFor="upload-date">Upload Date *</label>
                 <input
                   type="date"
                   id="upload-date"
@@ -1314,24 +1632,41 @@ function ContractDetailsPage({ user = null }) {
               </div>
               
               <div className="form-group">
-                <label htmlFor="file-upload">Select File *</label>
-                <div className="file-upload-area">
-                  <FileUp size={24} />
-                  <p>Click to select file or drag and drop</p>
-                  <p className="file-types">Supported: PDF, DOC, DOCX, XLS, XLSX</p>
+                <label>Select File *</label>
+                <div 
+                  className="file-upload-area"
+                  onClick={() => document.getElementById('file-input-real').click()}
+                  style={{ cursor: 'pointer' }}
+                >
                   <input
                     type="file"
-                    id="file-upload"
-                    className="file-input"
-                    accept=".pdf,.doc,.docx,.xls,.xlsx"
+                    id="file-input-real"
+                    className="file-input-hidden"
+                    accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.png,.jpg,.jpeg"
                   />
+                  <FileUp size={24} />
+                  <p>Click to select file</p>
+                  <p className="file-hint">or drag and drop here</p>
+                  <p className="file-types">Supported: PDF, DOC, XLS, PPT, TXT, Images</p>
+                  <p className="file-size">Max file size: 10MB</p>
+                </div>
+                <div id="selected-file-info" className="selected-file-info">
+                  <strong>Selected:</strong> <span id="selected-file-name">No file selected</span>
                 </div>
               </div>
             </div>
             <div className="modal-actions">
               <button
                 className="btn-secondary"
-                onClick={() => setShowUploadModal(false)}
+                onClick={() => {
+                  setShowUploadModal(false);
+                  setSelectedDeliverable(null);
+                  setUploadDate('');
+                  const fileInput = document.getElementById('file-input-real');
+                  if (fileInput) fileInput.value = '';
+                  const fileInfo = document.getElementById('selected-file-info');
+                  if (fileInfo) fileInfo.style.display = 'none';
+                }}
                 disabled={uploading}
               >
                 Cancel
@@ -1354,15 +1689,32 @@ function ContractDetailsPage({ user = null }) {
           </div>
         </div>
       )}
+
+      {/* PDF Viewer Modal - This should be at the root level */}
+      {showPDFViewer && (
+        <PDFViewer
+          pdfUrl={pdfUrl}
+          filename={pdfFilename}
+          onClose={() => {
+            setShowPDFViewer(false);
+            // Revoke the object URL if it's a blob URL
+            if (pdfUrl.startsWith('blob:')) {
+              URL.revokeObjectURL(pdfUrl);
+            }
+          }}
+        />
+      )}
     </div>
   );
 }
 
 export default ContractDetailsPage;
 
-
+// // C:\saple.ai\POC\frontend\src\ContractDetailsPage.jsx
 // import React, { useState, useEffect } from 'react';
 // import { useParams, useNavigate } from 'react-router-dom';
+// import { Eye } from 'lucide-react'; 
+// import PDFViewer from './components/pdf/PDFViewer';
 // import {
 //   ArrowLeft,
 //   Upload,
@@ -1402,7 +1754,8 @@ export default ContractDetailsPage;
 //   Loader2,
 //   RefreshCw,
 //   MessageSquare,
-//   XCircle
+//   XCircle,
+//   FileUp
 // } from 'lucide-react';
 // import ComprehensiveView from './ComprehensiveView';
 // import API_CONFIG from './config';
@@ -1424,11 +1777,123 @@ export default ContractDetailsPage;
 //     compliance: true,
 //     executiveSummary: true
 //   });
-  
+//   const [showPDFViewer, setShowPDFViewer] = useState(false);
+// const [pdfUrl, setPdfUrl] = useState('');
+// const [pdfFilename, setPdfFilename] = useState('');
+// const [loadingPDF, setLoadingPDF] = useState(false);
 //   // State for comments section
 //   const [pmComments, setPmComments] = useState([]);
 //   const [pmCommentsLoading, setPmCommentsLoading] = useState(false);
   
+//   // State for deliverables upload
+//   const [showUploadModal, setShowUploadModal] = useState(false);
+//   const [selectedDeliverable, setSelectedDeliverable] = useState(null);
+//   const [uploadDate, setUploadDate] = useState('');
+//   const [uploading, setUploading] = useState(false);
+//   const [uploadedFiles, setUploadedFiles] = useState({}); // Track uploaded files per deliverable
+  
+// const handleViewPDF = async () => {
+//   if (!contractData?.contract_id) return;
+  
+//   try {
+//     setLoadingPDF(true);
+//     const token = localStorage.getItem('token');
+//     const response = await fetch(
+//       `${API_CONFIG.BASE_URL}/api/contracts/${contractData.contract_id}/pdf-url`,
+//       {
+//         headers: {
+//           'Authorization': `Bearer ${token}`,
+//           'Content-Type': 'application/json'
+//         }
+//       }
+//     );
+
+//     if (response.ok) {
+//       const data = await response.json();
+//       setPdfUrl(data.pdf_url);
+//       setPdfFilename(data.original_filename || 'document.pdf');
+//       setShowPDFViewer(true);
+//     } else {
+//       alert('PDF not available or you don\'t have permission to view it');
+//     }
+//   } catch (error) {
+//     console.error('Failed to fetch PDF:', error);
+//     alert('Failed to load PDF document');
+//   } finally {
+//     setLoadingPDF(false);
+//   }
+// };
+
+// const handleViewDeliverableFile = async (deliverableIndex) => {
+//   const uploadedFile = uploadedFiles[deliverableIndex];
+//   if (!uploadedFile?.fileId) {
+//     alert('No file uploaded for this deliverable');
+//     return;
+//   }
+
+//   try {
+//     setLoadingPDF(true);
+//     const token = localStorage.getItem('token');
+//     // You'll need to create this endpoint in your backend
+//     const response = await fetch(
+//       `${API_CONFIG.BASE_URL}/api/deliverables/${uploadedFile.fileId}/file`,
+//       {
+//         headers: {
+//           'Authorization': `Bearer ${token}`,
+//           'Content-Type': 'application/json'
+//         }
+//       }
+//     );
+
+//     if (response.ok) {
+//       const blob = await response.blob();
+//       const url = URL.createObjectURL(blob);
+//       setPdfUrl(url);
+//       setPdfFilename(uploadedFile.fileName || 'deliverable.pdf');
+//       setShowPDFViewer(true);
+//     } else {
+//       alert('File not available or you don\'t have permission to view it');
+//     }
+//   } catch (error) {
+//     console.error('Failed to fetch deliverable file:', error);
+//     alert('Failed to load deliverable file');
+//   } finally {
+//     setLoadingPDF(false);
+//   }
+// };
+
+// // Update this useEffect (near the top of your component)
+// useEffect(() => {
+//   const fileInput = document.getElementById('file-input-real');
+//   const fileInfo = document.getElementById('selected-file-info');
+//   const fileNameSpan = document.getElementById('selected-file-name');
+  
+//   if (fileInput && fileInfo && fileNameSpan) {
+//     // Hide file info initially
+//     fileInfo.style.display = 'none';
+    
+//     const handleFileChange = function() {
+//       if (this.files && this.files[0]) {
+//         const file = this.files[0];
+//         const fileSizeMB = (file.size / 1024 / 1024).toFixed(2);
+//         fileNameSpan.textContent = `${file.name} (${fileSizeMB} MB)`;
+//         fileInfo.style.display = 'flex';
+//       } else {
+//         fileInfo.style.display = 'none';
+//       }
+//     };
+    
+//     fileInput.addEventListener('change', handleFileChange);
+    
+//     // Cleanup
+//     return () => {
+//       if (fileInput) {
+//         fileInput.removeEventListener('change', handleFileChange);
+//       }
+//     };
+//   }
+// }, [showUploadModal]); // Run when modal opens/closes
+
 //   useEffect(() => {
 //     console.log('ContractDetailsPage mounted with id:', id);
     
@@ -1453,8 +1918,85 @@ export default ContractDetailsPage;
 //   useEffect(() => {
 //     if (contractData && user?.role === "project_manager") {
 //       fetchReviewComments();
+//       // Load any existing uploaded files for deliverables
+//       loadUploadedFiles();
 //     }
 //   }, [contractData, user]);
+
+// const loadUploadedFiles = async () => {
+//   if (!contractData?.contract_id) return;
+  
+//   try {
+//     const token = localStorage.getItem('token');
+//     const response = await fetch(`${API_CONFIG.BASE_URL}/api/deliverables/contract/${contractData.contract_id}`, {
+//       headers: {
+//         'Authorization': `Bearer ${token}`,
+//         'Content-Type': 'application/json'
+//       }
+//     });
+
+//     if (response.ok) {
+//       const deliverables = await response.json();
+//       console.log('Loaded deliverables:', deliverables);
+      
+//       // Create a mapping of deliverable data
+//       const uploadsMap = {};
+//       deliverables.forEach(deliverable => {
+//         if (deliverable.uploaded_at) {
+//           // Find the index in the original deliverables array
+//           const compData = contractData.comprehensive_data || {};
+//           const origDeliverables = compData.deliverables?.items || [];
+//           const index = origDeliverables.findIndex(d => 
+//             d.deliverable_name === deliverable.deliverable_name
+//           );
+          
+//           if (index !== -1) {
+//             uploadsMap[index] = {
+//               deliverableId: deliverable.id,
+//               deliverableName: deliverable.deliverable_name,
+//               uploadDate: deliverable.uploaded_at.split('T')[0],
+//               uploadTimestamp: deliverable.uploaded_at,
+//               fileName: deliverable.uploaded_file_name,
+//               status: deliverable.status,
+//               fileId: deliverable.id
+//             };
+//           } else {
+//             // If not found in original array, add to the end
+//             const newIndex = Object.keys(uploadsMap).length;
+//             uploadsMap[newIndex] = {
+//               deliverableId: deliverable.id,
+//               deliverableName: deliverable.deliverable_name,
+//               uploadDate: deliverable.uploaded_at.split('T')[0],
+//               uploadTimestamp: deliverable.uploaded_at,
+//               fileName: deliverable.uploaded_file_name,
+//               status: deliverable.status,
+//               fileId: deliverable.id
+//             };
+//           }
+//         }
+//       });
+      
+//       setUploadedFiles(uploadsMap);
+//     }
+//   } catch (error) {
+//     console.error('Error loading uploaded files:', error);
+//     // Fallback to localStorage
+//     const savedUploads = localStorage.getItem(`contract_${id}_deliverable_uploads`);
+//     if (savedUploads) {
+//       try {
+//         setUploadedFiles(JSON.parse(savedUploads));
+//       } catch (e) {
+//         console.error('Error loading saved uploads:', e);
+//       }
+//     }
+//   }
+// };
+
+//   // Function to save uploaded files
+//   const saveUploadedFiles = (files) => {
+//     setUploadedFiles(files);
+//     localStorage.setItem(`contract_${id}_deliverable_uploads`, JSON.stringify(files));
+//   };
 
 //   const fetchContractData = async (contractId) => {
 //     console.log('Fetching contract data for ID:', contractId);
@@ -1745,6 +2287,135 @@ export default ContractDetailsPage;
 //     }
 //   };
 
+// const handleDeliverableUploadClick = (del, idx) => {
+//   if (user?.role === "project_manager") {
+//     // Create a deliverable object with all necessary properties
+//     const deliverableData = {
+//       ...del,
+//       index: idx,
+//       deliverableId: uploadedFiles[idx]?.deliverableId || idx + 1, // Use existing ID or create new one
+//       deliverable_name: del.deliverable_name || `Deliverable ${idx + 1}`
+//     };
+    
+//     setSelectedDeliverable(deliverableData);
+//     setUploadDate('');
+//     setShowUploadModal(true);
+//   }
+// };
+
+// const handleFileUpload = async () => {
+//   if (!selectedDeliverable || !uploadDate) {
+//     alert('Please select a date');
+//     return;
+//   }
+
+//   const fileInput = document.getElementById('file-input-real');
+//   if (!fileInput.files || fileInput.files.length === 0) {
+//     alert('Please select a file');
+//     return;
+//   }
+
+//   const file = fileInput.files[0];
+//   const fileSizeMB = file.size / 1024 / 1024;
+  
+//   if (fileSizeMB > 10) {
+//     alert("File size exceeds 10MB limit. Please choose a smaller file.");
+//     return;
+//   }
+
+//   setUploading(true);
+//   try {
+//     const token = localStorage.getItem('token');
+//     const formData = new FormData();
+//     formData.append('file', file);
+//     formData.append('upload_date', uploadDate);
+//     formData.append('deliverable_name', selectedDeliverable.deliverable_name || `Deliverable ${selectedDeliverable.index + 1}`);
+    
+//     if (selectedDeliverable.description) {
+//       formData.append('upload_notes', `Deliverable: ${selectedDeliverable.deliverable_name}. ${selectedDeliverable.description}`);
+//     } else {
+//       formData.append('upload_notes', `Uploaded for deliverable: ${selectedDeliverable.deliverable_name}`);
+//     }
+
+//     console.log('Uploading file:', file.name, 'Size:', fileSizeMB.toFixed(2), 'MB');
+//     console.log('Selected deliverable:', selectedDeliverable);
+//     console.log('Contract ID:', contractData.contract_id);
+    
+//     // Use the index + 1 as a temporary ID
+//     const deliverableIndex = selectedDeliverable.index + 1;
+    
+//     // Add contract_id as query parameter
+//     const url = `${API_CONFIG.BASE_URL}/api/deliverables/${deliverableIndex}/upload?contract_id=${contractData.contract_id}`;
+    
+//     const response = await fetch(url, {
+//       method: 'POST',
+//       headers: {
+//         'Authorization': `Bearer ${token}`,
+//       },
+//       body: formData
+//     });
+
+//     if (response.ok) {
+//       const result = await response.json();
+      
+//       console.log('Upload successful:', result);
+      
+//       // Update local state
+//       const newUpload = {
+//         deliverableId: result.id,
+//         deliverableName: result.deliverable_name,
+//         uploadDate: uploadDate,
+//         uploadTimestamp: result.uploaded_at,
+//         fileName: result.uploaded_file_name,
+//         status: result.status,
+//         fileId: result.id
+//       };
+      
+//       const updatedUploads = {
+//         ...uploadedFiles,
+//         [selectedDeliverable.index]: newUpload
+//       };
+      
+//       saveUploadedFiles(updatedUploads);
+      
+//       alert(`✅ File "${result.uploaded_file_name}" uploaded successfully!`);
+//       setShowUploadModal(false);
+//       setSelectedDeliverable(null);
+//       setUploadDate('');
+//       fileInput.value = ''; // Clear file input
+      
+//       // Hide selected file info
+//       const fileInfo = document.getElementById('selected-file-info');
+//       if (fileInfo) fileInfo.style.display = 'none';
+      
+//       // Refresh deliverables data
+//       loadUploadedFiles();
+      
+//     } else {
+//       const errorText = await response.text();
+//       console.error('Upload failed:', response.status, errorText);
+//       let errorMessage = 'Upload failed';
+//       try {
+//         const errorData = JSON.parse(errorText);
+//         errorMessage = errorData.detail || errorMessage;
+//       } catch (e) {
+//         errorMessage = errorText || errorMessage;
+//       }
+//       throw new Error(errorMessage);
+//     }
+//   } catch (error) {
+//     console.error('Error uploading file:', error);
+//     alert(`❌ Failed to upload file: ${error.message}`);
+//   } finally {
+//     setUploading(false);
+//   }
+// };
+
+//   // Function to check if a deliverable has been uploaded
+//   const hasDeliverableBeenUploaded = (index) => {
+//     return uploadedFiles[index] !== undefined;
+//   };
+
 //   const formatCurrency = (amount) => {
 //     if (!amount && amount !== 0) return '-';
 //     return new Intl.NumberFormat('en-US', {
@@ -2007,33 +2678,47 @@ export default ContractDetailsPage;
 //             <span>Back to Contracts</span>
 //           </button>
           
-//           <div className="header-actions-right">
-//             <button 
-//               className="btn-primary"
-//               onClick={() => navigate('/upload')}
-//             >
-//               <Upload size={18} />
-//               <span>Upload New</span>
-//             </button>
-            
-//             <div className="quick-actions-mini">
-//               <button className="action-btn-mini" title="Export PDF">
-//                 <Download size={16} />
-//               </button>
-//               <button className="action-btn-mini" title="Copy Details">
-//                 <Copy size={16} />
-//               </button>
-//               <button className="action-btn-mini" title="Share">
-//                 <Link size={16} />
-//               </button>
-//               <button className="action-btn-mini" title="Analytics">
-//                 <BarChart3 size={16} />
-//               </button>
-//               <button className="action-btn-mini" title="Reminder">
-//                 <Bell size={16} />
-//               </button>
-//             </div>
-//           </div>
+// <div className="header-actions-right">
+//   <button 
+//     className="btn-secondary"
+//     onClick={handleViewPDF}
+//     disabled={loadingPDF}
+//     title="View Original Contract PDF"
+//   >
+//     {loadingPDF ? (
+//       <Loader2 size={16} className="spinning" />
+//     ) : (
+//       <Eye size={16} />
+//     )}
+//     <span>View PDF</span>
+//   </button>
+  
+//   <button 
+//     className="btn-primary"
+//     onClick={() => navigate('/upload')}
+//   >
+//     <Upload size={16} />
+//     <span>Upload New</span>
+//   </button>
+  
+//   <div className="quick-actions-mini">
+//     <button className="action-btn-mini" title="Export PDF">
+//       <Download size={14} />
+//     </button>
+//     <button className="action-btn-mini" title="Copy Details">
+//       <Copy size={14} />
+//     </button>
+//     <button className="action-btn-mini" title="Share">
+//       <Link size={14} />
+//     </button>
+//     <button className="action-btn-mini" title="Analytics">
+//       <BarChart3 size={14} />
+//     </button>
+//     <button className="action-btn-mini" title="Reminder">
+//       <Bell size={14} />
+//     </button>
+//   </div>
+// </div>
 //         </div>
 
 //         <div className="contract-title-section">
@@ -2185,41 +2870,22 @@ export default ContractDetailsPage;
 //                   {renderField('Risk Management', contractDetails.risk_management, <AlertCircle size={16} />, 'text', true)}
 //                 </div>
                 
-//                 {/* Objectives - Full width */}
-//                 {/* {contractDetails.objectives && contractDetails.objectives.length > 0 && (
+//                 {/* Objective - Show only the first objective */}
+//                 {contractDetails.objectives && contractDetails.objectives.length > 0 && (
 //                   <div className="objectives-section">
-//                     <div className="field-card full-width">
+//                     <div className="field-card">
 //                       <div className="field-header">
 //                         <Target size={16} />
-//                         <label className="field-label">Objectives</label>
+//                         <label className="field-label">Objective</label>
 //                       </div>
-//                       <div className="objectives-list">
-//                         {contractDetails.objectives.map((obj, idx) => (
-//                           <div key={idx} className="objective-item">
-//                             <CheckCircle size={16} />
-//                             <span>{obj}</span>
-//                           </div>
-//                         ))}
+//                       <div className="field-value-container">
+//                         <span className="field-value">
+//                           {contractDetails.objectives[0]}
+//                         </span>
 //                       </div>
 //                     </div>
 //                   </div>
-//                 )} */}
-// {/* Objective - Show only the first objective */}
-// {contractDetails.objectives && contractDetails.objectives.length > 0 && (
-//   <div className="objectives-section">
-//     <div className="field-card">
-//       <div className="field-header">
-//         <Target size={16} />
-//         <label className="field-label">Objective</label>
-//       </div>
-//       <div className="field-value-container">
-//         <span className="field-value">
-//           {contractDetails.objectives[0]}
-//         </span>
-//       </div>
-//     </div>
-//   </div>
-// )}
+//                 )}
                 
 //                 {/* Scope of Work - Full width */}
 //                 {contractDetails.scope_of_work && (
@@ -2407,24 +3073,58 @@ export default ContractDetailsPage;
 //                             <th>Description</th>
 //                             <th>Due Date</th>
 //                             <th>Status</th>
+//                             {user?.role === "project_manager" && <th>Actions</th>}
 //                           </tr>
 //                         </thead>
 //                         <tbody>
-//                           {deliverables.items.map((del, idx) => (
-//                             <tr key={idx}>
-//                               <td className="deliverable-name">
-//                                 <Target size={14} />
-//                                 {del.deliverable_name || `Deliverable ${idx + 1}`}
-//                               </td>
-//                               <td>{del.description || 'Not specified'}</td>
-//                               <td>{del.due_date ? formatDate(del.due_date) : 'Not specified'}</td>
-//                               <td>
-//                                 <span className={`status-badge ${del.status?.toLowerCase() || 'pending'}`}>
-//                                   {del.status || 'Pending'}
-//                                 </span>
-//                               </td>
-//                             </tr>
-//                           ))}
+//                           {deliverables.items.map((del, idx) => {
+//                             const hasUploaded = hasDeliverableBeenUploaded(idx);
+                            
+//                             return (
+//                               <tr key={idx}>
+//                                 <td className="deliverable-name">
+//                                   <Target size={14} />
+//                                   {del.deliverable_name || `Deliverable ${idx + 1}`}
+//                                   {hasUploaded && (
+//                                     <span className="uploaded-badge" title="File uploaded">
+//                                       ✓
+//                                     </span>
+//                                   )}
+//                                 </td>
+//                                 <td>{del.description || 'Not specified'}</td>
+//                                 <td>{del.due_date ? formatDate(del.due_date) : 'Not specified'}</td>
+//                                 <td>
+//                                   <span className={`status-badge ${del.status?.toLowerCase() || 'pending'}`}>
+//                                     {hasUploaded ? 'Submitted' : (del.status || 'Pending')}
+//                                   </span>
+//                                 </td>
+//                                 {user?.role === "project_manager" && (
+
+// <td className="actions-cell">
+//   <button
+//     className="upload-btn"
+//     onClick={() => handleDeliverableUploadClick(del, idx)}
+//     title="Upload file for this deliverable"
+//   >
+//     <FileUp size={12} />
+//     <span>Upload</span>
+//   </button>
+  
+//   {hasUploaded && (
+//     <button
+//       className="view-btn"
+//       onClick={() => handleViewDeliverableFile(idx)}
+//       title="View uploaded file"
+//     >
+//       <Eye size={12} />
+//       <span>View</span>
+//     </button>
+//   )}
+// </td>
+//                                 )}
+//                               </tr>
+//                             );
+//                           })}
 //                         </tbody>
 //                       </table>
 //                     </div>
@@ -2548,6 +3248,126 @@ export default ContractDetailsPage;
 //           </div>
 //         )}
 //       </div>
+
+//       {/* Upload Modal */}
+//       {showUploadModal && (
+//         <div className="modal-overlay">
+//           <div className="modal-content">
+//             <div className="modal-header">
+//               <h3>Upload Deliverable File</h3>
+//               <button className="modal-close" onClick={() => setShowUploadModal(false)}>
+//                 ×
+//               </button>
+//             </div>
+//             <div className="modal-body">
+//               <div className="deliverable-info">
+//                 {/* <h4>{selectedDeliverable?.deliverable_name || `Deliverable ${selectedDeliverable?.index + 1}`}</h4>
+//                 <p className="deliverable-description">
+//                   {selectedDeliverable?.description || 'No description available'}
+//                 </p> */}
+//                 {selectedDeliverable?.due_date && (
+//                   <p className="due-date-info">
+//                     <strong>Due Date:</strong> {formatDate(selectedDeliverable.due_date)}
+//                   </p>
+//                 )}
+//               </div>
+//               {showPDFViewer && (
+//   <PDFViewer
+//     pdfUrl={pdfUrl}
+//     filename={pdfFilename}
+//     onClose={() => {
+//       setShowPDFViewer(false);
+//       // Revoke the object URL if it's a blob URL
+//       if (pdfUrl.startsWith('blob:')) {
+//         URL.revokeObjectURL(pdfUrl);
+//       }
+//     }}
+//   />
+// )}
+//               <div className="form-group">
+//                 <label htmlFor="upload-date">Upload Date *</label>
+//                 <input
+//                   type="date"
+//                   id="upload-date"
+//                   value={uploadDate}
+//                   onChange={(e) => setUploadDate(e.target.value)}
+//                   className="date-picker"
+//                   required
+//                 />
+//                 <p className="help-text">Select the date when the deliverable was completed</p>
+//               </div>
+              
+//               <div className="form-group">
+//                 <label>Select File *</label>
+//                 <div 
+//                   className="file-upload-area"
+//                   onClick={() => document.getElementById('file-input-real').click()}
+//                   style={{ cursor: 'pointer' }}
+//                 >
+//                   <input
+//                     type="file"
+//                     id="file-input-real"
+//                     className="file-input-hidden"
+//                     accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.png,.jpg,.jpeg"
+//                   />
+//                   <FileUp size={24} />
+//                   <p>Click to select file</p>
+//                   <p className="file-hint">or drag and drop here</p>
+//                   <p className="file-types">Supported: PDF, DOC, XLS, PPT, TXT, Images</p>
+//                   <p className="file-size">Max file size: 10MB</p>
+//                 </div>
+//                 <div id="selected-file-info" className="selected-file-info">
+//                   <strong>Selected:</strong> <span id="selected-file-name">No file selected</span>
+//                 </div>
+//               </div>
+//             </div>
+//             <div className="modal-actions">
+//               <button
+//                 className="btn-secondary"
+//                 onClick={() => {
+//                   setShowUploadModal(false);
+//                   setSelectedDeliverable(null);
+//                   setUploadDate('');
+//                   const fileInput = document.getElementById('file-input-real');
+//                   if (fileInput) fileInput.value = '';
+//                   const fileInfo = document.getElementById('selected-file-info');
+//                   if (fileInfo) fileInfo.style.display = 'none';
+//                 }}
+//                 disabled={uploading}
+//               >
+//                 Cancel
+//               </button>
+//               <button
+//                 className="btn-primary"
+//                 onClick={handleFileUpload}
+//                 disabled={!uploadDate || uploading}
+//               >
+//                 {uploading ? (
+//                   <>
+//                     <Loader2 size={16} className="spinning" />
+//                     Uploading...
+//                   </>
+//                 ) : (
+//                   'Upload File'
+//                 )}
+//               </button>
+//             </div>
+//           </div>
+//         </div>
+//       )}
+//       {showPDFViewer && (
+//   <PDFViewer
+//     pdfUrl={pdfUrl}
+//     filename={pdfFilename}
+//     onClose={() => {
+//       setShowPDFViewer(false);
+//       // Revoke the object URL if it's a blob URL
+//       if (pdfUrl.startsWith('blob:')) {
+//         URL.revokeObjectURL(pdfUrl);
+//       }
+//     }}
+//   />
+// )}
 //     </div>
 //   );
 // }

@@ -546,3 +546,38 @@ WHERE review_comments IS NULL OR review_comments = '[]';
 -- UPDATE contracts 
 -- SET review_comments = review_comments::TEXT 
 -- WHERE review_comments IS NOT NULL;
+
+
+
+
+
+
+
+CREATE TABLE contract_deliverables (
+    id SERIAL PRIMARY KEY,
+    contract_id INTEGER NOT NULL REFERENCES contracts(id) ON DELETE CASCADE,
+    deliverable_name VARCHAR(255) NOT NULL,
+    description TEXT,
+    due_date DATE,
+    status VARCHAR(50) DEFAULT 'pending',
+    uploaded_file_path TEXT,
+    uploaded_file_name VARCHAR(500),
+    uploaded_at TIMESTAMP WITH TIME ZONE,
+    uploaded_by INTEGER REFERENCES users(id),
+    upload_notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(contract_id, deliverable_name)
+);
+
+CREATE INDEX idx_contract_deliverables_contract_id ON contract_deliverables(contract_id);
+CREATE INDEX idx_contract_deliverables_status ON contract_deliverables(status);
+
+
+
+
+-- Add the file_data column to contract_deliverables table
+ALTER TABLE contract_deliverables ADD COLUMN IF NOT EXISTS file_data JSONB;
+
+-- Update existing rows to have null file_data
+UPDATE contract_deliverables SET file_data = NULL WHERE file_data IS NOT NULL;
