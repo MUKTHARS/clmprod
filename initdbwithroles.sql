@@ -572,3 +572,12 @@ CREATE TABLE contract_deliverables (
 
 CREATE INDEX idx_contract_deliverables_contract_id ON contract_deliverables(contract_id);
 CREATE INDEX idx_contract_deliverables_status ON contract_deliverables(status);
+
+
+
+
+-- Add the file_data column to contract_deliverables table
+ALTER TABLE contract_deliverables ADD COLUMN IF NOT EXISTS file_data JSONB;
+
+-- Update existing rows to have null file_data
+UPDATE contract_deliverables SET file_data = NULL WHERE file_data IS NOT NULL;

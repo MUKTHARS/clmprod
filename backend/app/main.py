@@ -495,7 +495,6 @@ async def register_user(
     
     return db_user
 
-
 @app.post("/api/deliverables/{deliverable_id_or_index}/upload")
 async def upload_deliverable_file(
     deliverable_id_or_index: int,
@@ -507,22 +506,20 @@ async def upload_deliverable_file(
     db: Session = Depends(get_db),
     request: Request = None
 ):
-    """Upload a file for a deliverable - accepts either deliverable ID or array index"""
+    """Upload a file for a deliverable - saves to database with proper tracking"""
     try:
         print(f"📤 Uploading file for deliverable ID/index: {deliverable_id_or_index}")
         print(f"Deliverable name from form: {deliverable_name}")
         
-        # Get contract ID from request parameters
+        # Get contract ID from request parameters or form
         contract_id = None
         if request and request.query_params.get("contract_id"):
             contract_id = int(request.query_params.get("contract_id"))
         else:
-            # Try to get contract ID from the referer or form data
-            contract_id = request.query_params.get("contract_id") if request else None
+            # Try to get from form data
+            contract_id = int(request.query_params.get("contract_id")) if request else None
         
-        # If contract_id is not provided, we need to find it
         if not contract_id:
-            # This is a fallback - in production, you should always pass contract_id
             raise HTTPException(status_code=400, detail="Contract ID is required")
         
         # Get the contract
@@ -530,22 +527,21 @@ async def upload_deliverable_file(
         if not contract:
             raise HTTPException(status_code=404, detail="Contract not found")
         
-        # Check permission - only the contract creator or director can upload
+        # Check permission - contract creator or director can upload
         if contract.created_by != current_user.id and current_user.role != "director":
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only the contract creator can upload deliverable files"
+                detail="Only the contract creator or director can upload deliverable files"
             )
         
-        # Check if this is a deliverable ID (from database) or an array index (from frontend)
+        # Find or create deliverable in database
         deliverable = None
         if deliverable_id_or_index > 1000:  # Likely a database ID
             deliverable = db.query(ContractDeliverable).filter(
                 ContractDeliverable.id == deliverable_id_or_index
             ).first()
         else:
-            # This is an array index from frontend - find or create deliverable
-            # First, try to find existing deliverable for this contract by name
+            # This is an array index - find by name and contract
             if deliverable_name:
                 deliverable = db.query(ContractDeliverable).filter(
                     ContractDeliverable.contract_id == contract_id,
@@ -600,38 +596,73 @@ async def upload_deliverable_file(
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
         
-        # Generate unique filename
-        import uuid
-        unique_filename = f"{uuid.uuid4().hex}{file_ext}"
-        
-        # Create uploads directory if it doesn't exist
-        upload_dir = "uploads/deliverables"
-        os.makedirs(upload_dir, exist_ok=True)
-        
-        # Create contract-specific directory
-        contract_dir = os.path.join(upload_dir, f"contract_{deliverable.contract_id}")
-        os.makedirs(contract_dir, exist_ok=True)
-        
-        # Save file
-        file_path = os.path.join(contract_dir, unique_filename)
-        
-        with open(file_path, "wb") as f:
-            f.write(file_content)
-        
-        # Update deliverable record in database
-        deliverable.uploaded_file_path = file_path
-        deliverable.uploaded_file_name = file.filename
-        deliverable.uploaded_at = datetime.utcnow()
-        deliverable.uploaded_by = current_user.id
-        deliverable.upload_notes = upload_notes
-        deliverable.status = "submitted"
-        deliverable.updated_at = datetime.utcnow()
-        
-        if not deliverable.due_date:
-            deliverable.due_date = upload_date_obj
-        
-        db.commit()
-        db.refresh(deliverable)
+        # ✅ CRITICAL: Store file content in S3, not local filesystem
+        try:
+            # Upload to S3
+            import uuid
+            unique_filename = f"deliverables/contract_{contract_id}/{uuid.uuid4().hex}{file_ext}"
+            
+            # Upload to S3
+            s3_service.upload_file_from_bytes(
+                file_content=file_content,
+                file_name=unique_filename,
+                content_type=file.content_type
+            )
+            
+            # Get S3 URL
+            file_url = s3_service.get_file_url(unique_filename)
+            
+            # ✅ Store S3 reference in database instead of local path
+            deliverable.uploaded_file_path = file_url
+            deliverable.uploaded_file_name = file.filename
+            deliverable.uploaded_at = datetime.utcnow()
+            deliverable.uploaded_by = current_user.id
+            deliverable.upload_notes = upload_notes
+            deliverable.status = "submitted"
+            deliverable.updated_at = datetime.utcnow()
+            
+            if not deliverable.due_date:
+                deliverable.due_date = upload_date_obj
+            
+            db.commit()
+            db.refresh(deliverable)
+            
+        except Exception as s3_error:
+            print(f"⚠️ S3 upload failed: {s3_error}")
+            # Fallback: Store file content directly in database (BLOB)
+            # Convert to base64 for storage in JSON
+            import base64
+            file_content_base64 = base64.b64encode(file_content).decode('utf-8')
+            
+            # Store file metadata and base64 content in database
+            deliverable.uploaded_file_path = f"database_stored:{deliverable.id}"
+            deliverable.uploaded_file_name = file.filename
+            deliverable.uploaded_at = datetime.utcnow()
+            deliverable.uploaded_by = current_user.id
+            deliverable.upload_notes = upload_notes
+            deliverable.status = "submitted"
+            deliverable.updated_at = datetime.utcnow()
+            
+            # Store file data in a separate JSON field
+            file_data = {
+                "filename": file.filename,
+                "content_type": file.content_type,
+                "size": file_size,
+                "base64_content": file_content_base64,
+                "uploaded_by": current_user.id,
+                "uploaded_by_name": current_user.full_name or current_user.username,
+                "uploaded_at": datetime.utcnow().isoformat(),
+                "upload_notes": upload_notes
+            }
+            
+            deliverable.file_data = file_data
+            
+            if not deliverable.due_date:
+                deliverable.due_date = upload_date_obj
+            
+            db.commit()
+            db.refresh(deliverable)
+            print(f"⚠️ Stored file directly in database for deliverable {deliverable.id}")
         
         # Log activity
         log_activity(
@@ -645,7 +676,8 @@ async def upload_deliverable_file(
                 "filename": file.filename,
                 "upload_date": upload_date,
                 "file_size": file_size,
-                "file_type": file_ext
+                "file_type": file_ext,
+                "storage_method": "s3" if 's3' in deliverable.uploaded_file_path else "database"
             },
             request=request
         )
@@ -657,9 +689,11 @@ async def upload_deliverable_file(
             "contract_id": deliverable.contract_id,
             "deliverable_name": deliverable.deliverable_name,
             "uploaded_file_name": deliverable.uploaded_file_name,
+            "uploaded_file_url": deliverable.uploaded_file_path if deliverable.uploaded_file_path.startswith('http') else None,
             "uploaded_at": deliverable.uploaded_at.isoformat() if deliverable.uploaded_at else None,
             "status": deliverable.status,
-            "upload_notes": deliverable.upload_notes
+            "upload_notes": deliverable.upload_notes,
+            "has_file_data": deliverable.file_data is not None
         }
         
     except HTTPException:
@@ -669,7 +703,6 @@ async def upload_deliverable_file(
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to upload file: {str(e)}")
-
 
 
 # Add this endpoint to get deliverables for a contract
@@ -4080,7 +4113,7 @@ async def get_deliverable_file(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get deliverable file - accessible by all roles"""
+    """Get deliverable file from database/S3 - accessible by ALL authorized users"""
     try:
         # Get the deliverable
         deliverable = db.query(ContractDeliverable).filter(
@@ -4090,7 +4123,7 @@ async def get_deliverable_file(
         if not deliverable:
             raise HTTPException(status_code=404, detail="Deliverable not found")
         
-        # Get the contract to check permissions
+        # Get the contract
         contract = db.query(models.Contract).filter(
             models.Contract.id == deliverable.contract_id
         ).first()
@@ -4098,49 +4131,84 @@ async def get_deliverable_file(
         if not contract:
             raise HTTPException(status_code=404, detail="Contract not found")
         
-        # Check permissions based on role
+        # ✅ FIXED PERMISSION LOGIC: Allow ALL roles with proper access
         if current_user.role == "project_manager":
             # Project managers can only see their own contracts
             if contract.created_by != current_user.id:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail="You don't have permission to view this deliverable"
+                    detail="Only the contract creator can view this deliverable"
                 )
         elif current_user.role == "program_manager":
-            # Program managers can see contracts they are reviewing
-            if contract.status not in ["under_review", "reviewed", "approved", "rejected"]:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="You don't have permission to view this deliverable"
-                )
-        # Directors can see all
+            # Program managers can see ALL contracts (not just under_review)
+            # This allows them to see deliverables for all contracts they have access to
+            pass  # Program managers can view all
+        elif current_user.role == "director":
+            # Directors can see everything
+            pass  # Directors can view all
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You don't have permission to view this deliverable"
+            )
         
         # Check if file exists
-        if not deliverable.uploaded_file_path:
+        if not deliverable.uploaded_file_path and not deliverable.file_data:
             raise HTTPException(status_code=404, detail="No file uploaded for this deliverable")
         
-        # Read the file
-        try:
-            with open(deliverable.uploaded_file_path, 'rb') as f:
-                file_content = f.read()
-        except FileNotFoundError:
-            raise HTTPException(status_code=404, detail="File not found on server")
+        # Case 1: File is stored in S3
+        if deliverable.uploaded_file_path and deliverable.uploaded_file_path.startswith('http'):
+            # Redirect to S3 URL
+            return RedirectResponse(url=deliverable.uploaded_file_path)
         
-        # Determine content type based on file extension
-        import mimetypes
-        content_type = mimetypes.guess_type(deliverable.uploaded_file_path)[0] or 'application/octet-stream'
+        # Case 2: File is stored in database (base64)
+        elif deliverable.file_data and deliverable.file_data.get('base64_content'):
+            import base64
+            from io import BytesIO
+            
+            file_data = deliverable.file_data
+            file_content = base64.b64decode(file_data['base64_content'])
+            
+            # Determine content type
+            content_type = file_data.get('content_type', 'application/octet-stream')
+            
+            # Return the file
+            return Response(
+                content=file_content,
+                media_type=content_type,
+                headers={
+                    "Content-Disposition": f"inline; filename=\"{file_data.get('filename', 'file')}\"",
+                    "Cache-Control": "no-cache, no-store, must-revalidate",
+                    "Pragma": "no-cache",
+                    "Expires": "0"
+                }
+            )
         
-        # Return the file
-        return Response(
-            content=file_content,
-            media_type=content_type,
-            headers={
-                "Content-Disposition": f"inline; filename=\"{deliverable.uploaded_file_name}\"",
-                "Cache-Control": "no-cache, no-store, must-revalidate",
-                "Pragma": "no-cache",
-                "Expires": "0"
-            }
-        )
+        # Case 3: Local file system (legacy - should be migrated)
+        elif deliverable.uploaded_file_path and os.path.exists(deliverable.uploaded_file_path):
+            try:
+                with open(deliverable.uploaded_file_path, 'rb') as f:
+                    file_content = f.read()
+                
+                # Determine content type
+                import mimetypes
+                content_type = mimetypes.guess_type(deliverable.uploaded_file_path)[0] or 'application/octet-stream'
+                
+                return Response(
+                    content=file_content,
+                    media_type=content_type,
+                    headers={
+                        "Content-Disposition": f"inline; filename=\"{deliverable.uploaded_file_name}\"",
+                        "Cache-Control": "no-cache, no-store, must-revalidate",
+                        "Pragma": "no-cache",
+                        "Expires": "0"
+                    }
+                )
+            except FileNotFoundError:
+                raise HTTPException(status_code=404, detail="File not found on server")
+        
+        else:
+            raise HTTPException(status_code=404, detail="File not available")
         
     except HTTPException:
         raise
@@ -4148,6 +4216,71 @@ async def get_deliverable_file(
         print(f"Error serving deliverable file: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to serve file: {str(e)}")
 
+
+# In s3_service.py or main.py
+def upload_file_from_bytes(self, file_content: bytes, file_name: str, content_type: str = None):
+    """Upload file from bytes to S3"""
+    try:
+        if not self.s3_client:
+            raise Exception("S3 client not initialized")
+        
+        self.s3_client.put_object(
+            Bucket=settings.S3_BUCKET_NAME,
+            Key=file_name,
+            Body=file_content,
+            ContentType=content_type or 'application/octet-stream',
+            ACL='private'
+        )
+        
+        return True
+    except Exception as e:
+        print(f"Failed to upload file to S3: {e}")
+        raise
+
+def get_file_url(self, file_key: str, expires_in: int = 3600):
+    """Generate pre-signed URL for S3 file"""
+    try:
+        if not self.s3_client:
+            return None
+        
+        url = self.s3_client.generate_presigned_url(
+            'get_object',
+            Params={
+                'Bucket': settings.S3_BUCKET_NAME,
+                'Key': file_key
+            },
+            ExpiresIn=expires_in
+        )
+        
+        return url
+    except Exception as e:
+        print(f"Failed to generate S3 URL: {e}")
+        return None
+
+
+@app.get("/api/debug/deliverables/{contract_id}")
+async def debug_contract_deliverables(
+    contract_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Debug endpoint to check deliverables for a contract"""
+    deliverables = db.query(ContractDeliverable).filter(
+        ContractDeliverable.contract_id == contract_id
+    ).all()
+    
+    return {
+        "contract_id": contract_id,
+        "deliverables_count": len(deliverables),
+        "deliverables": [{
+            "id": d.id,
+            "deliverable_name": d.deliverable_name,
+            "uploaded_file_name": d.uploaded_file_name,
+            "uploaded_at": d.uploaded_at.isoformat() if d.uploaded_at else None,
+            "status": d.status,
+            "contract_id": d.contract_id
+        } for d in deliverables]
+    }
 
 if __name__ == "__main__":
     import uvicorn

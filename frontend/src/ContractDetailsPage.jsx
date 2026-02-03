@@ -210,74 +210,130 @@ function ContractDetailsPage({ user = null }) {
     }
   }, [contractData, user]);
 
-  const loadUploadedFiles = async () => {
-    if (!contractData?.contract_id) return;
+const loadUploadedFiles = async () => {
+  if (!contractData?.contract_id) {
+    console.log('No contract ID available yet');
+    return;
+  }
+  
+  try {
+    console.log('Loading uploaded files for contract:', contractData.contract_id);
+    const token = localStorage.getItem('token');
     
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_CONFIG.BASE_URL}/api/deliverables/contract/${contractData.contract_id}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+    // Get deliverables from the database
+    const response = await fetch(`${API_CONFIG.BASE_URL}/api/deliverables/contract/${contractData.contract_id}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (response.ok) {
+      const deliverables = await response.json();
+      console.log('Loaded deliverables from database:', deliverables.length, 'items');
+      
+      // Create a mapping of deliverable data
+      const uploadsMap = {};
+      
+      deliverables.forEach(deliverable => {
+        console.log('Processing deliverable from database:', deliverable);
+        
+        // Find the index in the original deliverables array
+        const compData = contractData.comprehensive_data || {};
+        const origDeliverables = compData.deliverables?.items || [];
+        
+        // Try to find by name
+        let index = -1;
+        if (deliverable.deliverable_name) {
+          index = origDeliverables.findIndex(d => 
+            d && d.deliverable_name === deliverable.deliverable_name
+          );
+        }
+        
+        // If not found by name, try to match by position
+        if (index === -1) {
+          // Simple index based on order in database
+          index = deliverables.indexOf(deliverable);
+        }
+        
+        if (deliverable.uploaded_at || deliverable.status === 'submitted' || deliverable.uploaded_file_name) {
+          console.log('Found uploaded deliverable at index:', index, deliverable);
+          uploadsMap[index] = {
+            deliverableId: deliverable.id,
+            deliverableName: deliverable.deliverable_name || `Deliverable ${index + 1}`,
+            uploadDate: deliverable.uploaded_at ? deliverable.uploaded_at.split('T')[0] : new Date().toISOString().split('T')[0],
+            uploadTimestamp: deliverable.uploaded_at || new Date().toISOString(),
+            fileName: deliverable.uploaded_file_name || 'Uploaded file',
+            status: deliverable.status || 'submitted',
+            fileId: deliverable.id,
+            hasFile: true,
+            fileUrl: deliverable.uploaded_file_path,
+            description: deliverable.description || '',
+            uploadedBy: deliverable.uploaded_by
+          };
         }
       });
-
-      if (response.ok) {
-        const deliverables = await response.json();
-        console.log('Loaded deliverables:', deliverables);
-        
-        // Create a mapping of deliverable data
-        const uploadsMap = {};
-        deliverables.forEach(deliverable => {
-          if (deliverable.uploaded_at) {
-            // Find the index in the original deliverables array
-            const compData = contractData.comprehensive_data || {};
-            const origDeliverables = compData.deliverables?.items || [];
-            const index = origDeliverables.findIndex(d => 
-              d.deliverable_name === deliverable.deliverable_name
-            );
-            
-            if (index !== -1) {
-              uploadsMap[index] = {
-                deliverableId: deliverable.id,
-                deliverableName: deliverable.deliverable_name,
-                uploadDate: deliverable.uploaded_at.split('T')[0],
-                uploadTimestamp: deliverable.uploaded_at,
-                fileName: deliverable.uploaded_file_name,
-                status: deliverable.status,
-                fileId: deliverable.id
-              };
-            } else {
-              // If not found in original array, add to the end
-              const newIndex = Object.keys(uploadsMap).length;
-              uploadsMap[newIndex] = {
-                deliverableId: deliverable.id,
-                deliverableName: deliverable.deliverable_name,
-                uploadDate: deliverable.uploaded_at.split('T')[0],
-                uploadTimestamp: deliverable.uploaded_at,
-                fileName: deliverable.uploaded_file_name,
-                status: deliverable.status,
-                fileId: deliverable.id
-              };
-            }
-          }
-        });
-        
-        setUploadedFiles(uploadsMap);
-      }
-    } catch (error) {
-      console.error('Error loading uploaded files:', error);
+      
+      console.log('Final uploads map from database:', uploadsMap);
+      setUploadedFiles(uploadsMap);
+      
+      // Save to localStorage for quick access
+      localStorage.setItem(`contract_${contractData.contract_id}_deliverable_uploads`, JSON.stringify(uploadsMap));
+      
+    } else {
+      console.error('Failed to load deliverables from database:', response.status);
       // Fallback to localStorage
-      const savedUploads = localStorage.getItem(`contract_${id}_deliverable_uploads`);
+      const savedUploads = localStorage.getItem(`contract_${contractData.contract_id}_deliverable_uploads`);
       if (savedUploads) {
         try {
-          setUploadedFiles(JSON.parse(savedUploads));
+          const parsedUploads = JSON.parse(savedUploads);
+          console.log('Using fallback from localStorage:', parsedUploads);
+          setUploadedFiles(parsedUploads);
         } catch (e) {
           console.error('Error loading saved uploads:', e);
+          setUploadedFiles({});
         }
+      } else {
+        setUploadedFiles({});
       }
     }
-  };
+  } catch (error) {
+    console.error('Error loading uploaded files:', error);
+    // Fallback to localStorage
+    const savedUploads = localStorage.getItem(`contract_${id}_deliverable_uploads`);
+    if (savedUploads) {
+      try {
+        const parsedUploads = JSON.parse(savedUploads);
+        console.log('Error fallback from localStorage:', parsedUploads);
+        setUploadedFiles(parsedUploads);
+      } catch (e) {
+        console.error('Error loading saved uploads from error fallback:', e);
+        setUploadedFiles({});
+      }
+    } else {
+      setUploadedFiles({});
+    }
+  }
+};
+
+const refreshUploadedFiles = async () => {
+  console.log('Manually refreshing uploaded files...');
+  await loadUploadedFiles();
+};
+
+// And update the useEffect to also load uploaded files for ALL users, not just project managers:
+useEffect(() => {
+  if (contractData) {
+    console.log('Contract data loaded, fetching deliverables for all users');
+    // Load uploaded files for ALL users (Project Manager, Program Manager, Director)
+    loadUploadedFiles();
+    
+    // Only load comments for project managers
+    if (user?.role === "project_manager") {
+      fetchReviewComments();
+    }
+  }
+}, [contractData, id, user?.role]);
 
   // Function to save uploaded files
   const saveUploadedFiles = (files) => {
@@ -590,118 +646,124 @@ function ContractDetailsPage({ user = null }) {
     }
   };
 
-  const handleFileUpload = async () => {
-    if (!selectedDeliverable || !uploadDate) {
-      alert('Please select a date');
-      return;
-    }
+const handleFileUpload = async () => {
+  if (!selectedDeliverable || !uploadDate) {
+    alert('Please select a date');
+    return;
+  }
 
-    const fileInput = document.getElementById('file-input-real');
-    if (!fileInput.files || fileInput.files.length === 0) {
-      alert('Please select a file');
-      return;
-    }
+  const fileInput = document.getElementById('file-input-real');
+  if (!fileInput.files || fileInput.files.length === 0) {
+    alert('Please select a file');
+    return;
+  }
 
-    const file = fileInput.files[0];
-    const fileSizeMB = file.size / 1024 / 1024;
+  const file = fileInput.files[0];
+  const fileSizeMB = file.size / 1024 / 1024;
+  
+  if (fileSizeMB > 10) {
+    alert("File size exceeds 10MB limit. Please choose a smaller file.");
+    return;
+  }
+
+  setUploading(true);
+  try {
+    const token = localStorage.getItem('token');
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_date', uploadDate);
+    formData.append('deliverable_name', selectedDeliverable.deliverable_name || `Deliverable ${selectedDeliverable.index + 1}`);
     
-    if (fileSizeMB > 10) {
-      alert("File size exceeds 10MB limit. Please choose a smaller file.");
-      return;
+    if (selectedDeliverable.description) {
+      formData.append('upload_notes', `Deliverable: ${selectedDeliverable.deliverable_name}. ${selectedDeliverable.description}`);
+    } else {
+      formData.append('upload_notes', `Uploaded for deliverable: ${selectedDeliverable.deliverable_name}`);
     }
 
-    setUploading(true);
-    try {
-      const token = localStorage.getItem('token');
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('upload_date', uploadDate);
-      formData.append('deliverable_name', selectedDeliverable.deliverable_name || `Deliverable ${selectedDeliverable.index + 1}`);
-      
-      if (selectedDeliverable.description) {
-        formData.append('upload_notes', `Deliverable: ${selectedDeliverable.deliverable_name}. ${selectedDeliverable.description}`);
-      } else {
-        formData.append('upload_notes', `Uploaded for deliverable: ${selectedDeliverable.deliverable_name}`);
-      }
+    console.log('Uploading file to database/S3:', file.name);
+    
+    // Use the deliverable ID if available, otherwise use index
+    const deliverableId = selectedDeliverable.deliverableId || (selectedDeliverable.index + 1);
+    
+    // Add contract_id as query parameter
+    const url = `${API_CONFIG.BASE_URL}/api/deliverables/${deliverableId}/upload?contract_id=${contractData.contract_id}`;
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData
+    });
 
-      console.log('Uploading file:', file.name, 'Size:', fileSizeMB.toFixed(2), 'MB');
-      console.log('Selected deliverable:', selectedDeliverable);
-      console.log('Contract ID:', contractData.contract_id);
+    if (response.ok) {
+      const result = await response.json();
       
-      // Use the index + 1 as a temporary ID
-      const deliverableIndex = selectedDeliverable.index + 1;
+      console.log('Upload successful:', result);
       
-      // Add contract_id as query parameter
-      const url = `${API_CONFIG.BASE_URL}/api/deliverables/${deliverableIndex}/upload?contract_id=${contractData.contract_id}`;
+      // Update local state with database ID
+      const newUpload = {
+        deliverableId: result.id,
+        deliverableName: result.deliverable_name || selectedDeliverable.deliverable_name,
+        uploadDate: uploadDate,
+        uploadTimestamp: result.uploaded_at || new Date().toISOString(),
+        fileName: result.uploaded_file_name || file.name,
+        status: result.status || 'submitted',
+        fileId: result.id,
+        hasFile: true,
+        fileUrl: result.uploaded_file_url // S3 URL if available
+      };
       
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-        body: formData
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        
-        console.log('Upload successful:', result);
-        
-        // Update local state
-        const newUpload = {
-          deliverableId: result.id,
-          deliverableName: result.deliverable_name,
-          uploadDate: uploadDate,
-          uploadTimestamp: result.uploaded_at,
-          fileName: result.uploaded_file_name,
-          status: result.status,
-          fileId: result.id
-        };
-        
-        const updatedUploads = {
-          ...uploadedFiles,
-          [selectedDeliverable.index]: newUpload
-        };
-        
-        saveUploadedFiles(updatedUploads);
-        
-        alert(`✅ File "${result.uploaded_file_name}" uploaded successfully!`);
-        setShowUploadModal(false);
-        setSelectedDeliverable(null);
-        setUploadDate('');
-        fileInput.value = ''; // Clear file input
-        
-        // Hide selected file info
-        const fileInfo = document.getElementById('selected-file-info');
-        if (fileInfo) fileInfo.style.display = 'none';
-        
-        // Refresh deliverables data
-        loadUploadedFiles();
-        
-      } else {
-        const errorText = await response.text();
-        console.error('Upload failed:', response.status, errorText);
-        let errorMessage = 'Upload failed';
-        try {
-          const errorData = JSON.parse(errorText);
-          errorMessage = errorData.detail || errorMessage;
-        } catch (e) {
-          errorMessage = errorText || errorMessage;
-        }
-        throw new Error(errorMessage);
+      const updatedUploads = {
+        ...uploadedFiles,
+        [selectedDeliverable.index]: newUpload
+      };
+      
+      // Update state immediately
+      setUploadedFiles(updatedUploads);
+      
+      // Save to localStorage
+      localStorage.setItem(`contract_${contractData.contract_id}_deliverable_uploads`, JSON.stringify(updatedUploads));
+      
+      alert(`✅ File "${result.uploaded_file_name || file.name}" uploaded successfully to database!`);
+      
+      // Close modal and reset
+      setShowUploadModal(false);
+      setSelectedDeliverable(null);
+      setUploadDate('');
+      fileInput.value = '';
+      
+      // Hide selected file info
+      const fileInfo = document.getElementById('selected-file-info');
+      if (fileInfo) fileInfo.style.display = 'none';
+      
+      // Refresh deliverables data
+      await loadUploadedFiles();
+      
+    } else {
+      const errorText = await response.text();
+      console.error('Upload failed:', response.status, errorText);
+      let errorMessage = 'Upload failed';
+      try {
+        const errorData = JSON.parse(errorText);
+        errorMessage = errorData.detail || errorMessage;
+      } catch (e) {
+        errorMessage = errorText || errorMessage;
       }
-    } catch (error) {
-      console.error('Error uploading file:', error);
-      alert(`❌ Failed to upload file: ${error.message}`);
-    } finally {
-      setUploading(false);
+      throw new Error(errorMessage);
     }
-  };
+  } catch (error) {
+    console.error('Error uploading file:', error);
+    alert(`❌ Failed to upload file: ${error.message}`);
+  } finally {
+    setUploading(false);
+  }
+};
 
   // Function to check if a deliverable has been uploaded
-  const hasDeliverableBeenUploaded = (index) => {
-    return uploadedFiles[index] !== undefined;
-  };
+const hasDeliverableBeenUploaded = (index) => {
+  return uploadedFiles[index] !== undefined;
+};
 
   const formatCurrency = (amount) => {
     if (!amount && amount !== 0) return '-';
@@ -1364,53 +1426,55 @@ function ContractDetailsPage({ user = null }) {
                           </tr>
                         </thead>
                         <tbody>
-                          {deliverables.items.map((del, idx) => {
-                            const hasUploaded = hasDeliverableBeenUploaded(idx);
-                            
-                            return (
-                              <tr key={idx}>
-                                <td className="deliverable-name">
-                                  <Target size={14} />
-                                  {del.deliverable_name || `Deliverable ${idx + 1}`}
-                                  {hasUploaded && (
-                                    <span className="uploaded-badge" title="File uploaded">
-                                      ✓
-                                    </span>
-                                  )}
-                                </td>
-                                <td>{del.description || 'Not specified'}</td>
-                                <td>{del.due_date ? formatDate(del.due_date) : 'Not specified'}</td>
-                                <td>
-                                  <span className={`status-badge ${del.status?.toLowerCase() || 'pending'}`}>
-                                    {hasUploaded ? 'Submitted' : (del.status || 'Pending')}
-                                  </span>
-                                </td>
-                                {user?.role === "project_manager" && (
-                                  <td className="actions-cell">
-                                    <button
-                                      className="upload-btn"
-                                      onClick={() => handleDeliverableUploadClick(del, idx)}
-                                      title="Upload file for this deliverable"
-                                    >
-                                      <FileUp size={12} />
-                                      <span>Upload</span>
-                                    </button>
-                                    
-                                    {hasUploaded && (
-                                      <button
-                                        className="view-btn"
-                                        onClick={() => handleViewDeliverableFile(idx)}
-                                        title="View uploaded file"
-                                      >
-                                        <Eye size={12} />
-                                        <span>View</span>
-                                      </button>
-                                    )}
-                                  </td>
-                                )}
-                              </tr>
-                            );
-                          })}
+                   {deliverables.items.map((del, idx) => {
+  const hasUploaded = hasDeliverableBeenUploaded(idx);
+  
+  return (
+    <tr key={idx}>
+      <td className="deliverable-name">
+        <Target size={14} />
+        {del.deliverable_name || `Deliverable ${idx + 1}`}
+        {hasUploaded && (
+          <span className="uploaded-badge" title="File uploaded">
+            ✓
+          </span>
+        )}
+      </td>
+      <td>{del.description || 'Not specified'}</td>
+      <td>{del.due_date ? formatDate(del.due_date) : 'Not specified'}</td>
+      <td>
+        <span className={`status-badge ${hasUploaded ? 'submitted' : (del.status?.toLowerCase() || 'pending')}`}>
+          {hasUploaded ? 'Submitted' : (del.status || 'Pending')}
+        </span>
+      </td>
+      {/* ✅ SHOW VIEW BUTTON FOR ALL USERS WHEN FILE IS UPLOADED */}
+      <td className="actions-cell">
+        {hasUploaded ? (
+          <button
+            className="view-btn"
+            onClick={() => handleViewDeliverableFile(idx)}
+            title="View uploaded file"
+          >
+            <Eye size={12} />
+            <span>View</span>
+          </button>
+        ) : (
+          // Only show upload button for Project Manager
+          user?.role === "project_manager" && (
+            <button
+              className="upload-btn"
+              onClick={() => handleDeliverableUploadClick(del, idx)}
+              title="Upload file for this deliverable"
+            >
+              <FileUp size={12} />
+              <span>Upload</span>
+            </button>
+          )
+        )}
+      </td>
+    </tr>
+  );
+})}
                         </tbody>
                       </table>
                     </div>
