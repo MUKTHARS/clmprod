@@ -1,14 +1,14 @@
-# C:\saple.ai\POC\backend\app\ai_extractor.py
-# COMPLETE FIXED VERSION - ENHANCED DELIVERABLES EXTRACTION
-
 import openai
 import json
 import re
-from typing import Dict, Any, List
+import hashlib
+from typing import Dict, Any, List, Optional
 from app.config import settings
 import os
 from datetime import datetime
 import sys
+import pickle
+from pathlib import Path
 
 class AIExtractor:
     def __init__(self):
@@ -19,6 +19,10 @@ class AIExtractor:
         # Initialize client
         self.client = self._create_openai_client()
         
+        # Cache directory for deterministic extraction
+        self.cache_dir = Path("./.extraction_cache")
+        self.cache_dir.mkdir(exist_ok=True)
+        
         # Define the comprehensive but optimized prompt with STRONG EMPHASIS on deliverables
         self.extraction_prompt = """ANALYZE THIS GRANT CONTRACT AND EXTRACT ALL INFORMATION.
 
@@ -27,7 +31,7 @@ CRITICAL PRIORITY: EXTRACT ALL DELIVERABLES & REPORTING REQUIREMENTS
 MOST IMPORTANT FIELDS (EXTRACT THESE FIRST):
 1. CONTRACT TITLE/NAME - Look at beginning of document, headers, logo area
 2. GRANTOR & GRANTEE - Look for "BETWEEN [Grantor] AND [Grantee]"
-3. CONTRACT/GREFERENCE NUMBER - Any alphanumeric ID
+3. CONTRACT/GRANT REFERENCE NUMBER - Any alphanumeric ID
 4. TOTAL GRANT AMOUNT - Look for dollar amounts, "total grant", "amount"
 5. START AND END DATES - Look for "effective date", "commencement", "term"
 6. DELIVERABLES - Extract EVERY deliverable, milestone, task, output
@@ -102,7 +106,6 @@ Return ONLY valid JSON matching this exact structure:
 Contract text (first 12000 characters):
 {text}"""
     
-
     def _clean_environment(self):
         """Clean proxy environment variables"""
         proxy_vars = ['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy']
@@ -221,7 +224,7 @@ Contract text (first 12000 characters):
         }, indent=2)
     
     def extract_contract_data(self, text: str) -> Dict[str, Any]:
-        """Extract comprehensive structured data from contract text"""
+        """Extract comprehensive structured data from contract text with deterministic caching"""
         try:
             # Check API key
             if not self.api_key or self.api_key == "your-openai-api-key-here":
@@ -235,7 +238,25 @@ Contract text (first 12000 characters):
             # Pre-process text
             processed_text = self._preprocess_text(text)
             
-            # Use GPT-4o with enhanced focus on deliverables
+            # Create a deterministic hash of the text for caching
+            text_hash = self._create_text_hash(processed_text[:12000])
+            cache_file = self.cache_dir / f"{text_hash}.pkl"
+            
+            # Check if we have a cached extraction for this exact text
+            if cache_file.exists():
+                print(f"📦 Loading cached extraction for text hash: {text_hash[:8]}...")
+                try:
+                    with open(cache_file, 'rb') as f:
+                        cached_result = pickle.load(f)
+                    # Add fresh timestamp
+                    cached_result["metadata"]["extraction_timestamp"] = datetime.now().isoformat()
+                    return cached_result
+                except Exception as e:
+                    print(f"⚠️ Cache load failed: {e}")
+            
+            print(f"🔍 No cache found, extracting from text hash: {text_hash[:8]}...")
+            
+            # Use GPT-4o with enhanced focus on deliverables - WITH DETERMINISTIC SETTINGS
             response = self.client.chat.completions.create(
                 model="gpt-4o",
                 messages=[
@@ -259,7 +280,7 @@ Contract text (first 12000 characters):
                         )
                     }
                 ],
-                temperature=0.1,
+                temperature=0.1,  # Very low temperature for consistency
                 response_format={"type": "json_object"},
                 max_tokens=3000  # Increased for better deliverables extraction
             )
@@ -271,24 +292,32 @@ Contract text (first 12000 characters):
             result["metadata"]["extraction_timestamp"] = datetime.now().isoformat()
             
             # Add reference IDs
-            result["reference_ids"] = self.extract_reference_ids(text, result.get("contract_details", {}))
+            result["reference_ids"] = self.extract_reference_ids(processed_text, result.get("contract_details", {}))
             
             # Add detailed scope extraction
             if "contract_details" in result:
                 if "scope_of_work" not in result["contract_details"] or not result["contract_details"]["scope_of_work"]:
-                    result["contract_details"]["scope_of_work"] = self._extract_scope_from_text(text)
+                    result["contract_details"]["scope_of_work"] = self._extract_scope_from_text(processed_text)
                 
                 # Add detailed scope structure
-                result["contract_details"]["detailed_scope_of_work"] = self._extract_detailed_scope(text)
+                result["contract_details"]["detailed_scope_of_work"] = self._extract_detailed_scope(processed_text)
             
             # ENHANCED: Post-process with special focus on deliverables
-            result = self._validate_and_enhance_deliverables(result, text)
+            result = self._validate_and_enhance_deliverables(result, processed_text)
             
             # Add summary section
             result["summary"] = self._generate_summary(result)
             
             # Add extended data section
-            result["extended_data"] = self._extract_extended_data(text, result)
+            result["extended_data"] = self._extract_extended_data(processed_text, result)
+            
+            # Cache the result for future identical extractions
+            try:
+                with open(cache_file, 'wb') as f:
+                    pickle.dump(result, f)
+                print(f"💾 Cached extraction for future use: {text_hash[:8]}")
+            except Exception as e:
+                print(f"⚠️ Cache save failed: {e}")
             
             return result
             
@@ -303,7 +332,7 @@ Contract text (first 12000 characters):
                     fixed_json = re.sub(r',\s*}', '}', fixed_json)
                     fixed_json = re.sub(r',\s*]', ']', fixed_json)
                     result = json.loads(fixed_json)
-                    return self._validate_and_enhance_deliverables(result, text)
+                    return self._validate_and_enhance_deliverables(result, processed_text)
             except:
                 pass
             return self._get_empty_result()
@@ -313,8 +342,15 @@ Contract text (first 12000 characters):
             traceback.print_exc()
             return self._get_empty_result()
     
+    def _create_text_hash(self, text: str) -> str:
+        """Create deterministic hash of text for caching"""
+        # Normalize text for consistent hashing
+        normalized_text = text.strip().lower()
+        normalized_text = re.sub(r'\s+', ' ', normalized_text)  # Normalize whitespace
+        return hashlib.md5(normalized_text.encode('utf-8')).hexdigest()
+    
     def _validate_and_enhance_deliverables(self, data: Dict[str, Any], original_text: str) -> Dict[str, Any]:
-        """Special validation with enhanced deliverables extraction"""
+        """Special validation with enhanced deliverables extraction - FIXED DETERMINISTIC VERSION"""
         # First, run the standard validation
         data = self._validate_and_enhance_data(data, original_text)
         
@@ -334,7 +370,7 @@ Contract text (first 12000 characters):
             extracted_deliverables = self._extract_deliverables_from_text(original_text)
             deliverables["items"] = extracted_deliverables
         
-        # Validate each deliverable
+        # Validate and normalize each deliverable - CRITICAL: Sort them for consistency
         for item in deliverables["items"]:
             # Ensure required fields
             if "deliverable_name" not in item or not item["deliverable_name"]:
@@ -347,6 +383,15 @@ Contract text (first 12000 characters):
             if "status" not in item:
                 item["status"] = "pending"
         
+        # Sort deliverables by due date, then name for consistency
+        deliverables["items"] = sorted(
+            deliverables["items"],
+            key=lambda x: (
+                x.get("due_date", "9999-12-31"),
+                x.get("deliverable_name", "").lower()
+            )
+        )
+        
         # Ensure reporting_requirements section exists and is populated
         if "reporting_requirements" not in deliverables:
             deliverables["reporting_requirements"] = {}
@@ -357,10 +402,10 @@ Contract text (first 12000 characters):
         required_fields = {
             "frequency": self._extract_reporting_frequency(original_text),
             "report_types": self._extract_report_types(original_text),
-            "due_dates": self._extract_reporting_due_dates(original_text),
+            "due_dates": sorted(self._extract_reporting_due_dates(original_text)),  # Sort for consistency
             "format_requirements": self._extract_reporting_format(original_text),
             "submission_method": self._extract_submission_method(original_text),
-            "recipients": self._extract_report_recipients(original_text)
+            "recipients": sorted(self._extract_report_recipients(original_text))  # Sort for consistency
         }
         
         # Update with extracted values if current ones are empty
@@ -368,10 +413,16 @@ Contract text (first 12000 characters):
             if field not in reporting or not reporting[field] or (isinstance(reporting[field], list) and len(reporting[field]) == 0):
                 reporting[field] = extracted_value
         
+        # Sort arrays for consistency
+        if isinstance(reporting.get("report_types"), list):
+            reporting["report_types"] = sorted(reporting["report_types"])
+        if isinstance(reporting.get("recipients"), list):
+            reporting["recipients"] = sorted(reporting["recipients"])
+        
         return data
 
     def _validate_and_enhance_data(self, data: Dict[str, Any], original_text: str) -> Dict[str, Any]:
-        """Validate and enhance extracted data"""
+        """Validate and enhance extracted data - FIXED FOR CONSISTENCY"""
         # Ensure all sections exist
         required_sections = [
             "metadata", "parties", "contract_details", "financial_details",
@@ -387,7 +438,7 @@ Contract text (first 12000 characters):
             contract_details = data["contract_details"]
             
             if not contract_details.get("grant_name"):
-                # Try to extract from text
+                # Try to extract from text - use FIRST match only for consistency
                 name_patterns = [
                     r'AGREEMENT\s+(?:FOR|RELATING TO)\s+(.+?)(?:\n|;)',
                     r'GRANT\s+AGREEMENT\s+(?:FOR|BETWEEN)\s+(.+?)(?:\n|;)',
@@ -408,7 +459,7 @@ Contract text (first 12000 characters):
             if not contract_details.get("scope_of_work"):
                 contract_details["scope_of_work"] = self._extract_scope_from_text(original_text)
         
-        # Fix financial amounts
+        # Fix financial amounts - ALWAYS use the same method
         if "financial_details" in data:
             financial = data["financial_details"]
             
@@ -420,7 +471,7 @@ Contract text (first 12000 characters):
                     "milestones": []
                 }
             
-            # Try to extract payment info from text if missing
+            # Try to extract payment info from text if missing - use FIRST match
             if not financial.get("total_grant_amount"):
                 amount_patterns = [
                     r'\$?\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)',
@@ -438,105 +489,157 @@ Contract text (first 12000 characters):
                             break
                         except:
                             pass
+            
+            # Sort installments and milestones for consistency
+            payment_schedule = financial.get("payment_schedule", {})
+            if isinstance(payment_schedule.get("installments"), list):
+                payment_schedule["installments"] = sorted(
+                    payment_schedule["installments"],
+                    key=lambda x: (
+                        x.get("installment_number", 999),
+                        x.get("due_date", "9999-12-31")
+                    )
+                )
+            
+            if isinstance(payment_schedule.get("milestones"), list):
+                payment_schedule["milestones"] = sorted(
+                    payment_schedule["milestones"],
+                    key=lambda x: (
+                        x.get("due_date", "9999-12-31"),
+                        x.get("milestone_name", "").lower()
+                    )
+                )
 
         return data
 
-    # NEW METHODS FOR ENHANCED DELIVERABLES EXTRACTION
+    # UPDATED METHODS FOR CONSISTENT DELIVERABLES EXTRACTION
     def _extract_deliverables_from_text(self, text: str) -> List[Dict[str, str]]:
-        """Extract deliverables from contract text using multiple methods"""
+        """Extract deliverables from contract text using multiple methods - FIXED FOR CONSISTENCY"""
         deliverables = []
         
-        print("DEBUG: Starting deliverables extraction from text...")
+        print("DEBUG: Starting CONSISTENT deliverables extraction from text...")
         
         # Method 1: Look for explicit deliverables sections
         deliverable_patterns = [
             r'(?:Deliverable|Output|Milestone|Task|Work Package)\s*(?:#|No\.?|Number)?\s*\d+[:\-\s]+(.+?)(?=\n|Deliverable|Output|Milestone|Task|$|\.)',
             r'(?:shall deliver|will provide|to deliver|to provide)[:\s]+(.+?)(?=\n|\.)',
             r'(?:deliverable|output|milestone)[:\s]+(.+?)(?=\n|\.)',
-            r'[0-9]+\.\s*(.+?)(?=\n|$)',
-            r'[\-\*•]\s*(.+?)(?=\n|$)'
         ]
         
+        # Process patterns in a fixed order for consistency
         for pattern in deliverable_patterns:
             matches = re.findall(pattern, text, re.IGNORECASE | re.MULTILINE)
+            # Sort matches for consistency
+            matches = sorted(matches, key=lambda x: x.lower() if isinstance(x, str) else "")
             for match in matches:
                 if isinstance(match, str) and len(match.strip()) > 10:
                     deliverable_name = match.strip()
-                    # Clean up the name
+                    # Clean up the name - CONSISTENT cleaning
                     deliverable_name = re.sub(r'^(Deliverable|Output|Milestone|Task)\s*\d+\s*[:\-\s]*', '', deliverable_name, flags=re.IGNORECASE)
                     deliverable_name = deliverable_name.strip()
                     
                     if deliverable_name and len(deliverable_name) > 5:
-                        deliverables.append({
-                            "deliverable_name": deliverable_name[:100],
-                            "description": self._extract_deliverable_description(text, deliverable_name),
-                            "due_date": self._extract_deliverable_due_date(text, deliverable_name),
-                            "status": "pending"
-                        })
-                        print(f"DEBUG: Found deliverable: {deliverable_name[:50]}...")
+                        # Check if we already have this deliverable (case-insensitive)
+                        existing_names = [d["deliverable_name"].lower() for d in deliverables]
+                        if deliverable_name.lower() not in existing_names:
+                            deliverables.append({
+                                "deliverable_name": deliverable_name[:100],
+                                "description": self._extract_deliverable_description(text, deliverable_name),
+                                "due_date": self._extract_deliverable_due_date(text, deliverable_name),
+                                "status": "pending"
+                            })
         
-        # Method 2: Extract from scope/objectives if no explicit deliverables found
+        # Method 2: Extract numbered/bulleted items for consistency
         if len(deliverables) < 2:
-            print("DEBUG: Not enough deliverables found, extracting from scope/objectives...")
+            # Extract numbered items (1., 2., etc.)
+            numbered_pattern = r'^\s*(\d+)\.\s+(.+?)(?=\n|$)'
+            numbered_matches = re.findall(numbered_pattern, text, re.MULTILINE)
+            
+            for number, content in numbered_matches[:5]:  # Take up to 5
+                if len(content.strip()) > 10:
+                    deliverables.append({
+                        "deliverable_name": f"Deliverable {number}: {content.strip()[:80]}",
+                        "description": f"Complete item {number} as specified in contract",
+                        "due_date": self._extract_next_date(text, 90),
+                        "status": "pending"
+                    })
+        
+        # Method 3: Extract from scope/objectives if still not enough
+        if len(deliverables) < 2:
+            print("DEBUG: Extracting from objectives for consistency...")
             
             # Extract objectives from text
             objectives = re.findall(r'(?:Objective|Goal|Aim)\s*\d*[:\-\s]+(.+?)(?=\n|Objective|Goal|Aim|\.)', text, re.IGNORECASE)
+            objectives = sorted(objectives, key=lambda x: x.lower())  # Sort for consistency
             
-            for i, objective in enumerate(objectives[:5]):  # Take up to 5 objectives
+            for i, objective in enumerate(objectives[:3]):  # Take up to 3 objectives
                 if len(objective.strip()) > 15:
                     deliverables.append({
                         "deliverable_name": f"Deliverable {i+1}: {objective.strip()[:80]}",
                         "description": f"Complete {objective.strip()} as specified in contract objectives",
-                        "due_date": self._extract_deliverable_due_date(text, objective),
+                        "due_date": self._extract_next_date(text, 90),
                         "status": "pending"
                     })
         
-        # Method 3: Create generic deliverables if still none found
+        # Method 4: Create standard generic deliverables if still none found
         if len(deliverables) == 0:
-            print("DEBUG: Creating generic deliverables...")
+            print("DEBUG: Creating STANDARD generic deliverables...")
+            # Always create the SAME generic deliverables for consistency
             deliverables = [
                 {
                     "deliverable_name": "Project Inception Report",
                     "description": "Initial project setup and planning documentation",
-                    "due_date": self._extract_next_date(text, 30),  # 30 days from now
+                    "due_date": self._extract_next_date(text, 30),
                     "status": "pending"
                 },
                 {
                     "deliverable_name": "Final Project Report",
                     "description": "Comprehensive final report summarizing project outcomes",
-                    "due_date": self._extract_next_date(text, 180),  # 180 days from now
+                    "due_date": self._extract_next_date(text, 180),
                     "status": "pending"
                 }
             ]
         
-        print(f"DEBUG: Total deliverables extracted: {len(deliverables)}")
-        return deliverables[:10]  # Limit to 10 deliverables
+        # Sort deliverables for consistency
+        deliverables = sorted(
+            deliverables,
+            key=lambda x: (
+                x.get("deliverable_name", "").lower(),
+                x.get("due_date", "9999-12-31")
+            )
+        )[:10]  # Limit to 10 deliverables
+        
+        print(f"DEBUG: Extracted {len(deliverables)} CONSISTENT deliverables")
+        return deliverables
 
+    # REST OF THE METHODS REMAIN THE SAME (except for consistency fixes)
     def _extract_deliverable_description(self, text: str, deliverable_name: str) -> str:
-        """Extract description for a deliverable"""
+        """Extract description for a deliverable - CONSISTENT"""
         # Look for description near the deliverable name
         name_escaped = re.escape(deliverable_name[:50])  # Use first 50 chars
         pattern = f'{name_escaped}[^.]*\.'
-        match = re.search(pattern, text, re.IGNORECASE)
-        if match:
-            return match.group(0).strip()
+        matches = re.findall(pattern, text, re.IGNORECASE)
+        if matches:
+            # Use FIRST match for consistency
+            return matches[0].strip()
         
-        # If no description found, create one based on deliverable type
-        if 'report' in deliverable_name.lower():
+        # If no description found, create consistent ones based on deliverable type
+        deliverable_lower = deliverable_name.lower()
+        if 'report' in deliverable_lower:
             return "Detailed report as specified in contract requirements"
-        elif 'plan' in deliverable_name.lower():
+        elif 'plan' in deliverable_lower:
             return "Comprehensive planning document"
-        elif 'analysis' in deliverable_name.lower() or 'study' in deliverable_name.lower():
+        elif 'analysis' in deliverable_lower or 'study' in deliverable_lower:
             return "Analytical document with findings and recommendations"
-        elif 'training' in deliverable_name.lower() or 'workshop' in deliverable_name.lower():
+        elif 'training' in deliverable_lower or 'workshop' in deliverable_lower:
             return "Training/workshop session with materials"
-        elif 'software' in deliverable_name.lower() or 'tool' in deliverable_name.lower():
+        elif 'software' in deliverable_lower or 'tool' in deliverable_lower:
             return "Software/tool development and documentation"
         
         return "Deliverable as specified in contract scope of work"
 
     def _extract_deliverable_due_date(self, text: str, deliverable_name: str) -> str:
-        """Extract due date for a deliverable"""
+        """Extract due date for a deliverable - CONSISTENT"""
         # Look for dates near the deliverable
         date_patterns = [
             r'\d{4}-\d{2}-\d{2}',
@@ -553,9 +656,10 @@ Contract text (first 12000 characters):
             context = text[start:end]
             
             for pattern in date_patterns:
-                match = re.search(pattern, context, re.IGNORECASE)
-                if match:
-                    return self._normalize_date(match.group(0))
+                matches = re.findall(pattern, context, re.IGNORECASE)
+                if matches:
+                    # Use FIRST match for consistency
+                    return self._normalize_date(matches[0])
         
         # If no date found, return a calculated date based on contract duration
         return self._extract_next_date(text, 90)  # Default: 90 days from now
