@@ -4074,6 +4074,80 @@ def determine_priority(pm_review, total_amount):
     return priority
 
 
+@app.get("/api/deliverables/{deliverable_id}/file")
+async def get_deliverable_file(
+    deliverable_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get deliverable file - accessible by all roles"""
+    try:
+        # Get the deliverable
+        deliverable = db.query(ContractDeliverable).filter(
+            ContractDeliverable.id == deliverable_id
+        ).first()
+        
+        if not deliverable:
+            raise HTTPException(status_code=404, detail="Deliverable not found")
+        
+        # Get the contract to check permissions
+        contract = db.query(models.Contract).filter(
+            models.Contract.id == deliverable.contract_id
+        ).first()
+        
+        if not contract:
+            raise HTTPException(status_code=404, detail="Contract not found")
+        
+        # Check permissions based on role
+        if current_user.role == "project_manager":
+            # Project managers can only see their own contracts
+            if contract.created_by != current_user.id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="You don't have permission to view this deliverable"
+                )
+        elif current_user.role == "program_manager":
+            # Program managers can see contracts they are reviewing
+            if contract.status not in ["under_review", "reviewed", "approved", "rejected"]:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="You don't have permission to view this deliverable"
+                )
+        # Directors can see all
+        
+        # Check if file exists
+        if not deliverable.uploaded_file_path:
+            raise HTTPException(status_code=404, detail="No file uploaded for this deliverable")
+        
+        # Read the file
+        try:
+            with open(deliverable.uploaded_file_path, 'rb') as f:
+                file_content = f.read()
+        except FileNotFoundError:
+            raise HTTPException(status_code=404, detail="File not found on server")
+        
+        # Determine content type based on file extension
+        import mimetypes
+        content_type = mimetypes.guess_type(deliverable.uploaded_file_path)[0] or 'application/octet-stream'
+        
+        # Return the file
+        return Response(
+            content=file_content,
+            media_type=content_type,
+            headers={
+                "Content-Disposition": f"inline; filename=\"{deliverable.uploaded_file_name}\"",
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+                "Pragma": "no-cache",
+                "Expires": "0"
+            }
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error serving deliverable file: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to serve file: {str(e)}")
+
 
 if __name__ == "__main__":
     import uvicorn
