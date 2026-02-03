@@ -1,12 +1,11 @@
 import os
 import sys
-from app.s3_service import s3_service
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any
 from fastapi import Query, Response
 from fastapi.responses import RedirectResponse, JSONResponse
 from app.auth_models import User, UserSession, ActivityLog, ContractPermission, ReviewComment
-
+from app.s3_service import s3_service
 # Remove all proxy environment variables
 proxy_vars = [
     'HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy',
@@ -507,7 +506,7 @@ async def upload_contract(
     db: Session = Depends(get_db),
     request: Request = None
 ):
-    """Upload and process PDF contract - Only Project Managers, Program Managers and Directors can upload"""
+    """Upload and process PDF contract"""
     if current_user.role not in ["project_manager", "program_manager", "director"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -529,6 +528,7 @@ async def upload_contract(
         # Extract comprehensive data using AI
         comprehensive_data = ai_extractor.extract_contract_data(cleaned_text)
         reference_ids = comprehensive_data.get("reference_ids", {})
+        
         # Get embedding
         embedding = ai_extractor.get_embedding(cleaned_text)
         
@@ -706,78 +706,79 @@ async def delete_contract(
     return {"message": "Contract deleted successfully"}
 
 
-@app.get("/api/contracts/{contract_id}/pdf")
-async def get_contract_pdf(
-    contract_id: int,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """Get the original PDF for a contract - for AI Copilot use"""
-    # Check permission
-    contract = db.query(models.Contract).filter(models.Contract.id == contract_id).first()
-    if not contract:
-        raise HTTPException(status_code=404, detail="Contract not found")
-    
-    if not check_permission(current_user, contract_id, "view", db):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You don't have permission to view this contract"
-        )
-    
-    try:
-        # Get PDF content from S3
-        pdf_content = s3_service.get_pdf_content(contract_id)
-        
-        if pdf_content:
-            # Return PDF as response
-            return Response(
-                content=pdf_content,
-                media_type="application/pdf",
-                headers={
-                    "Content-Disposition": f"attachment; filename={contract.filename}",
-                    "Content-Length": str(len(pdf_content))
-                }
-            )
-        else:
-            raise HTTPException(status_code=404, detail="PDF not found in S3")
-            
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve PDF: {str(e)}")
-
 @app.get("/api/contracts/{contract_id}/pdf-url")
 async def get_contract_pdf_url(
     contract_id: int,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get a temporary URL to access the PDF - for frontend display"""
+    """Get S3 URL for contract PDF"""
     # Check permission
-    contract = db.query(models.Contract).filter(models.Contract.id == contract_id).first()
-    if not contract:
-        raise HTTPException(status_code=404, detail="Contract not found")
-    
     if not check_permission(current_user, contract_id, "view", db):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You don't have permission to view this contract"
         )
     
-    try:
-        # Get signed URL from S3
-        pdf_url = s3_service.get_pdf_url(contract_id)
-        
-        if pdf_url:
-            return {
-                "contract_id": contract_id,
-                "pdf_url": pdf_url,
-                "filename": contract.filename,
-                "expires_in": "1 hour"
-            }
-        else:
-            raise HTTPException(status_code=404, detail="PDF not found in S3")
-            
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to generate PDF URL: {str(e)}")
+    contract = db.query(models.Contract).filter(models.Contract.id == contract_id).first()
+    if not contract:
+        raise HTTPException(status_code=404, detail="Contract not found")
+    
+    # Get S3 key from comprehensive data
+    s3_key = None
+    if contract.comprehensive_data and "s3_pdf" in contract.comprehensive_data:
+        s3_key = contract.comprehensive_data["s3_pdf"]["key"]
+    
+    if not s3_key:
+        raise HTTPException(status_code=404, detail="PDF not found in S3 storage")
+    
+    # Generate pre-signed URL
+    pdf_url = s3_service.get_pdf_url(s3_key)
+    
+    if not pdf_url:
+        raise HTTPException(status_code=500, detail="Failed to generate PDF URL")
+    
+    return {
+        "contract_id": contract_id,
+        "pdf_url": pdf_url,
+        "expires_in": "1 hour",
+        "original_filename": contract.filename
+    }
+
+@app.get("/api/health/s3")
+async def check_s3_health(
+    current_user: User = Depends(get_current_user)
+):
+    """Check S3 health status"""
+    # Only allow admins/directors to see this
+    if current_user.role != "director":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only Directors can check system health"
+        )
+    
+    status_info = {
+        "aws_configured": bool(settings.AWS_ACCESS_KEY_ID and settings.AWS_SECRET_ACCESS_KEY),
+        "aws_region": settings.AWS_REGION,
+        "s3_bucket": settings.S3_BUCKET_NAME,
+        "s3_client_ready": s3_service.s3_client is not None,
+        "timestamp": datetime.utcnow().isoformat()
+    }
+    
+    # Try to access the bucket if configured
+    if s3_service.s3_client:
+        try:
+            s3_service.s3_client.head_bucket(Bucket=settings.S3_BUCKET_NAME)
+            status_info["bucket_accessible"] = True
+            status_info["bucket_status"] = "accessible"
+        except Exception as e:
+            status_info["bucket_accessible"] = False
+            status_info["bucket_status"] = f"error: {str(e)}"
+    else:
+        status_info["bucket_accessible"] = False
+        status_info["bucket_status"] = "s3_client_not_ready"
+    
+    return status_info    
 
 @app.get("/api/contracts/{contract_id}/comprehensive")
 async def get_comprehensive_data(
