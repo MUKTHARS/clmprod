@@ -112,42 +112,91 @@ function ContractDetailsPage({ user = null }) {
     }
   };
 
-  const handleViewDeliverableFile = async (deliverableIndex) => {
-    const uploadedFile = uploadedFiles[deliverableIndex];
-    if (!uploadedFile?.fileId) {
-      alert('No file uploaded for this deliverable');
-      return;
-    }
+const handleViewDeliverableFile = async (deliverableIndex) => {
+  const uploadedFile = uploadedFiles[deliverableIndex];
+  if (!uploadedFile?.fileId) {
+    alert('No file uploaded for this deliverable');
+    return;
+  }
 
-    try {
-      setLoadingPDF(true);
-      const token = localStorage.getItem('token');
-      const response = await fetch(
-        `${API_CONFIG.BASE_URL}/api/deliverables/${uploadedFile.fileId}/file`,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
+  try {
+    setLoadingPDF(true);
+    const token = localStorage.getItem('token');
+    
+    // Get the file directly
+    const response = await fetch(
+      `${API_CONFIG.BASE_URL}/api/deliverables/${uploadedFile.fileId}/file`,
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
-      );
+      }
+    );
 
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = URL.createObjectURL(blob);
+    if (response.ok) {
+      const blob = await response.blob();
+      const fileName = uploadedFile.fileName || 'file';
+      const fileExtension = fileName.split('.').pop().toLowerCase();
+      const isPDF = fileExtension === 'pdf';
+      
+      // Create object URL
+      const url = URL.createObjectURL(blob);
+      
+      // Store file info for download
+      const fileInfo = {
+        url: url,
+        filename: fileName,
+        isPDF: isPDF,
+        fileExtension: fileExtension,
+        blob: blob
+      };
+      
+      // Store in localStorage for the PDF viewer
+      localStorage.setItem('currentFileInfo', JSON.stringify({
+        filename: fileName,
+        isPDF: isPDF,
+        fileExtension: fileExtension
+      }));
+      
+      // For PDFs, use the blob URL directly
+      if (isPDF) {
         setPdfUrl(url);
-        setPdfFilename(uploadedFile.fileName || 'deliverable.pdf');
+        setPdfFilename(fileName);
         setShowPDFViewer(true);
       } else {
-        alert('File not available or you don\'t have permission to view it');
+        // For non-PDF files, we need to handle them differently
+        // Try to create a data URL for display
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const dataUrl = reader.result;
+          setPdfUrl(dataUrl);
+          setPdfFilename(fileName);
+          setShowPDFViewer(true);
+        };
+        
+        // Read as data URL for images, text as text, others as binary
+        if (['jpg', 'jpeg', 'png', 'gif', 'bmp'].includes(fileExtension)) {
+          reader.readAsDataURL(blob);
+        } else if (['txt', 'csv', 'html', 'xml', 'json'].includes(fileExtension)) {
+          reader.readAsText(blob);
+        } else {
+          // For other files, just use blob URL and let the viewer handle it
+          setPdfUrl(url);
+          setPdfFilename(fileName);
+          setShowPDFViewer(true);
+        }
       }
-    } catch (error) {
-      console.error('Failed to fetch deliverable file:', error);
-      alert('Failed to load deliverable file');
-    } finally {
-      setLoadingPDF(false);
+    } else {
+      alert('File not available or you don\'t have permission to view it');
     }
-  };
+  } catch (error) {
+    console.error('Failed to fetch deliverable file:', error);
+    alert('Failed to load deliverable file');
+  } finally {
+    setLoadingPDF(false);
+  }
+};
 
   // Update this useEffect (near the top of your component)
   useEffect(() => {
@@ -1028,19 +1077,7 @@ const hasDeliverableBeenUploaded = (index) => {
           </button>
           
           <div className="header-actions-right">
-            <button 
-              className="btn-secondary"
-              onClick={handleViewPDF}
-              disabled={loadingPDF}
-              title="View Original Contract PDF"
-            >
-              {loadingPDF ? (
-                <Loader2 size={16} className="spinning" />
-              ) : (
-                <Eye size={16} />
-              )}
-              <span>View PDF</span>
-            </button>
+
             
             <button 
               className="btn-primary"
