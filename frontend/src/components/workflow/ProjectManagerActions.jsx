@@ -297,36 +297,6 @@ function ProjectManagerActions({ contract, user, onActionComplete }) {
         </div>
       </div>
 
-      {/* ✅ NEW: Add Comment Section for Project Manager */}
-      {(contract.status === 'draft' || contract.status === 'rejected') && (
-        <div className="pm-add-comment-section">
-          <h4>
-            <MessageSquare size={18} />
-            Add Notes for Program Managers
-          </h4>
-          <p className="pm-comment-help">
-            These notes will be visible to Program Managers when reviewing this contract
-          </p>
-          <textarea
-            value={pmComment}
-            onChange={(e) => setPmComment(e.target.value)}
-            placeholder="Add notes, clarifications, or important information for Program Managers reviewing this contract..."
-            rows={3}
-            className="pm-comment-textarea"
-          />
-          <div className="pm-comment-actions">
-            <button
-              className="btn-primary"
-              onClick={handleAddProjectManagerComment}
-              disabled={!pmComment.trim()}
-            >
-              <Send size={14} />
-              Add Note for Program Managers
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Available Actions Based on Status */}
       {(contract.status === 'draft' || contract.status === 'rejected') && (
         <div className="available-actions">
