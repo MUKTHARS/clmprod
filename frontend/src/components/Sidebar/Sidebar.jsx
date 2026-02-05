@@ -40,7 +40,7 @@ const Sidebar = ({ user, onLogout }) => {
     const fetchPermissions = async () => {
       try {
         const token = localStorage.getItem('token');
-        const response = await fetch('https://localhost:4001/api/user/permissions', {
+        const response = await fetch('https://grantapi.saple.ai/api/user/permissions', {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -176,7 +176,7 @@ const Sidebar = ({ user, onLogout }) => {
     
     if (itemId === 'review') {
       try {
-        const response = await fetch('https://localhost:4001/api/contracts/status/under_review', {
+        const response = await fetch('https://grantapi.saple.ai/api/contracts/status/under_review', {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -209,7 +209,7 @@ const Sidebar = ({ user, onLogout }) => {
     
     if (itemId === 'approvals') {
       try {
-        const response = await fetch('https://localhost:4001/api/contracts/status/reviewed', {
+        const response = await fetch('https://grantapi.saple.ai/api/contracts/status/reviewed', {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -434,7 +434,7 @@ export default Sidebar;
 //     const fetchPermissions = async () => {
 //       try {
 //         const token = localStorage.getItem('token');
-//         const response = await fetch('https://localhost:4001/api/user/permissions', {
+//         const response = await fetch('https://grantapi.saple.ai/api/user/permissions', {
 //           headers: {
 //             'Authorization': `Bearer ${token}`,
 //             'Content-Type': 'application/json'
@@ -601,7 +601,7 @@ export default Sidebar;
     
 //     if (itemId === 'review') {
 //       try {
-//         const response = await fetch('https://localhost:4001/api/contracts/status/under_review', {
+//         const response = await fetch('https://grantapi.saple.ai/api/contracts/status/under_review', {
 //           headers: {
 //             'Authorization': `Bearer ${token}`
 //           }
@@ -633,7 +633,7 @@ export default Sidebar;
     
 //     if (itemId === 'approvals') {
 //       try {
-//         const response = await fetch('https://localhost:4001/api/contracts/status/reviewed', {
+//         const response = await fetch('https://grantapi.saple.ai/api/contracts/status/reviewed', {
 //           headers: {
 //             'Authorization': `Bearer ${token}`
 //           }

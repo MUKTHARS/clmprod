@@ -79,7 +79,7 @@ app.include_router(admin_router)
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:4000", "https://localhost:4001","https://localhost:4000"],
+    allow_origins=["http://localhost:5173", "https://demo.saple.ai", "https://grantapi.saple.ai","https://demo.saple.ai"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
