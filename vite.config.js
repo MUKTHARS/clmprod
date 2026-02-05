@@ -8,7 +8,7 @@ export default defineConfig({
     port: 4000,
     proxy: {
       '/api': {
-        target: 'http://44.219.56.85:4001',
+        target: 'https://grantapi.saple.ai',
         changeOrigin: true,
         secure: false
       }
