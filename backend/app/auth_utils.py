@@ -111,7 +111,36 @@ def check_permission(user: User, contract_id: int, required_permission: str, db:
 
 def get_user_permissions(user: User) -> Dict[str, bool]:
     """Get all permissions for a user based on their role"""
-    if user.role == "director":
+    if user.role == "super_admin":
+        return {
+            "can_upload": True,
+            "can_view_all": True,
+            "can_edit_all": True,
+            "can_delete_all": True,
+            "can_review": True,
+            "can_approve": True,
+            "can_manage_users": True,
+            "can_view_activity_logs": True,
+            "can_export": True,
+            "can_manage_settings": True,
+            "can_view_dashboard": True,
+            "can_view_contracts": True,
+            "can_view_analytics": True,
+            "can_view_reports": True,
+            "can_view_risk": True,
+            "can_view_organizations": True,
+            "can_view_grants": True,
+            "can_view_approvals": True,
+            "can_view_knowledge": True,
+            "can_view_help": True,
+            # Super admin specific permissions
+            "can_manage_modules": True,
+            "can_manage_roles": True,
+            "can_manage_all_users": True,
+            "can_view_system_logs": True,
+            "can_configure_system": True
+        }
+    elif user.role == "director":
         return {
             "can_upload": True,
             "can_view_all": True,
