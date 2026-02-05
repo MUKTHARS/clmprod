@@ -16,7 +16,7 @@ import {
   History
 } from 'lucide-react';
 import './Workflow.css';
-
+// import API_CONFIG from '../../config';
 function ContractReview() {
   const [contracts, setContracts] = useState([]);
   const [selectedContract, setSelectedContract] = useState(null);
@@ -32,7 +32,7 @@ function ContractReview() {
   const fetchContractsUnderReview = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://44.219.56.85:4001/api/contracts/status/under_review', {
+      const response = await fetch('https://grantapi.saple.ai/api/contracts/status/under_review', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -62,7 +62,7 @@ function ContractReview() {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://44.219.56.85:4001/api/contracts/${selectedContract.id}/update-status?status=${action}&comments=${encodeURIComponent(comment)}`, {
+      const response = await fetch(`https://grantapi.saple.ai/api/contracts/${selectedContract.id}/update-status?status=${action}&comments=${encodeURIComponent(comment)}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
