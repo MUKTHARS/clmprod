@@ -761,7 +761,10 @@ async def login(
         )
     
     if not user.is_active:
-        raise HTTPException(status_code=400, detail="User account is disabled")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User account is deactivated"
+        )
     
     # Update last login
     user.last_login = datetime.utcnow()
@@ -776,13 +779,34 @@ async def login(
         request=request
     )
     
-    # Create JWT token
-    access_token = create_access_token(data={"sub": user.username})
+    # Create JWT token with user role
+    access_token = create_access_token(data={
+        "sub": user.username,
+        "role": user.role,
+        "user_id": user.id
+    })
+    
+    # Create user response with all fields
+    user_response = UserResponse(
+        id=user.id,
+        username=user.username,
+        email=user.email,
+        first_name=user.first_name,
+        last_name=user.last_name,
+        company=user.company,
+        phone=user.phone,
+        department=user.department,
+        user_type=user.user_type,
+        role=user.role,
+        is_active=user.is_active,
+        created_at=user.created_at,
+        last_login=user.last_login
+    )
     
     return {
         "access_token": access_token,
         "token_type": "bearer",
-        "user": UserResponse.from_orm(user)
+        "user": user_response
     }
 
 @app.post("/auth/logout")
