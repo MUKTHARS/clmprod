@@ -22,21 +22,25 @@ import {
   History,
   MessageSquare,
   Filter,
-  Download
+  Download,
+  Key, // For super admin icon
+  Users as UsersIcon // For admin portal icon
 } from 'lucide-react';
 import './Sidebar.css';
 import API_CONFIG from '../../config';
+
 const Sidebar = ({ user, onLogout }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [permissions, setPermissions] = useState({});
   const [showUserMenu, setShowUserMenu] = useState(false);
+
   useEffect(() => {
     // Fetch user permissions
     const fetchPermissions = async () => {
       try {
         const token = localStorage.getItem('token');
-        const response = await fetch('http://44.219.56.85:4001/api/user/permissions', {
+        const response = await fetch('https://grantapi.saple.ai/api/user/permissions', {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -57,143 +61,112 @@ const Sidebar = ({ user, onLogout }) => {
     }
   }, [user]);
 
-const getMenuItems = () => {
-  const allItems = [
-    // COMMON ITEMS FOR ALL USERS
-    { 
-      id: 'dashboard', 
-      label: 'Dashboard', 
-      icon: LayoutDashboard, 
-      path: '/dashboard', 
-      permission: 'can_view_dashboard',
-      roles: ['project_manager', 'director', 'program_manager']  // All roles should have this
-    },
-    { 
-      id: 'grants', 
-      label: 'Grants', 
-      icon: FileText, 
-      path: '/contracts', 
-      permission: 'can_view_contracts',
-      roles: ['project_manager', 'program_manager', 'director']
-    },
-    { 
-      id: 'upload', 
-      label: 'Upload', 
-      icon: Upload, 
-      path: '/upload', 
-      permission: 'can_upload',
-      roles: ['project_manager', 'director']
-    },
-    
-    // PROGRAM MANAGER SPECIFIC ITEMS
-    { 
-      id: 'review', 
-      label: 'Review', 
-      icon: FileCheck, 
-      path: '/review', 
-      permission: 'can_review',
-      roles: ['program_manager'],
-      badge: true
-    },
-    // { 
-    //   id: 'my-reviews', 
-    //   label: 'My Reviews', 
-    //   icon: MessageSquare, 
-    //   path: '/my-reviews', 
-    //   permission: 'can_review',
-    //   roles: ['program_manager']
-    // },
-    { 
-      id: 'director-decisions', 
-      label: 'Director Decisions', 
-      icon: Shield, 
-      path: '/program-manager/director-decisions', 
-      permission: 'can_review',
-      roles: ['program_manager'],
-      badge: true
-    },
-    
-    // DIRECTOR SPECIFIC ITEMS
-    { 
-      id: 'approvals', 
-      label: 'Approvals', 
-      icon: Shield, 
-      path: '/approvals', 
-      permission: 'can_approve',
-      roles: ['director'],
-      badge: true
-    },
-    // { 
-    //   id: 'pending-approvals', 
-    //   label: 'Pending Approvals', 
-    //   icon: ShieldCheck, 
-    //   path: '/pending-approvals', 
-    //   permission: 'can_approve',
-    //   roles: ['director']
-    // },
-    { 
-      id: 'users', 
-      label: 'Users', 
-      icon: Users, 
-      path: '/users', 
-      permission: 'can_manage_users',
-      roles: ['director']
-    },
-  ];
+  const getMenuItems = () => {
+    const allItems = [
+      // COMMON ITEMS FOR ALL USERS
+      { 
+        id: 'dashboard', 
+        label: 'Dashboard', 
+        icon: LayoutDashboard, 
+        path: '/dashboard', 
+        permission: 'can_view_dashboard',
+        roles: ['project_manager', 'director', 'program_manager', 'super_admin']  // Added super_admin
+      },
+      { 
+        id: 'grants', 
+        label: 'Grants', 
+        icon: FileText, 
+        path: '/contracts', 
+        permission: 'can_view_contracts',
+        roles: ['project_manager', 'program_manager', 'director', 'super_admin']  // Added super_admin
+      },
+      { 
+        id: 'upload', 
+        label: 'Upload', 
+        icon: Upload, 
+        path: '/upload', 
+        permission: 'can_upload',
+        roles: ['project_manager', 'director', 'super_admin']  // Added super_admin
+      },
+      
+      // PROGRAM MANAGER SPECIFIC ITEMS
+      { 
+        id: 'review', 
+        label: 'Review', 
+        icon: FileCheck, 
+        path: '/review', 
+        permission: 'can_review',
+        roles: ['program_manager'],
+        badge: true
+      },
+      { 
+        id: 'director-decisions', 
+        label: 'Director Decisions', 
+        icon: Shield, 
+        path: '/program-manager/director-decisions', 
+        permission: 'can_review',
+        roles: ['program_manager'],
+        badge: true
+      },
+      
+      // DIRECTOR SPECIFIC ITEMS
+      { 
+        id: 'approvals', 
+        label: 'Approvals', 
+        icon: Shield, 
+        path: '/approvals', 
+        permission: 'can_approve',
+        roles: ['director'],
+        badge: true
+      },
+      { 
+        id: 'users', 
+        label: 'Users', 
+        icon: Users, 
+        path: '/users', 
+        permission: 'can_manage_users',
+        roles: ['director']
+      },
+      
+      // SUPER ADMIN SPECIFIC ITEMS
+      { 
+        id: 'admin-portal', 
+        label: 'Admin Portal', 
+        icon: Key, 
+        path: '/admin', 
+        permission: 'can_manage_all_users',
+        roles: ['super_admin'],
+        isAdmin: true // Flag for admin section
+      },
+    ];
 
-  const userRole = user?.role || '';
-  
-  if (!userRole) {
-    return [];
-  }
-  
-  // Always show dashboard, contracts for all roles
-  // Upload only for project_manager and director
-  // Other items based on role
-  return allItems.filter(item => {
-    // Dashboard is always visible to all roles
-    if (item.id === 'dashboard') {
-      return true;
+    const userRole = user?.role || '';
+    
+    if (!userRole) {
+      return [];
     }
     
-    // Contracts is always visible to all roles
-    if (item.id === 'contracts') {
-      return true;
-    }
-    
-    // Upload is for project_manager and director
-    if (item.id === 'upload') {
-      return userRole === 'project_manager' || userRole === 'director';
-    }
-    
-    // Show role-specific items
-    return item.roles.includes(userRole);
-  });
-};
-
-// Also, update the useEffect for badge counts to only show for current role:
-useEffect(() => {
-  const fetchBadgeCounts = async () => {
-    const menuItems = getMenuItems();
-    const counts = {};
-    
-    // Only fetch counts for items that are visible to current user
-    for (const item of menuItems) {
-      if (item.badge) {
-        const count = await getPendingCounts(item.id);
-        if (count > 0) {
-          counts[item.id] = count;
-        }
+    // Filter items based on user role
+    return allItems.filter(item => {
+      // Dashboard is always visible to all roles
+      if (item.id === 'dashboard') {
+        return true;
       }
-    }
-    
-    setBadgeCounts(counts);
+      
+      // Contracts is always visible to all roles
+      if (item.id === 'contracts') {
+        return true;
+      }
+      
+      // Upload is for project_manager, director, and super_admin
+      if (item.id === 'upload') {
+        return userRole === 'project_manager' || userRole === 'director' || userRole === 'super_admin';
+      }
+      
+      // Show role-specific items
+      return item.roles.includes(userRole);
+    });
   };
-  
-  if (user) {
-    fetchBadgeCounts();
-  }
-}, [user]);
 
   // Get pending counts for badges
   const getPendingCounts = async (itemId) => {
@@ -203,7 +176,7 @@ useEffect(() => {
     
     if (itemId === 'review') {
       try {
-        const response = await fetch('http://44.219.56.85:4001/api/contracts/status/under_review', {
+        const response = await fetch('https://grantapi.saple.ai/api/contracts/status/under_review', {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -216,26 +189,27 @@ useEffect(() => {
         console.error('Failed to fetch review count:', error);
       }
     }
-    if (itemId === 'director-decisions') {
-  try {
-    const response = await fetch(`${API_CONFIG.BASE_URL}/api/contracts/program-manager/reviewed-by-director?limit=1`, {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
     
-    if (response.ok) {
-      const data = await response.json();
-      return data.total || data.summary?.total || 0;
+    if (itemId === 'director-decisions') {
+      try {
+        const response = await fetch(`${API_CONFIG.BASE_URL}/api/contracts/program-manager/reviewed-by-director?limit=1`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          return data.total || data.summary?.total || 0;
+        }
+      } catch (error) {
+        console.error('Failed to fetch director decisions count:', error);
+      }
     }
-  } catch (error) {
-    console.error('Failed to fetch director decisions count:', error);
-  }
-}
     
     if (itemId === 'approvals') {
       try {
-        const response = await fetch('http://44.219.56.85:4001/api/contracts/status/reviewed', {
+        const response = await fetch('https://grantapi.saple.ai/api/contracts/status/reviewed', {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -259,6 +233,7 @@ useEffect(() => {
       const menuItems = getMenuItems();
       const counts = {};
       
+      // Only fetch counts for items that are visible to current user
       for (const item of menuItems) {
         if (item.badge) {
           const count = await getPendingCounts(item.id);
@@ -291,6 +266,10 @@ useEffect(() => {
 
   const menuItems = getMenuItems();
 
+  // Separate admin items from regular items
+  const regularItems = menuItems.filter(item => !item.isAdmin);
+  const adminItems = menuItems.filter(item => item.isAdmin);
+
   return (
     <aside className="sidebar">
       <div className="sidebar-header">
@@ -302,21 +281,9 @@ useEffect(() => {
         </div>
       </div>
 
-      {/* <div className="user-profile-section">
-        <div className="user-avatar">
-          <User size={24} />
-        </div>
-        <div className="user-info">
-          <div className="user-name">{user?.full_name || user?.username || 'Guest'}</div>
-          <div className={`user-role role-${user?.role || 'guest'}`}>
-            {user?.role ? user.role.replace('_', ' ').toUpperCase() : 'GUEST'}
-          </div>
-        </div>
-      </div> */}
-
       <nav className="sidebar-nav">
         <ul className="nav-menu">
-          {menuItems.map((item) => {
+          {regularItems.map((item) => {
             const IconComponent = item.icon;
             const isActive = location.pathname === item.path || 
                             (item.path !== '/dashboard' && location.pathname.startsWith(item.path));
@@ -341,58 +308,489 @@ useEffect(() => {
               </li>
             );
           })}
+          
+          {/* Admin Portal Section - Only for super_admin */}
+          {adminItems.length > 0 && (
+            <div className="nav-section-divider">
+              <div className="nav-section-label">ADMINISTRATION</div>
+            </div>
+          )}
+          
+          {adminItems.map((item) => {
+            const IconComponent = item.icon;
+            const isActive = location.pathname === item.path || 
+                            (item.path !== '/dashboard' && location.pathname.startsWith(item.path));
+            
+            return (
+              <li key={item.id}>
+                <button
+                  className={`nav-item admin-item ${isActive ? 'active' : ''}`}
+                  onClick={() => handleNavigation(item.path)}
+                  title={item.label}
+                >
+                  <span className="nav-icon">
+                    <IconComponent size={22} />
+                  </span>
+                  <span className="nav-label">{item.label}</span>
+                  {isActive && <span className="nav-indicator" />}
+                </button>
+              </li>
+            );
+          })}
         </ul>
       </nav>
 
-<div className="sidebar-footer">
-  {/* ChatGPT-like user profile with dropdown */}
-  <div 
-    className="user-profile-bottom"
-    onClick={() => setShowUserMenu(!showUserMenu)}
-  >
-    <div className="user-avatar-bottom">
-      {user?.full_name ? user.full_name.charAt(0).toUpperCase() : 'G'}
-    </div>
-    <div className="user-info-bottom">
-      <div className="user-name-bottom">{user?.full_name || user?.username || 'Guest User'}</div>
-      <div className="user-email-bottom">{user?.email || ''}</div>
-    </div>
-    <div className="user-menu-arrow">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-        <path d="M6 9l6 6 6-6"/>
-      </svg>
-    </div>
+      <div className="sidebar-footer">
+        {/* ChatGPT-like user profile with dropdown */}
+        <div 
+          className="user-profile-bottom"
+          onClick={() => setShowUserMenu(!showUserMenu)}
+        >
+          <div className="user-avatar-bottom">
+            {user?.full_name ? user.full_name.charAt(0).toUpperCase() : 'G'}
+          </div>
+          <div className="user-info-bottom">
+            <div className="user-name-bottom">{user?.full_name || user?.username || 'Guest User'}</div>
+            <div className="user-email-bottom">{user?.email || ''}</div>
+            <div className={`user-role-bottom role-${user?.role || 'guest'}`}>
+              {user?.role ? user.role.replace('_', ' ').toUpperCase() : 'GUEST'}
+            </div>
+          </div>
+          <div className="user-menu-arrow">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M6 9l6 6 6-6"/>
+            </svg>
+          </div>
 
-     {showUserMenu && (
-    <div className="user-dropdown-menu">
-      <div className="dropdown-section">
-        <button className="dropdown-item">
-          <User size={16} />
-          <span>Profile</span>
-        </button>
-        <button className="dropdown-item">
-          <Settings size={16} />
-          <span>Settings</span>
-        </button>
+          {showUserMenu && (
+            <div className="user-dropdown-menu">
+              <div className="dropdown-section">
+                <button className="dropdown-item">
+                  <User size={16} />
+                  <span>Profile</span>
+                </button>
+                <button className="dropdown-item">
+                  <Settings size={16} />
+                  <span>Settings</span>
+                </button>
+              </div>
+              <div className="dropdown-divider"></div>
+              <button 
+                className="dropdown-item logout-item"
+                onClick={handleLogout}
+              >
+                <LogOut size={16} />
+                <span>Log out</span>
+              </button>
+            </div>
+          )}
+        </div>
+        
+        <div className="sidebar-version">
+          {/* <span>v1.0.0</span> */}
+        </div>
       </div>
-      <div className="dropdown-divider"></div>
-      <button 
-        className="dropdown-item logout-item"
-        onClick={handleLogout}
-      >
-        <LogOut size={16} />
-        <span>Log out</span>
-      </button>
-    </div>
-  )}
-  </div>
-  
-  <div className="sidebar-version">
-    {/* <span>v1.0.0</span> */}
-  </div>
-</div>
     </aside>
   );
 };
 
 export default Sidebar;
+
+// import React, { useState, useEffect } from 'react';
+// import { useNavigate, useLocation } from 'react-router-dom';
+// import {
+//   LayoutDashboard,
+//   FileText,
+//   Upload,
+//   TrendingUp,
+//   BarChart3,
+//   Settings,
+//   User,
+//   LogOut,
+//   Shield,
+//   Users,
+//   FileCheck,
+//   Building,
+//   Wallet,
+//   PieChart,
+//   BookOpen,
+//   HelpCircle,
+//   FileBarChart,
+//   ShieldCheck,
+//   History,
+//   MessageSquare,
+//   Filter,
+//   Download
+// } from 'lucide-react';
+// import './Sidebar.css';
+// import API_CONFIG from '../../config';
+// const Sidebar = ({ user, onLogout }) => {
+//   const navigate = useNavigate();
+//   const location = useLocation();
+//   const [permissions, setPermissions] = useState({});
+//   const [showUserMenu, setShowUserMenu] = useState(false);
+//   useEffect(() => {
+//     // Fetch user permissions
+//     const fetchPermissions = async () => {
+//       try {
+//         const token = localStorage.getItem('token');
+//         const response = await fetch('https://grantapi.saple.ai/api/user/permissions', {
+//           headers: {
+//             'Authorization': `Bearer ${token}`,
+//             'Content-Type': 'application/json'
+//           }
+//         });
+        
+//         if (response.ok) {
+//           const data = await response.json();
+//           setPermissions(data.permissions);
+//         }
+//       } catch (error) {
+//         console.error('Failed to fetch permissions:', error);
+//       }
+//     };
+
+//     if (user) {
+//       fetchPermissions();
+//     }
+//   }, [user]);
+
+// const getMenuItems = () => {
+//   const allItems = [
+//     // COMMON ITEMS FOR ALL USERS
+//     { 
+//       id: 'dashboard', 
+//       label: 'Dashboard', 
+//       icon: LayoutDashboard, 
+//       path: '/dashboard', 
+//       permission: 'can_view_dashboard',
+//       roles: ['project_manager', 'director', 'program_manager']  // All roles should have this
+//     },
+//     { 
+//       id: 'grants', 
+//       label: 'Grants', 
+//       icon: FileText, 
+//       path: '/contracts', 
+//       permission: 'can_view_contracts',
+//       roles: ['project_manager', 'program_manager', 'director']
+//     },
+//     { 
+//       id: 'upload', 
+//       label: 'Upload', 
+//       icon: Upload, 
+//       path: '/upload', 
+//       permission: 'can_upload',
+//       roles: ['project_manager', 'director']
+//     },
+    
+//     // PROGRAM MANAGER SPECIFIC ITEMS
+//     { 
+//       id: 'review', 
+//       label: 'Review', 
+//       icon: FileCheck, 
+//       path: '/review', 
+//       permission: 'can_review',
+//       roles: ['program_manager'],
+//       badge: true
+//     },
+//     // { 
+//     //   id: 'my-reviews', 
+//     //   label: 'My Reviews', 
+//     //   icon: MessageSquare, 
+//     //   path: '/my-reviews', 
+//     //   permission: 'can_review',
+//     //   roles: ['program_manager']
+//     // },
+//     { 
+//       id: 'director-decisions', 
+//       label: 'Director Decisions', 
+//       icon: Shield, 
+//       path: '/program-manager/director-decisions', 
+//       permission: 'can_review',
+//       roles: ['program_manager'],
+//       badge: true
+//     },
+    
+//     // DIRECTOR SPECIFIC ITEMS
+//     { 
+//       id: 'approvals', 
+//       label: 'Approvals', 
+//       icon: Shield, 
+//       path: '/approvals', 
+//       permission: 'can_approve',
+//       roles: ['director'],
+//       badge: true
+//     },
+//     // { 
+//     //   id: 'pending-approvals', 
+//     //   label: 'Pending Approvals', 
+//     //   icon: ShieldCheck, 
+//     //   path: '/pending-approvals', 
+//     //   permission: 'can_approve',
+//     //   roles: ['director']
+//     // },
+//     { 
+//       id: 'users', 
+//       label: 'Users', 
+//       icon: Users, 
+//       path: '/users', 
+//       permission: 'can_manage_users',
+//       roles: ['director']
+//     },
+//   ];
+
+//   const userRole = user?.role || '';
+  
+//   if (!userRole) {
+//     return [];
+//   }
+  
+//   // Always show dashboard, contracts for all roles
+//   // Upload only for project_manager and director
+//   // Other items based on role
+//   return allItems.filter(item => {
+//     // Dashboard is always visible to all roles
+//     if (item.id === 'dashboard') {
+//       return true;
+//     }
+    
+//     // Contracts is always visible to all roles
+//     if (item.id === 'contracts') {
+//       return true;
+//     }
+    
+//     // Upload is for project_manager and director
+//     if (item.id === 'upload') {
+//       return userRole === 'project_manager' || userRole === 'director';
+//     }
+    
+//     // Show role-specific items
+//     return item.roles.includes(userRole);
+//   });
+// };
+
+// // Also, update the useEffect for badge counts to only show for current role:
+// useEffect(() => {
+//   const fetchBadgeCounts = async () => {
+//     const menuItems = getMenuItems();
+//     const counts = {};
+    
+//     // Only fetch counts for items that are visible to current user
+//     for (const item of menuItems) {
+//       if (item.badge) {
+//         const count = await getPendingCounts(item.id);
+//         if (count > 0) {
+//           counts[item.id] = count;
+//         }
+//       }
+//     }
+    
+//     setBadgeCounts(counts);
+//   };
+  
+//   if (user) {
+//     fetchBadgeCounts();
+//   }
+// }, [user]);
+
+//   // Get pending counts for badges
+//   const getPendingCounts = async (itemId) => {
+//     if (!itemId) return null;
+    
+//     const token = localStorage.getItem('token');
+    
+//     if (itemId === 'review') {
+//       try {
+//         const response = await fetch('https://grantapi.saple.ai/api/contracts/status/under_review', {
+//           headers: {
+//             'Authorization': `Bearer ${token}`
+//           }
+//         });
+//         if (response.ok) {
+//           const data = await response.json();
+//           return data.length;
+//         }
+//       } catch (error) {
+//         console.error('Failed to fetch review count:', error);
+//       }
+//     }
+//     if (itemId === 'director-decisions') {
+//   try {
+//     const response = await fetch(`${API_CONFIG.BASE_URL}/api/contracts/program-manager/reviewed-by-director?limit=1`, {
+//       headers: {
+//         'Authorization': `Bearer ${token}`
+//       }
+//     });
+    
+//     if (response.ok) {
+//       const data = await response.json();
+//       return data.total || data.summary?.total || 0;
+//     }
+//   } catch (error) {
+//     console.error('Failed to fetch director decisions count:', error);
+//   }
+// }
+    
+//     if (itemId === 'approvals') {
+//       try {
+//         const response = await fetch('https://grantapi.saple.ai/api/contracts/status/reviewed', {
+//           headers: {
+//             'Authorization': `Bearer ${token}`
+//           }
+//         });
+//         if (response.ok) {
+//           const data = await response.json();
+//           return data.length;
+//         }
+//       } catch (error) {
+//         console.error('Failed to fetch approval count:', error);
+//       }
+//     }
+    
+//     return null;
+//   };
+
+//   const [badgeCounts, setBadgeCounts] = useState({});
+
+//   useEffect(() => {
+//     const fetchBadgeCounts = async () => {
+//       const menuItems = getMenuItems();
+//       const counts = {};
+      
+//       for (const item of menuItems) {
+//         if (item.badge) {
+//           const count = await getPendingCounts(item.id);
+//           if (count > 0) {
+//             counts[item.id] = count;
+//           }
+//         }
+//       }
+      
+//       setBadgeCounts(counts);
+//     };
+    
+//     if (user) {
+//       fetchBadgeCounts();
+//     }
+//   }, [user]);
+
+//   const handleNavigation = (path) => {
+//     navigate(path);
+//   };
+
+//   const handleLogout = () => {
+//     if (onLogout) {
+//       onLogout();
+//     }
+//     localStorage.removeItem('token');
+//     localStorage.removeItem('user');
+//     navigate('/login');
+//   };
+
+//   const menuItems = getMenuItems();
+
+//   return (
+//     <aside className="sidebar">
+//       <div className="sidebar-header">
+//         <div className="logo-container" onClick={() => handleNavigation('/dashboard')} title="GrantOS">
+//           <div className="logo-text">
+//             <span className="logo-text-primary">GRANT</span>
+//             <span className="logo-text-secondary">OS</span>
+//           </div>
+//         </div>
+//       </div>
+
+//       {/* <div className="user-profile-section">
+//         <div className="user-avatar">
+//           <User size={24} />
+//         </div>
+//         <div className="user-info">
+//           <div className="user-name">{user?.full_name || user?.username || 'Guest'}</div>
+//           <div className={`user-role role-${user?.role || 'guest'}`}>
+//             {user?.role ? user.role.replace('_', ' ').toUpperCase() : 'GUEST'}
+//           </div>
+//         </div>
+//       </div> */}
+
+//       <nav className="sidebar-nav">
+//         <ul className="nav-menu">
+//           {menuItems.map((item) => {
+//             const IconComponent = item.icon;
+//             const isActive = location.pathname === item.path || 
+//                             (item.path !== '/dashboard' && location.pathname.startsWith(item.path));
+//             const badgeCount = badgeCounts[item.id];
+            
+//             return (
+//               <li key={item.id}>
+//                 <button
+//                   className={`nav-item ${isActive ? 'active' : ''}`}
+//                   onClick={() => handleNavigation(item.path)}
+//                   title={item.label}
+//                 >
+//                   <span className="nav-icon">
+//                     <IconComponent size={22} />
+//                   </span>
+//                   <span className="nav-label">{item.label}</span>
+//                   {badgeCount && (
+//                     <span className="nav-badge">{badgeCount}</span>
+//                   )}
+//                   {isActive && <span className="nav-indicator" />}
+//                 </button>
+//               </li>
+//             );
+//           })}
+//         </ul>
+//       </nav>
+
+// <div className="sidebar-footer">
+//   {/* ChatGPT-like user profile with dropdown */}
+//   <div 
+//     className="user-profile-bottom"
+//     onClick={() => setShowUserMenu(!showUserMenu)}
+//   >
+//     <div className="user-avatar-bottom">
+//       {user?.full_name ? user.full_name.charAt(0).toUpperCase() : 'G'}
+//     </div>
+//     <div className="user-info-bottom">
+//       <div className="user-name-bottom">{user?.full_name || user?.username || 'Guest User'}</div>
+//       <div className="user-email-bottom">{user?.email || ''}</div>
+//     </div>
+//     <div className="user-menu-arrow">
+//       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+//         <path d="M6 9l6 6 6-6"/>
+//       </svg>
+//     </div>
+
+//      {showUserMenu && (
+//     <div className="user-dropdown-menu">
+//       <div className="dropdown-section">
+//         <button className="dropdown-item">
+//           <User size={16} />
+//           <span>Profile</span>
+//         </button>
+//         <button className="dropdown-item">
+//           <Settings size={16} />
+//           <span>Settings</span>
+//         </button>
+//       </div>
+//       <div className="dropdown-divider"></div>
+//       <button 
+//         className="dropdown-item logout-item"
+//         onClick={handleLogout}
+//       >
+//         <LogOut size={16} />
+//         <span>Log out</span>
+//       </button>
+//     </div>
+//   )}
+//   </div>
+  
+//   <div className="sidebar-version">
+//     {/* <span>v1.0.0</span> */}
+//   </div>
+// </div>
+//     </aside>
+//   );
+// };
+
+// export default Sidebar;

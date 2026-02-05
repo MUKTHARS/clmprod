@@ -398,68 +398,6 @@ BEGIN
     
 END $$;
 
--- Now, here's the complete CREATE TABLE statement with ALL columns
--- that your INSERT statement is trying to use:
-/*
-CREATE TABLE IF NOT EXISTS contracts (
-    id SERIAL PRIMARY KEY,
-    filename VARCHAR NOT NULL,
-    uploaded_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    
-    -- Reference IDs
-    investment_id VARCHAR(255),
-    project_id VARCHAR(255),
-    grant_id VARCHAR(255),
-    extracted_reference_ids JSONB DEFAULT '[]',
-    
-    -- Basic extracted data
-    contract_number VARCHAR,
-    grant_name VARCHAR,
-    grantor VARCHAR,
-    grantee VARCHAR,
-    total_amount DOUBLE PRECISION,
-    start_date VARCHAR,
-    end_date VARCHAR,
-    purpose TEXT,
-    payment_schedule JSONB,
-    terms_conditions JSONB,
-    
-    -- Comprehensive data
-    comprehensive_data JSONB,
-    
-    -- Raw text
-    full_text TEXT,
-    
-    -- Metadata
-    status VARCHAR DEFAULT 'draft',
-    processing_time DOUBLE PRECISION,
-    
-    -- ChromaDB reference
-    chroma_id VARCHAR(255),
-    
-    -- Version control for amendments
-    document_type VARCHAR DEFAULT 'main_contract',
-    parent_contract_id INTEGER REFERENCES contracts(id) ON DELETE SET NULL,
-    version INTEGER DEFAULT 1,
-    is_latest_version BOOLEAN DEFAULT TRUE,
-    amendment_status VARCHAR DEFAULT 'draft',
-    amendment_date TIMESTAMP WITH TIME ZONE,
-    amendment_reason TEXT,
-    
-    -- Workflow fields
-    created_by INTEGER REFERENCES users(id),
-    
-    -- TEMPORARY: review_comments column (should be removed from INSERT statement)
-    -- This exists only because your backend code is trying to insert into it
-    -- Ideally, remove 'review_comments' from the INSERT in your backend code
-    review_comments JSONB DEFAULT '[]',
-    
-    -- Timestamps
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-*/
-
 -- Create all necessary indexes
 CREATE INDEX IF NOT EXISTS idx_contracts_created_by ON contracts(created_by);
 CREATE INDEX IF NOT EXISTS idx_contracts_status ON contracts(status);
@@ -581,3 +519,18 @@ ALTER TABLE contract_deliverables ADD COLUMN IF NOT EXISTS file_data JSONB;
 
 -- Update existing rows to have null file_data
 UPDATE contract_deliverables SET file_data = NULL WHERE file_data IS NOT NULL;
+
+
+
+
+-- to see all column details
+
+SELECT 
+    table_name, 
+    column_name, 
+    data_type, 
+    is_nullable, 
+    column_default
+FROM information_schema.columns
+WHERE table_schema = 'public'
+ORDER BY table_name, ordinal_position;

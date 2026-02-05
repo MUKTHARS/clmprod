@@ -11,7 +11,7 @@ import {
   Filter,
   ChevronRight
 } from 'lucide-react';
-
+// import API_CONFIG from './config';
 function ProjectManagerDashboard({ user }) {
   const [contracts, setContracts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -25,7 +25,7 @@ function ProjectManagerDashboard({ user }) {
   const fetchMyContracts = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://44.219.56.85:4001/api/contracts/', {
+      const response = await fetch('https://grantapi.saple.ai/api/contracts/', {
         headers: {
           'Authorization': `Bearer ${token}`
         }

@@ -23,6 +23,7 @@ import ViewProgramManagerReviews from './components/workflow/ViewProgramManagerR
 import DirectorApproval from './components/workflow/DirectorApproval';
 import ProgramManagerDirectorDecisions from './components/workflow/ProgramManagerDirectorDecisions';
 import CopilotPage from './components/copilot/CopilotPage';
+import SuperAdminDashboard from './components/admin/SuperAdminDashboard';
 // Create a wrapper component to handle the redirect logic
 function AppContent({ user, isAuthenticated, loading, contracts, onLogin, onLogout, onUploadComplete, fetchContracts }) {
   const location = useLocation();
@@ -169,6 +170,15 @@ function AppContent({ user, isAuthenticated, loading, contracts, onLogin, onLogo
               element={
                 <PrivateRoute user={user} requiredRole="project_manager">
                   <ViewProgramManagerReviews />
+                </PrivateRoute>
+              } 
+            />
+
+            <Route 
+              path="/admin" 
+              element={
+                <PrivateRoute user={user} requiredRole="super_admin">
+                  <SuperAdminDashboard user={user} />
                 </PrivateRoute>
               } 
             />

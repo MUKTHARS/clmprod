@@ -7,6 +7,7 @@ from fastapi.responses import RedirectResponse, JSONResponse
 from app.auth_models import User, UserSession, ActivityLog, ContractPermission, ReviewComment
 from app.s3_service import s3_service
 from app.deliverable_models import ContractDeliverable
+from app.admin_routes import router as admin_router
 # from app.deliverable_routes import router as deliverable_router
 # Remove all proxy environment variables
 proxy_vars = [
@@ -68,18 +69,17 @@ from app.config import settings
 from app import models, schemas
 from app.auth_models import User, ActivityLog, ContractPermission
 from app.auth_schemas import UserCreate, UserResponse, LoginRequest, Token, ChangePasswordRequest
-# Include deliverable routes
-# from app.deliverable_routes import router as deliverable_router
-# app.include_router(deliverable_router)
+
+
 # Create tables and setup relationships
 setup_database()
 
 app = FastAPI(title=settings.APP_NAME)
-
+app.include_router(admin_router)
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://44.219.56.85:4000", "http://44.219.56.85:4001", "http://44.219.56.85:4000", "http://44.219.56.85:4001"],
+    allow_origins=["http://localhost:5173", "https://demo.saple.ai", "https://grantapi.saple.ai","https://demo.saple.ai"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -450,16 +450,16 @@ async def health_check():
 # Authentication endpoints
 @app.post("/auth/register", response_model=UserResponse)
 async def register_user(
-    user_data: UserCreate,
+    user_data: UserCreate,  # Use UserCreate instead of old schema
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
     request: Request = None
 ):
-    """Register a new user (director only)"""
-    if current_user.role != "director":
+    """Register a new user (super_admin and director only)"""
+    if current_user.role not in ["super_admin", "director"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only directors can register new users"
+            detail="Only super admins and directors can register new users"
         )
     
     # Check if user exists
@@ -470,15 +470,19 @@ async def register_user(
     if existing_user:
         raise HTTPException(status_code=400, detail="Username or email already exists")
     
-    # Create new user
+    # Create new user with all fields
     db_user = User(
         username=user_data.username,
         email=user_data.email,
         password_hash=get_password_hash(user_data.password),
-        full_name=user_data.full_name,
-        role=user_data.role,
+        first_name=user_data.first_name,
+        last_name=user_data.last_name,
+        company=user_data.company,
+        phone=user_data.phone,
         department=user_data.department,
-        phone=user_data.phone
+        user_type=user_data.user_type,
+        role=user_data.role,
+        is_active=True
     )
     
     db.add(db_user)
@@ -757,7 +761,10 @@ async def login(
         )
     
     if not user.is_active:
-        raise HTTPException(status_code=400, detail="User account is disabled")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User account is deactivated"
+        )
     
     # Update last login
     user.last_login = datetime.utcnow()
@@ -772,13 +779,34 @@ async def login(
         request=request
     )
     
-    # Create JWT token
-    access_token = create_access_token(data={"sub": user.username})
+    # Create JWT token with user role
+    access_token = create_access_token(data={
+        "sub": user.username,
+        "role": user.role,
+        "user_id": user.id
+    })
+    
+    # Create user response with all fields
+    user_response = UserResponse(
+        id=user.id,
+        username=user.username,
+        email=user.email,
+        first_name=user.first_name,
+        last_name=user.last_name,
+        company=user.company,
+        phone=user.phone,
+        department=user.department,
+        user_type=user.user_type,
+        role=user.role,
+        is_active=user.is_active,
+        created_at=user.created_at,
+        last_login=user.last_login
+    )
     
     return {
         "access_token": access_token,
         "token_type": "bearer",
-        "user": UserResponse.from_orm(user)
+        "user": user_response
     }
 
 @app.post("/auth/logout")
