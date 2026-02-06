@@ -1,0 +1,661 @@
+"""
+Agreement Workflow Module for Project Managers
+"""
+from datetime import datetime
+from typing import List, Optional, Dict, Any
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
+from sqlalchemy.orm import Session
+
+from app.database import get_db
+from app.auth_models import User
+from app.auth_utils import get_current_user, log_activity
+from app.models import Contract
+from app.schemas import (
+    UpdateDraftRequest, 
+    PublishAgreementRequest,
+    AdditionalDocument,
+    AgreementMetadata,
+    AssignUsersRequest
+)
+from app.s3_service import s3_service
+import uuid
+import os
+
+router = APIRouter(prefix="/api/agreements", tags=["agreement-workflow"])
+
+@router.get("/drafts")
+async def get_draft_agreements(
+    skip: int = 0,
+    limit: int = 100,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get all draft agreements created by the current Project Manager
+    """
+    if current_user.role != "project_manager":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only Project Managers can access draft agreements"
+        )
+    
+    # Get drafts created by this user
+    drafts = db.query(Contract).filter(
+        Contract.created_by == current_user.id,
+        Contract.status == "draft"
+    ).order_by(Contract.uploaded_at.desc()).offset(skip).limit(limit).all()
+    
+    return drafts
+
+@router.get("/drafts/{contract_id}")
+async def get_draft_details(
+    contract_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get detailed information about a draft agreement
+    """
+    if current_user.role != "project_manager":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only Project Managers can view draft agreements"
+        )
+    
+    contract = db.query(Contract).filter(
+        Contract.id == contract_id,
+        Contract.created_by == current_user.id,
+        Contract.status == "draft"
+    ).first()
+    
+    if not contract:
+        raise HTTPException(status_code=404, detail="Draft agreement not found")
+    
+    # Get assigned users details
+    from app.auth_models import User as AuthUser
+    
+    assigned_pm_users = []
+    assigned_pgm_users = []
+    assigned_director_users = []
+    
+    if contract.assigned_pm_users:
+        pm_users = db.query(AuthUser).filter(
+            AuthUser.id.in_(contract.assigned_pm_users),
+            AuthUser.role == "project_manager"
+        ).all()
+        assigned_pm_users = [{"id": u.id, "name": u.full_name or u.username} for u in pm_users]
+    
+    if contract.assigned_pgm_users:
+        pgm_users = db.query(AuthUser).filter(
+            AuthUser.id.in_(contract.assigned_pgm_users),
+            AuthUser.role == "program_manager"
+        ).all()
+        assigned_pgm_users = [{"id": u.id, "name": u.full_name or u.username} for u in pgm_users]
+    
+    if contract.assigned_director_users:
+        director_users = db.query(AuthUser).filter(
+            AuthUser.id.in_(contract.assigned_director_users),
+            AuthUser.role == "director"
+        ).all()
+        assigned_director_users = [{"id": u.id, "name": u.full_name or u.username} for u in director_users]
+    
+    # Extract agreement metadata from comprehensive data
+    agreement_metadata = {}
+    if contract.comprehensive_data and "agreement_metadata" in contract.comprehensive_data:
+        agreement_metadata = contract.comprehensive_data["agreement_metadata"]
+    
+    # Get additional documents
+    additional_documents = contract.additional_documents or []
+    
+    # Helper function to safely format dates
+    def safe_date_format(date_value):
+        if date_value:
+            if hasattr(date_value, 'isoformat'):
+                return date_value.isoformat()
+            elif isinstance(date_value, str):
+                return date_value  # Already a string
+        return None
+    
+    return {
+        "contract": {
+            "id": contract.id,
+            "filename": contract.filename,
+            "grant_name": contract.grant_name,
+            "contract_number": contract.contract_number,
+            "grantor": contract.grantor,
+            "grantee": contract.grantee,
+            "total_amount": contract.total_amount,
+            "start_date": safe_date_format(contract.start_date),
+            "end_date": safe_date_format(contract.end_date),
+            "purpose": contract.purpose,
+            "notes": contract.notes,
+            "agreement_type": contract.agreement_type,
+            "effective_date": safe_date_format(contract.effective_date),
+            "renewal_date": safe_date_format(contract.renewal_date),
+            "termination_date": safe_date_format(contract.termination_date),
+            "jurisdiction": contract.jurisdiction,
+            "governing_law": contract.governing_law,
+            "special_conditions": contract.special_conditions,
+            "assigned_pm_users": contract.assigned_pm_users or [],
+            "assigned_pgm_users": contract.assigned_pgm_users or [],
+            "assigned_director_users": contract.assigned_director_users or [],
+            "additional_documents": additional_documents,
+            "comprehensive_data": contract.comprehensive_data,
+            "status": contract.status,
+            "created_by": contract.created_by
+        },
+        "assigned_users": {
+            "pm_users": assigned_pm_users,
+            "pgm_users": assigned_pgm_users,
+            "director_users": assigned_director_users
+        },
+        "agreement_metadata": agreement_metadata
+    }
+
+@router.put("/drafts/{contract_id}/update")
+async def update_draft_agreement(
+    contract_id: int,
+    update_data: UpdateDraftRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Update draft agreement metadata, assigned users, and other details
+    """
+    if current_user.role != "project_manager":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only Project Managers can update draft agreements"
+        )
+    
+    contract = db.query(Contract).filter(
+        Contract.id == contract_id,
+        Contract.created_by == current_user.id,
+        Contract.status == "draft"
+    ).first()
+    
+    if not contract:
+        raise HTTPException(status_code=404, detail="Draft agreement not found")
+    
+    try:
+        # Update basic metadata
+        if update_data.grant_name is not None:
+            contract.grant_name = update_data.grant_name
+        if update_data.contract_number is not None:
+            contract.contract_number = update_data.contract_number
+        if update_data.grantor is not None:
+            contract.grantor = update_data.grantor
+        if update_data.grantee is not None:
+            contract.grantee = update_data.grantee
+        if update_data.total_amount is not None:
+            contract.total_amount = update_data.total_amount
+        if update_data.start_date is not None:
+            contract.start_date = update_data.start_date
+        if update_data.end_date is not None:
+            contract.end_date = update_data.end_date
+        if update_data.purpose is not None:
+            contract.purpose = update_data.purpose
+        if update_data.notes is not None:
+            contract.notes = update_data.notes
+        
+        # Update agreement metadata
+        if update_data.agreement_metadata:
+            if not contract.comprehensive_data:
+                contract.comprehensive_data = {}
+            
+            comp_data = contract.comprehensive_data
+            if "agreement_metadata" not in comp_data:
+                comp_data["agreement_metadata"] = {}
+            
+            metadata = comp_data["agreement_metadata"]
+            
+            if update_data.agreement_metadata.agreement_type:
+                contract.agreement_type = update_data.agreement_metadata.agreement_type
+                metadata["agreement_type"] = update_data.agreement_metadata.agreement_type
+            
+            if update_data.agreement_metadata.effective_date:
+                contract.effective_date = update_data.agreement_metadata.effective_date
+                metadata["effective_date"] = update_data.agreement_metadata.effective_date
+            
+            if update_data.agreement_metadata.renewal_date:
+                contract.renewal_date = update_data.agreement_metadata.renewal_date
+                metadata["renewal_date"] = update_data.agreement_metadata.renewal_date
+            
+            if update_data.agreement_metadata.termination_date:
+                contract.termination_date = update_data.agreement_metadata.termination_date
+                metadata["termination_date"] = update_data.agreement_metadata.termination_date
+            
+            if update_data.agreement_metadata.jurisdiction:
+                contract.jurisdiction = update_data.agreement_metadata.jurisdiction
+                metadata["jurisdiction"] = update_data.agreement_metadata.jurisdiction
+            
+            if update_data.agreement_metadata.governing_law:
+                contract.governing_law = update_data.agreement_metadata.governing_law
+                metadata["governing_law"] = update_data.agreement_metadata.governing_law
+            
+            if update_data.agreement_metadata.special_conditions:
+                contract.special_conditions = update_data.agreement_metadata.special_conditions
+                metadata["special_conditions"] = update_data.agreement_metadata.special_conditions
+            
+            comp_data["agreement_metadata"] = metadata
+            contract.comprehensive_data = comp_data
+        
+        # Update assigned users
+        if update_data.assigned_users:
+            # Validate users exist and have correct roles
+            from app.auth_models import User as AuthUser
+            
+            # PM Users
+            if update_data.assigned_users.pm_users:
+                pm_users = db.query(AuthUser).filter(
+                    AuthUser.id.in_(update_data.assigned_users.pm_users),
+                    AuthUser.role == "project_manager",
+                    AuthUser.is_active == True
+                ).all()
+                valid_pm_ids = [user.id for user in pm_users]
+                contract.assigned_pm_users = valid_pm_ids
+            else:
+                contract.assigned_pm_users = []
+            
+            # PGM Users
+            if update_data.assigned_users.pgm_users:
+                pgm_users = db.query(AuthUser).filter(
+                    AuthUser.id.in_(update_data.assigned_users.pgm_users),
+                    AuthUser.role == "program_manager",
+                    AuthUser.is_active == True
+                ).all()
+                valid_pgm_ids = [user.id for user in pgm_users]
+                contract.assigned_pgm_users = valid_pgm_ids
+            else:
+                contract.assigned_pgm_users = []
+            
+            # Director Users
+            if update_data.assigned_users.director_users:
+                director_users = db.query(AuthUser).filter(
+                    AuthUser.id.in_(update_data.assigned_users.director_users),
+                    AuthUser.role == "director",
+                    AuthUser.is_active == True
+                ).all()
+                valid_director_ids = [user.id for user in director_users]
+                contract.assigned_director_users = valid_director_ids
+            else:
+                contract.assigned_director_users = []
+        
+        # Update audit fields
+        contract.last_edited_by = current_user.id
+        contract.last_edited_at = datetime.utcnow()
+        
+        db.commit()
+        
+        # Refresh to get updated data
+        db.refresh(contract)
+        
+        # Log activity
+        log_activity(
+            db,
+            current_user.id,
+            "update_draft",
+            contract_id=contract_id,
+            details={
+                "contract_id": contract_id,
+                "updated_fields": list(update_data.dict(exclude_unset=True).keys())
+            }
+        )
+        
+        # Helper function to safely format dates
+        def safe_date_format(date_value):
+            if date_value:
+                if hasattr(date_value, 'isoformat'):
+                    return date_value.isoformat()
+                elif isinstance(date_value, str):
+                    return date_value  # Already a string
+            return None
+        
+        # Format the response with all contract data
+        return {
+            "message": "Draft agreement updated successfully",
+            "contract_id": contract_id,
+            "contract": {
+                "id": contract.id,
+                "filename": contract.filename,
+                "grant_name": contract.grant_name,
+                "contract_number": contract.contract_number,
+                "grantor": contract.grantor,
+                "grantee": contract.grantee,
+                "total_amount": contract.total_amount,
+                "start_date": safe_date_format(contract.start_date),
+                "end_date": safe_date_format(contract.end_date),
+                "purpose": contract.purpose,
+                "notes": contract.notes,
+                "agreement_type": contract.agreement_type,
+                "effective_date": safe_date_format(contract.effective_date),
+                "renewal_date": safe_date_format(contract.renewal_date),
+                "termination_date": safe_date_format(contract.termination_date),
+                "jurisdiction": contract.jurisdiction,
+                "governing_law": contract.governing_law,
+                "special_conditions": contract.special_conditions,
+                "assigned_pm_users": contract.assigned_pm_users or [],
+                "assigned_pgm_users": contract.assigned_pgm_users or [],
+                "assigned_director_users": contract.assigned_director_users or [],
+                "additional_documents": contract.additional_documents or [],
+                "comprehensive_data": contract.comprehensive_data,
+                "status": contract.status,
+                "created_by": contract.created_by
+            }
+        }
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update draft: {str(e)}"
+        )
+
+
+@router.post("/drafts/{contract_id}/add-document")
+async def add_additional_document(
+    contract_id: int,
+    file: UploadFile = File(...),
+    description: Optional[str] = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Add additional document to a draft agreement
+    """
+    if current_user.role != "project_manager":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only Project Managers can add documents to draft agreements"
+        )
+    
+    contract = db.query(Contract).filter(
+        Contract.id == contract_id,
+        Contract.created_by == current_user.id,
+        Contract.status == "draft"
+    ).first()
+    
+    if not contract:
+        raise HTTPException(status_code=404, detail="Draft agreement not found")
+    
+    try:
+        # Read file content
+        file_content = await file.read()
+        
+        # Create document metadata WITHOUT S3 upload
+        document_metadata = {
+            "id": str(uuid.uuid4()),
+            "filename": file.filename,
+            "original_filename": file.filename,
+            "file_type": file.content_type,
+            "description": description,
+            "size": len(file_content),
+            "uploaded_by": current_user.id,
+            "uploaded_by_name": current_user.full_name or current_user.username,
+            "uploaded_at": datetime.utcnow().isoformat(),
+            "content_base64": file_content.hex()  # Store content as hex string in database
+        }
+        
+        # Add to contract's additional documents
+        if contract.additional_documents is None:
+            contract.additional_documents = []
+        
+        contract.additional_documents.append(document_metadata)
+        
+        # Update audit fields
+        contract.last_edited_by = current_user.id
+        contract.last_edited_at = datetime.utcnow()
+        
+        db.commit()
+        
+        # Log activity
+        log_activity(
+            db,
+            current_user.id,
+            "add_document",
+            contract_id=contract_id,
+            details={
+                "contract_id": contract_id,
+                "filename": file.filename,
+                "file_size": len(file_content)
+            }
+        )
+        
+        return {
+            "message": "Document added successfully",
+            "document": document_metadata,
+            "contract_id": contract_id
+        }
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to add document: {str(e)}"
+        )
+
+@router.get("/drafts/{contract_id}/documents/{document_id}")
+async def get_document(
+    contract_id: int,
+    document_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get additional document from a draft agreement
+    """
+    if current_user.role != "project_manager":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only Project Managers can access draft agreement documents"
+        )
+    
+    contract = db.query(Contract).filter(
+        Contract.id == contract_id,
+        Contract.created_by == current_user.id,
+        Contract.status == "draft"
+    ).first()
+    
+    if not contract:
+        raise HTTPException(status_code=404, detail="Draft agreement not found")
+    
+    # Find the document in additional_documents
+    if not contract.additional_documents:
+        raise HTTPException(status_code=404, detail="No additional documents found")
+    
+    document = None
+    for doc in contract.additional_documents:
+        if doc.get("id") == document_id:
+            document = doc
+            break
+    
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+    
+    # Convert hex string back to bytes
+    try:
+        content_bytes = bytes.fromhex(document["content_base64"])
+    except:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to decode document content"
+        )
+    
+    # Return the file
+    from fastapi.responses import Response
+    
+    return Response(
+        content=content_bytes,
+        media_type=document.get("file_type", "application/octet-stream"),
+        headers={
+            "Content-Disposition": f"attachment; filename={document['filename']}",
+            "Content-Length": str(len(content_bytes))
+        }
+    )        
+
+@router.post("/drafts/{contract_id}/publish")
+async def publish_agreement(
+    contract_id: int,
+    publish_data: PublishAgreementRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Publish a draft agreement (optionally submit for review)
+    """
+    if current_user.role != "project_manager":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only Project Managers can publish agreements"
+        )
+    
+    contract = db.query(Contract).filter(
+        Contract.id == contract_id,
+        Contract.created_by == current_user.id,
+        Contract.status == "draft"
+    ).first()
+    
+    if not contract:
+        raise HTTPException(status_code=404, detail="Draft agreement not found")
+    
+    try:
+        # Update audit fields
+        contract.published_at = datetime.utcnow()
+        contract.published_by = current_user.id
+        
+        if publish_data.notes:
+            contract.notes = publish_data.notes
+        
+        # If publishing to review, update status
+        if publish_data.publish_to_review:
+            contract.status = "under_review"
+            
+            # Create a version snapshot
+            from app.models import ContractVersion
+            
+            last_version = db.query(ContractVersion).filter(
+                ContractVersion.contract_id == contract_id
+            ).order_by(ContractVersion.version_number.desc()).first()
+            
+            version_number = (last_version.version_number + 1) if last_version else 1
+            
+            version_data = {
+                "contract_data": contract.comprehensive_data or {},
+                "basic_data": {
+                    "grant_name": contract.grant_name,
+                    "contract_number": contract.contract_number,
+                    "grantor": contract.grantor,
+                    "grantee": contract.grantee,
+                    "total_amount": contract.total_amount,
+                    "start_date": contract.start_date,
+                    "end_date": contract.end_date,
+                    "purpose": contract.purpose,
+                    "status": contract.status,
+                    "assigned_pm_users": contract.assigned_pm_users,
+                    "assigned_pgm_users": contract.assigned_pgm_users,
+                    "assigned_director_users": contract.assigned_director_users,
+                    "additional_documents": contract.additional_documents,
+                    "notes": contract.notes
+                },
+                "publish_notes": publish_data.notes
+            }
+            
+            version = ContractVersion(
+                contract_id=contract_id,
+                version_number=version_number,
+                created_by=current_user.id,
+                contract_data=version_data,
+                changes_description=f"Published agreement: {publish_data.notes}" if publish_data.notes else "Published agreement",
+                version_type="publish"
+            )
+            
+            db.add(version)
+            
+            # Update contract version
+            contract.version = version_number
+            
+            # Add to comprehensive data history
+            if not contract.comprehensive_data:
+                contract.comprehensive_data = {}
+            
+            publish_history = contract.comprehensive_data.get("publish_history", [])
+            publish_history.append({
+                "action": "published",
+                "by_user_id": current_user.id,
+                "by_user_name": current_user.full_name or current_user.username,
+                "timestamp": datetime.utcnow().isoformat(),
+                "notes": publish_data.notes,
+                "published_to_review": publish_data.publish_to_review,
+                "version_number": version_number
+            })
+            
+            contract.comprehensive_data["publish_history"] = publish_history
+        
+        db.commit()
+        
+        # Log activity
+        action_type = "publish_for_review" if publish_data.publish_to_review else "publish_draft"
+        log_activity(
+            db,
+            current_user.id,
+            action_type,
+            contract_id=contract_id,
+            details={
+                "contract_id": contract_id,
+                "publish_to_review": publish_data.publish_to_review,
+                "notes": publish_data.notes
+            }
+        )
+        
+        message = "Agreement published and submitted for review" if publish_data.publish_to_review else "Agreement published"
+        
+        return {
+            "message": message,
+            "contract_id": contract_id,
+            "status": contract.status,
+            "published_at": contract.published_at.isoformat() if contract.published_at else None
+        }
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to publish agreement: {str(e)}"
+        )
+
+@router.get("/users/available")
+async def get_available_users(
+    role: Optional[str] = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get available users for assignment (filtered by role)
+    """
+    if current_user.role != "project_manager":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only Project Managers can view available users"
+        )
+    
+    from app.auth_models import User as AuthUser
+    
+    query = db.query(AuthUser).filter(AuthUser.is_active == True)
+    
+    if role:
+        query = query.filter(AuthUser.role == role)
+    
+    users = query.order_by(AuthUser.full_name).all()
+    
+    return [
+        {
+            "id": user.id,
+            "username": user.username,
+            "full_name": user.full_name or user.username,
+            "email": user.email,
+            "role": user.role,
+            "company": user.company,
+            "department": user.department
+        }
+        for user in users
+    ]

@@ -111,3 +111,66 @@ class ReviewCommentSchema(BaseModel):
     
     class Config:
         from_attributes = True
+
+
+# Add these schemas after existing ones
+
+class AdditionalDocument(BaseModel):
+    filename: str
+    file_type: str
+    description: Optional[str] = None
+    uploaded_at: Optional[datetime] = None
+    uploaded_by: Optional[int] = None
+
+class AgreementMetadata(BaseModel):
+    agreement_type: Optional[str] = None
+    effective_date: Optional[str] = None
+    renewal_date: Optional[str] = None
+    termination_date: Optional[str] = None
+    jurisdiction: Optional[str] = None
+    governing_law: Optional[str] = None
+    special_conditions: Optional[Dict[str, Any]] = None
+
+class AssignUsersRequest(BaseModel):
+    pm_users: Optional[List[int]] = []  # Project Manager IDs
+    pgm_users: Optional[List[int]] = []  # Program Manager IDs
+    director_users: Optional[List[int]] = []  # Director IDs
+
+class UpdateDraftRequest(BaseModel):
+    grant_name: Optional[str] = None
+    contract_number: Optional[str] = None
+    grantor: Optional[str] = None
+    grantee: Optional[str] = None
+    total_amount: Optional[float] = None
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    purpose: Optional[str] = None
+    notes: Optional[str] = None
+    agreement_metadata: Optional[AgreementMetadata] = None
+    assigned_users: Optional[AssignUsersRequest] = None
+
+    
+class PublishAgreementRequest(BaseModel):
+    notes: Optional[str] = None
+    publish_to_review: Optional[bool] = True  # If True, publishes and submits for review
+
+class ContractResponseEnhanced(ContractResponse):
+    # Add new fields to response
+    assigned_pm_users: Optional[List[int]] = []
+    assigned_pgm_users: Optional[List[int]] = []
+    assigned_director_users: Optional[List[int]] = []
+    additional_documents: Optional[List[Dict[str, Any]]] = []
+    notes: Optional[str] = None
+    agreement_type: Optional[str] = None
+    effective_date: Optional[str] = None
+    renewal_date: Optional[str] = None
+    jurisdiction: Optional[str] = None
+    governing_law: Optional[str] = None
+    special_conditions: Optional[Dict[str, Any]] = None
+    last_edited_by: Optional[int] = None
+    last_edited_at: Optional[datetime] = None
+    published_at: Optional[datetime] = None
+    published_by: Optional[int] = None
+    
+    class Config:
+        from_attributes = True

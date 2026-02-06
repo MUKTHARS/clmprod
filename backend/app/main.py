@@ -8,6 +8,7 @@ from app.auth_models import User, UserSession, ActivityLog, ContractPermission, 
 from app.s3_service import s3_service
 from app.deliverable_models import ContractDeliverable
 from app.admin_routes import router as admin_router
+from app.agreement_workflow import router as agreement_router
 # from app.deliverable_routes import router as deliverable_router
 # Remove all proxy environment variables
 proxy_vars = [
@@ -76,10 +77,11 @@ setup_database()
 
 app = FastAPI(title=settings.APP_NAME)
 app.include_router(admin_router)
+app.include_router(agreement_router)
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "https://demo.saple.ai", "https://grantapi.saple.ai","https://demo.saple.ai"],
+    allow_origins=["http://localhost:5173", "https://localhost:4000", "https://localhost:4001","https://localhost:4000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -744,7 +746,43 @@ async def get_contract_deliverables(
         raise HTTPException(status_code=500, detail=f"Failed to fetch deliverables: {str(e)}")
 
 
-
+@app.get("/api/admin/users")
+async def get_admin_users(
+    skip: int = 0,
+    limit: int = 100,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get all users for admin panel - Director only"""
+    if current_user.role != "director":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only Directors can view all users"
+        )
+    
+    users = db.query(User).order_by(User.created_at.desc()).offset(skip).limit(limit).all()
+    
+    # Format response without password hash
+    user_list = []
+    for user in users:
+        user_list.append({
+            "id": user.id,
+            "username": user.username,
+            "email": user.email,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "company": user.company,
+            "phone": user.phone,
+            "department": user.department,
+            "user_type": user.user_type,
+            "role": user.role,
+            "is_active": user.is_active,
+            "created_at": user.created_at.isoformat() if user.created_at else None,
+            "last_login": user.last_login.isoformat() if user.last_login else None
+        })
+    
+    return user_list
+    
 @app.post("/auth/login", response_model=Token)
 async def login(
     login_data: LoginRequest, 
@@ -3817,6 +3855,7 @@ async def director_final_approval(
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to process final approval: {str(e)}")
+
 
 @app.get("/api/contracts/{contract_id}/director/view-complete")
 async def director_view_complete_contract(

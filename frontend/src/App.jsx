@@ -24,7 +24,9 @@ import DirectorApproval from './components/workflow/DirectorApproval';
 import ProgramManagerDirectorDecisions from './components/workflow/ProgramManagerDirectorDecisions';
 import CopilotPage from './components/copilot/CopilotPage';
 import SuperAdminDashboard from './components/admin/SuperAdminDashboard';
-// Create a wrapper component to handle the redirect logic
+import ViewDraftsPage from './components/workflow/ViewDraftsPage';
+import DraftManagementPage from './pages/DraftManagementPage';
+// import ArchivePage from './pages/ArchivePage';
 function AppContent({ user, isAuthenticated, loading, contracts, onLogin, onLogout, onUploadComplete, fetchContracts }) {
   const location = useLocation();
   
@@ -86,6 +88,7 @@ function AppContent({ user, isAuthenticated, loading, contracts, onLogin, onLogo
                 </PrivateRoute>
               } 
             />
+            
             <Route 
               path="/pm-dashboard" 
               element={
@@ -95,6 +98,14 @@ function AppContent({ user, isAuthenticated, loading, contracts, onLogin, onLogo
               } 
             />
             
+            {/* <Route 
+  path="/drafts" 
+  element={
+    <PrivateRoute user={user} requiredRole="project_manager">
+      <DraftManagementPage user={user} />
+    </PrivateRoute>
+  } 
+/> */}
             {/* Program Manager Routes */}
             <Route 
               path="/review" 
@@ -112,6 +123,7 @@ function AppContent({ user, isAuthenticated, loading, contracts, onLogin, onLogo
                 </PrivateRoute>
               } 
             />
+            <Route path="/drafts" element={<ViewDraftsPage user={user} />} />
             <Route 
               path="/my-reviews" 
               element={
@@ -138,7 +150,38 @@ function AppContent({ user, isAuthenticated, loading, contracts, onLogin, onLogo
                 </PrivateRoute>
               } 
             />
-            
+ <Route 
+    path="/drafts/my" 
+    element={
+      user?.role === "project_manager" ? (
+        <DraftManagementPage user={user} />
+      ) : (
+        <Navigate to="/dashboard" replace />
+      )
+    } 
+  />
+  <Route 
+    path="/drafts/assigned" 
+    element={
+      user?.role === "project_manager" ? (
+        <DraftManagementPage user={user} />
+      ) : (
+        <Navigate to="/dashboard" replace />
+      )
+    } 
+  />
+{/* <Route path="/archive" element={
+  user ? (
+    <Layout>
+      <div className="archive-page" style={{ padding: '24px' }}>
+        <h1>Archive</h1>
+        <p>Archive functionality coming soon...</p>
+      </div>
+    </Layout>
+  ) : (
+    <Navigate to="/login" replace />
+  )
+} /> */}
             {/* Old review routes (keep for compatibility) */}
             <Route 
               path="/review-old" 
@@ -216,6 +259,7 @@ function AppContent({ user, isAuthenticated, loading, contracts, onLogin, onLogo
                 </PrivateRoute>
               } 
             />
+            
             <Route 
   path="/copilot" 
   element={
@@ -225,6 +269,8 @@ function AppContent({ user, isAuthenticated, loading, contracts, onLogin, onLogo
   } 
 />
           </Routes>
+
+          
         </div>
       </div>
     </>

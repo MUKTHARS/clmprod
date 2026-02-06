@@ -2308,5 +2308,294 @@
 }
 
 
+/* Agreement Workflow Styles */
+.workflow-info {
+  background: #f8fafc;
+  border-radius: 6px;
+  padding: 16px;
+  margin-bottom: 16px;
+  border: 1px solid #e2e8f0;
+}
+
+.workflow-info p {
+  margin: 0 0 12px 0;
+  color: #475569;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.workflow-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+.workflow-btn:hover {
+  background: #2563eb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+}
+
+/* Draft status badge */
+.draft-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: #fef3c7;
+  color: #92400e;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+  margin-left: 8px;
+}
 
 
+
+
+
+
+
+
+
+
+/* Fix for Agreement Workflow Section */
+.section-header-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.workflow-info {
+  background: #f8fafc;
+  border-radius: 6px;
+  padding: 16px;
+  margin-bottom: 16px;
+  border: 1px solid #e2e8f0;
+}
+
+.workflow-info p {
+  margin: 0 0 12px 0;
+  color: #475569;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* Ensure proper separation between sections */
+.section-card + .section-card {
+  margin-top: 16px;
+}
+
+/* Fix expandable sections visibility */
+.expandable-section {
+  margin-bottom: 8px;
+  background: #f8fafc;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+}
+
+.expandable-section:last-child {
+  margin-bottom: 0;
+}
+
+.expandable-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background: white;
+  border-bottom: 1px solid #e2e8f0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.expandable-header:hover {
+  background: #f1f5f9;
+}
+
+.expandable-header h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0;
+  flex: 1;
+}
+
+.expandable-content {
+  padding: 16px;
+}
+
+/* Make sure fields are properly visible */
+.fields-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.field-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  min-height: auto;
+  width: 100%;
+}
+
+.field-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+}
+
+.field-label {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.field-value {
+  font-size: 13px;
+  font-weight: 500;
+  color: #1e293b;
+  line-height: 1.5;
+  word-break: normal;
+  margin: 0;
+  text-align: left;
+  display: block;
+}
+
+/* Fix for Project Manager Actions */
+.project-manager-actions {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  margin-top: 0;
+}
+
+/* Make sure the workflow button is properly styled */
+.workflow-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+.workflow-btn:hover {
+  background: #2563eb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+}
+
+
+/* Make sure expandable sections are clearly visible */
+.expandable-section {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.expandable-section:last-child {
+  margin-bottom: 0;
+}
+
+.expandable-header {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-bottom: 1px solid #e2e8f0;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.expandable-header:hover {
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+}
+
+.expand-icon {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  color: #64748b;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.expandable-header:hover .expand-icon {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+}
+
+.expandable-header h4 {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0;
+  flex: 1;
+}
+
+.expandable-header svg {
+  color: #475569;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+}
+
+.expandable-content {
+  padding: 20px;
+  background: white;
+}
+
+/* Make sure the content is properly spaced */
+.expandable-content > *:not(:first-child) {
+  margin-top: 16px;
+}
+
+.expandable-content > *:last-child {
+  margin-bottom: 0;
+}
