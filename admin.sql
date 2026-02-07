@@ -109,3 +109,24 @@ SELECT
 FROM information_schema.columns 
 WHERE table_name = 'contracts' 
 ORDER BY ordinal_position;
+
+
+
+
+CREATE TABLE user_notifications (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    notification_type VARCHAR NOT NULL,
+    title VARCHAR NOT NULL,
+    message TEXT NOT NULL,
+    contract_id INTEGER REFERENCES contracts(id),
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    read_at TIMESTAMP WITH TIME ZONE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (contract_id) REFERENCES contracts(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_user_notifications_user_id ON user_notifications(user_id);
+CREATE INDEX idx_user_notifications_contract_id ON user_notifications(contract_id);
+CREATE INDEX idx_user_notifications_is_read ON user_notifications(is_read);

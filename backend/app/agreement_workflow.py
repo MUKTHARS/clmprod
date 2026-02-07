@@ -23,6 +23,7 @@ import os
 
 router = APIRouter(prefix="/api/agreements", tags=["agreement-workflow"])
 
+
 @router.get("/drafts")
 async def get_draft_agreements(
     skip: int = 0,
@@ -39,13 +40,29 @@ async def get_draft_agreements(
             detail="Only Project Managers can access draft agreements"
         )
     
-    # Get drafts created by this user
-    drafts = db.query(Contract).filter(
-        Contract.created_by == current_user.id,
-        Contract.status == "draft"
-    ).order_by(Contract.uploaded_at.desc()).offset(skip).limit(limit).all()
-    
-    return drafts
+    try:
+        print(f"DEBUG: Fetching drafts for user {current_user.id}")
+        
+        # Get drafts created by this user
+        drafts = db.query(Contract).filter(
+            Contract.created_by == current_user.id,
+            Contract.status == "draft"
+        ).order_by(Contract.uploaded_at.desc()).offset(skip).limit(limit).all()
+        
+        print(f"DEBUG: Found {len(drafts)} drafts for user")
+        
+        # Add debug info for each draft
+        for draft in drafts:
+            print(f"  Draft {draft.id}: PM Users = {draft.assigned_pm_users}, Type = {type(draft.assigned_pm_users)}")
+        
+        return drafts
+        
+    except Exception as e:
+        print(f"ERROR in get_draft_agreements: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch draft agreements: {str(e)}"
+        )
 
 @router.get("/drafts/{contract_id}")
 async def get_draft_details(
@@ -281,10 +298,95 @@ async def update_draft_agreement(
             else:
                 contract.assigned_director_users = []
         
+            from app.notification_service import NotificationService
+        
+            # Track which users need notifications
+            notification_messages = []
+            
+            # PM Users
+            if update_data.assigned_users.pm_users:
+                contract.assigned_pm_users = valid_pm_ids
+                # Create notifications
+                NotificationService.create_assignment_notification(
+                    db=db,
+                    contract_id=contract_id,
+                    contract_name=contract.grant_name or contract.filename,
+                    assigned_users=valid_pm_ids,
+                    assigned_by_user=current_user,
+                    user_type="project_manager"
+                )
+                notification_messages.append(f"{len(valid_pm_ids)} project manager(s) notified")
+            
+            # PGM Users
+            if update_data.assigned_users.pgm_users:
+                contract.assigned_pgm_users = valid_pgm_ids
+                # Create notifications
+                NotificationService.create_assignment_notification(
+                    db=db,
+                    contract_id=contract_id,
+                    contract_name=contract.grant_name or contract.filename,
+                    assigned_users=valid_pgm_ids,
+                    assigned_by_user=current_user,
+                    user_type="program_manager"
+                )
+                notification_messages.append(f"{len(valid_pgm_ids)} program manager(s) notified")
+            
+            # Director Users
+            if update_data.assigned_users.director_users:
+                contract.assigned_director_users = valid_director_ids
+                # Create notifications
+                NotificationService.create_assignment_notification(
+                    db=db,
+                    contract_id=contract_id,
+                    contract_name=contract.grant_name or contract.filename,
+                    assigned_users=valid_director_ids,
+                    assigned_by_user=current_user,
+                    user_type="director"
+                )
+                notification_messages.append(f"{len(valid_director_ids)} director(s) notified")
+
+
         # Update audit fields
         contract.last_edited_by = current_user.id
         contract.last_edited_at = datetime.utcnow()
         
+
+        if update_data.assigned_users:
+            if not contract.comprehensive_data:
+                contract.comprehensive_data = {}
+            
+            # Initialize assignment history
+            if "assignment_history" not in contract.comprehensive_data:
+                contract.comprehensive_data["assignment_history"] = []
+            
+            # Create assignment tracking entry
+            assignment_entry = {
+                "assigned_by": current_user.id,
+                "assigned_by_name": current_user.full_name or current_user.username,
+                "assigned_by_role": current_user.role,
+                "assigned_at": datetime.utcnow().isoformat(),
+                "assigned_users": {
+                    "pm_users": valid_pm_ids if update_data.assigned_users.pm_users else [],
+                    "pgm_users": valid_pgm_ids if update_data.assigned_users.pgm_users else [],
+                    "director_users": valid_director_ids if update_data.assigned_users.director_users else []
+                },
+                "notes": f"Assigned via draft update"
+            }
+            
+            contract.comprehensive_data["assignment_history"].append(assignment_entry)
+            
+            # Also store current assignment tracking
+            contract.comprehensive_data["assignment_tracking"] = {
+                "last_assigned_by": current_user.id,
+                "last_assigned_by_name": current_user.full_name or current_user.username,
+                "last_assigned_by_role": current_user.role,
+                "last_assigned_at": datetime.utcnow().isoformat(),
+                "current_pm_users": valid_pm_ids if update_data.assigned_users.pm_users else [],
+                "current_pgm_users": valid_pgm_ids if update_data.assigned_users.pgm_users else [],
+                "current_director_users": valid_director_ids if update_data.assigned_users.director_users else []
+            }
+
+
         db.commit()
         
         # Refresh to get updated data
@@ -341,7 +443,8 @@ async def update_draft_agreement(
                 "comprehensive_data": contract.comprehensive_data,
                 "status": contract.status,
                 "created_by": contract.created_by
-            }
+            },
+            "notifications_sent": notification_messages
         }
         
     except Exception as e:
@@ -530,6 +633,30 @@ async def publish_agreement(
         if publish_data.publish_to_review:
             contract.status = "under_review"
             
+             # Create notifications for all assigned users
+            from app.notification_service import NotificationService
+            
+            # Get all assigned users
+            all_assigned_users = []
+            if contract.assigned_pm_users:
+                all_assigned_users.extend(contract.assigned_pm_users)
+            if contract.assigned_pgm_users:
+                all_assigned_users.extend(contract.assigned_pgm_users)
+            if contract.assigned_director_users:
+                all_assigned_users.extend(contract.assigned_director_users)
+            
+            # Remove duplicates
+            all_assigned_users = list(set(all_assigned_users))
+            
+            if all_assigned_users:
+                NotificationService.create_publish_notification(
+                    db=db,
+                    contract_id=contract_id,
+                    contract_name=contract.grant_name or contract.filename,
+                    published_by_user=current_user,
+                    assigned_users=all_assigned_users
+                )
+
             # Create a version snapshot
             from app.models import ContractVersion
             

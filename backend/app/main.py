@@ -1,5 +1,6 @@
 import os
 import sys
+from app.notification_service import NotificationService
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any
 from fastapi import Query, Response, Form
@@ -153,6 +154,7 @@ def get_current_user(
     
     return user
 
+# In main.py, update the check_permission function:
 def check_permission(user: User, contract_id: int, required_permission: str, db: Session) -> bool:
     """Check if user has required permission for a contract"""
     # Get the contract first
@@ -178,11 +180,22 @@ def check_permission(user: User, contract_id: int, required_permission: str, db:
     
     # Project Manager permissions
     if user.role == "project_manager":
+        # ✅ CRITICAL FIX: Check if user is assigned to this contract
+        is_assigned = False
+        
+        # Check all assignment lists
+        if contract.assigned_pm_users and isinstance(contract.assigned_pm_users, list):
+            is_assigned = user.id in contract.assigned_pm_users
+        
         # Check if this user created the contract
         is_creator = contract.created_by == user.id
         
-        if not is_creator:
-            # Non-creator Project Managers can only view if explicitly granted
+        # ✅ FIX: If user is assigned, grant view permission
+        if is_assigned and required_permission == "view":
+            return True
+        
+        if not is_creator and not is_assigned:
+            # Non-creator and non-assigned Project Managers can only view if explicitly granted
             if required_permission == "view":
                 permission = db.query(ContractPermission).filter(
                     ContractPermission.contract_id == contract_id,
@@ -192,10 +205,10 @@ def check_permission(user: User, contract_id: int, required_permission: str, db:
                 return permission is not None
             return False
         
-        # Project Manager (Creator/Owner/Admin) permissions based on status
+        # Project Manager (Creator/Assigned) permissions based on status
         
         # 1. ALWAYS ALLOWED PERMISSIONS (regardless of status):
-        # - View: Can always view their own contracts
+        # - View: Can always view their own or assigned contracts
         # - Upload: Can upload/initiate processing (this is handled at contract creation)
         if required_permission in ["view", "upload"]:
             return True
@@ -203,23 +216,23 @@ def check_permission(user: User, contract_id: int, required_permission: str, db:
         # 2. DRAFT STATUS PERMISSIONS:
         # Contract is in draft or being created
         if contract.status == "draft":
-            # Can edit, fix metadata, submit for review
+            # Can edit, fix metadata, submit for review (only creator)
             if required_permission in ["edit", "fix_metadata", "submit_review"]:
-                return True
+                return is_creator  # Only creator can edit, not assigned users
         
         # 3. REJECTED STATUS PERMISSIONS:
         # Contract was rejected by Program Manager
         elif contract.status == "rejected":
-            # Can edit, fix metadata, respond to comments, resubmit for review
+            # Can edit, fix metadata, respond to comments, resubmit for review (only creator)
             if required_permission in ["edit", "fix_metadata", "respond_to_comments", "submit_review"]:
-                return True
+                return is_creator  # Only creator can edit/re-submit
         
         # 4. UNDER_REVIEW STATUS PERMISSIONS:
         # Contract is being reviewed by Program Manager
         elif contract.status == "under_review":
             # Can only view and respond to comments (cannot edit while under review)
             if required_permission in ["respond_to_comments"]:
-                return True
+                return is_creator  # Only creator can respond
         
         # 5. REVIEWED STATUS PERMISSIONS:
         # Contract reviewed by Program Manager, waiting for Director approval
@@ -252,6 +265,106 @@ def check_permission(user: User, contract_id: int, required_permission: str, db:
     ).first()
     
     return permission is not None
+    
+# def check_permission(user: User, contract_id: int, required_permission: str, db: Session) -> bool:
+#     """Check if user has required permission for a contract"""
+#     # Get the contract first
+#     contract = db.query(models.Contract).filter(models.Contract.id == contract_id).first()
+#     if not contract:
+#         return False
+    
+#     # Admin/Director has all permissions for all contracts
+#     if user.role == "director":
+#         return True
+    
+#     # Program Manager permissions
+#     if user.role == "program_manager":
+#         # Program Managers can:
+#         # 1. View contracts under review, reviewed, approved, or draft
+#         if required_permission == "view":
+#             return contract.status in ["under_review", "reviewed", "approved", "draft"]
+#         # 2. Review contracts that are under review
+#         elif required_permission == "review":
+#             return contract.status == "under_review"
+#         else:
+#             return False
+    
+#     # Project Manager permissions
+#     if user.role == "project_manager":
+#         # Check if this user created the contract
+#         is_creator = contract.created_by == user.id
+        
+#         if not is_creator:
+#             # Non-creator Project Managers can only view if explicitly granted
+#             if required_permission == "view":
+#                 permission = db.query(ContractPermission).filter(
+#                     ContractPermission.contract_id == contract_id,
+#                     ContractPermission.user_id == user.id,
+#                     ContractPermission.permission_type == "view"
+#                 ).first()
+#                 return permission is not None
+#             return False
+        
+#         # Project Manager (Creator/Owner/Admin) permissions based on status
+        
+#         # 1. ALWAYS ALLOWED PERMISSIONS (regardless of status):
+#         # - View: Can always view their own contracts
+#         # - Upload: Can upload/initiate processing (this is handled at contract creation)
+#         if required_permission in ["view", "upload"]:
+#             return True
+        
+#         # 2. DRAFT STATUS PERMISSIONS:
+#         # Contract is in draft or being created
+#         if contract.status == "draft":
+#             # Can edit, fix metadata, submit for review
+#             if required_permission in ["edit", "fix_metadata", "submit_review"]:
+#                 return True
+        
+#         # 3. REJECTED STATUS PERMISSIONS:
+#         # Contract was rejected by Program Manager
+#         elif contract.status == "rejected":
+#             # Can edit, fix metadata, respond to comments, resubmit for review
+#             if required_permission in ["edit", "fix_metadata", "respond_to_comments", "submit_review"]:
+#                 return True
+        
+#         # 4. UNDER_REVIEW STATUS PERMISSIONS:
+#         # Contract is being reviewed by Program Manager
+#         elif contract.status == "under_review":
+#             # Can only view and respond to comments (cannot edit while under review)
+#             if required_permission in ["respond_to_comments"]:
+#                 return True
+        
+#         # 5. REVIEWED STATUS PERMISSIONS:
+#         # Contract reviewed by Program Manager, waiting for Director approval
+#         elif contract.status == "reviewed":
+#             # Can only view (no changes allowed)
+#             if required_permission == "view":
+#                 return True
+        
+#         # 6. APPROVED STATUS PERMISSIONS:
+#         # Contract approved by Director
+#         elif contract.status == "approved":
+#             # Can only view (contract is finalized)
+#             if required_permission == "view":
+#                 return True
+        
+#         # Check explicit permissions for any other permissions
+#         permission = db.query(ContractPermission).filter(
+#             ContractPermission.contract_id == contract_id,
+#             ContractPermission.user_id == user.id,
+#             ContractPermission.permission_type == required_permission
+#         ).first()
+        
+#         return permission is not None
+    
+#     # Other users (if any) - check explicit permissions only
+#     permission = db.query(ContractPermission).filter(
+#         ContractPermission.contract_id == contract_id,
+#         ContractPermission.user_id == user.id,
+#         ContractPermission.permission_type == required_permission
+#     ).first()
+    
+#     return permission is not None
 
 def get_user_permissions_dict(user: User) -> Dict[str, bool]:
     """Get all permissions for a user based on their role"""
@@ -721,7 +834,7 @@ async def get_contract_deliverables(
     """Get all deliverables for a specific contract"""
     try:
         # Check permission
-        contract = db.query(Contract).filter(Contract.id == contract_id).first()
+        contract = db.query(models.Contract).filter(models.Contract.id == contract_id).first()
         if not contract:
             raise HTTPException(status_code=404, detail="Contract not found")
         
@@ -960,6 +1073,7 @@ async def upload_contract(
             purpose=basic_data["purpose"],
             payment_schedule=basic_data["payment_schedule"],
             terms_conditions=basic_data["terms_conditions"],
+            # ✅ CRITICAL FIX: Set created_by to current user's ID
             created_by=current_user.id,
             status="draft",
             version=1
@@ -1044,6 +1158,77 @@ async def upload_contract(
         raise HTTPException(status_code=500, detail=f"Processing failed: {str(e)}")
     finally:
         await file.close()
+
+@app.get("/api/contracts/{contract_id}/assignment-details")
+async def get_assignment_details(
+    contract_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get detailed assignment information for a contract"""
+    # Get the contract first to check permissions
+    contract = db.query(models.Contract).filter(models.Contract.id == contract_id).first()
+    if not contract:
+        raise HTTPException(status_code=404, detail="Contract not found")
+    
+    # Check if current user is assigned to this contract
+    if not is_user_assigned_to_contract(current_user.id, contract, db):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not assigned to this contract"
+        )
+    
+    # Get assignment info
+    assignment_info = get_assignment_info(contract_id, current_user.id, db)
+    
+    # Get all assigned users with details
+    assigned_users = []
+    
+    # Helper function to get user info
+    def get_user_details(user_ids):
+        if not user_ids:
+            return []
+        users = db.query(User).filter(User.id.in_(user_ids)).all()
+        return [
+            {
+                "id": u.id,
+                "username": u.username,
+                "full_name": u.full_name or u.username,
+                "email": u.email,
+                "role": u.role,
+                "company": u.company,
+                "department": u.department
+            }
+            for u in users
+        ]
+    
+    # Get all assigned users
+    all_assigned_ids = []
+    if contract.assigned_pm_users and isinstance(contract.assigned_pm_users, list):
+        all_assigned_ids.extend(contract.assigned_pm_users)
+    if contract.assigned_pgm_users and isinstance(contract.assigned_pgm_users, list):
+        all_assigned_ids.extend(contract.assigned_pgm_users)
+    if contract.assigned_director_users and isinstance(contract.assigned_director_users, list):
+        all_assigned_ids.extend(contract.assigned_director_users)
+    
+    # Remove duplicates and current user
+    all_assigned_ids = list(set(all_assigned_ids))
+    if current_user.id in all_assigned_ids:
+        all_assigned_ids.remove(current_user.id)
+    
+    assigned_users = get_user_details(all_assigned_ids)
+    
+    return {
+        "contract_id": contract_id,
+        "contract_name": contract.grant_name or contract.filename,
+        "assignment_info": assignment_info,
+        "assigned_with": assigned_users,
+        "total_assigned": len(all_assigned_ids) + 1,  # +1 for current user
+        "contract_creator": contract.created_by,
+        "created_at": contract.uploaded_at.isoformat() if contract.uploaded_at else None,
+        "comprehensive_data_has_history": "assignment_history" in (contract.comprehensive_data or {})
+    }
+
 
 
 @app.delete("/api/contracts/{contract_id}")
@@ -1189,9 +1374,16 @@ async def get_comprehensive_data(
     
     # Check permission based on role
     if current_user.role == "project_manager":
-        # Project managers can only see contracts they created
-        if contract.created_by != current_user.id:
-            print(f"Permission denied: Contract created by {contract.created_by}, user is {current_user.id}")
+        # Project managers can see contracts they created OR are assigned to
+        is_creator = contract.created_by == current_user.id
+        is_assigned = False
+        
+        # Check if user is assigned
+        if contract.assigned_pm_users and isinstance(contract.assigned_pm_users, list):
+            is_assigned = current_user.id in contract.assigned_pm_users
+        
+        if not is_creator and not is_assigned:
+            print(f"Permission denied: Contract created by {contract.created_by}, user is {current_user.id}, assigned: {is_assigned}")
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="You don't have permission to view this contract"
@@ -1244,6 +1436,74 @@ async def get_comprehensive_data(
         },
         "comprehensive_data": comp_data
     }
+
+
+# Add this helper function near the check_permission function:
+def is_user_assigned_to_contract(user_id: int, contract, db: Session) -> bool:
+    """Check if a user is assigned to a contract"""
+    if not contract:
+        return False
+    
+    # Check PM assignments
+    if contract.assigned_pm_users:
+        if isinstance(contract.assigned_pm_users, list):
+            if user_id in contract.assigned_pm_users:
+                return True
+        elif isinstance(contract.assigned_pm_users, str):
+            # Try to parse as JSON or comma-separated
+            import json
+            try:
+                pm_list = json.loads(contract.assigned_pm_users)
+                if isinstance(pm_list, list) and user_id in pm_list:
+                    return True
+            except:
+                try:
+                    pm_ids = [int(id_str.strip()) for id_str in contract.assigned_pm_users.split(',') if id_str.strip().isdigit()]
+                    if user_id in pm_ids:
+                        return True
+                except:
+                    pass
+    
+    # Check PGM assignments
+    if contract.assigned_pgm_users:
+        if isinstance(contract.assigned_pgm_users, list):
+            if user_id in contract.assigned_pgm_users:
+                return True
+        elif isinstance(contract.assigned_pgm_users, str):
+            import json
+            try:
+                pgm_list = json.loads(contract.assigned_pgm_users)
+                if isinstance(pgm_list, list) and user_id in pgm_list:
+                    return True
+            except:
+                try:
+                    pgm_ids = [int(id_str.strip()) for id_str in contract.assigned_pgm_users.split(',') if id_str.strip().isdigit()]
+                    if user_id in pgm_ids:
+                        return True
+                except:
+                    pass
+    
+    # Check Director assignments
+    if contract.assigned_director_users:
+        if isinstance(contract.assigned_director_users, list):
+            if user_id in contract.assigned_director_users:
+                return True
+        elif isinstance(contract.assigned_director_users, str):
+            import json
+            try:
+                dir_list = json.loads(contract.assigned_director_users)
+                if isinstance(dir_list, list) and user_id in dir_list:
+                    return True
+            except:
+                try:
+                    dir_ids = [int(id_str.strip()) for id_str in contract.assigned_director_users.split(',') if id_str.strip().isdigit()]
+                    if user_id in dir_ids:
+                        return True
+                except:
+                    pass
+    
+    return False
+    
 
 @app.post("/api/contracts/{contract_id}/project-manager/submit-review")
 async def submit_contract_for_review(
@@ -1850,7 +2110,10 @@ async def get_all_contracts(
             print(f"Project Manager: Fetching ONLY contracts created by user ID {current_user.id}")
             # Project Manager can only see contracts they created
             query = query.filter(
-                models.Contract.created_by == current_user.id
+                (models.Contract.created_by == current_user.id) |
+                (models.Contract.assigned_pm_users.contains([current_user.id])) |
+                (models.Contract.assigned_pgm_users.contains([current_user.id])) |
+                (models.Contract.assigned_director_users.contains([current_user.id]))
             )
         
         # Get contracts
@@ -1929,6 +2192,79 @@ async def get_all_contracts(
         print(f"Error details: {error_details}")
         # Return empty array instead of error for frontend compatibility
         return []
+
+
+
+
+
+@app.get("/api/debug/user/{user_id}/assignments")
+async def debug_user_assignments(
+    user_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Debug endpoint to check all assignments for a user"""
+    # Only directors or the user themselves can view this
+    if current_user.role != "director" and current_user.id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only view your own assignments"
+        )
+    
+    # Get user
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Get all contracts
+    all_contracts = db.query(models.Contract).all()
+    
+    assigned_contracts = []
+    
+    for contract in all_contracts:
+        is_assigned = is_user_assigned_to_contract(user_id, contract, db)
+        is_creator = contract.created_by == user_id
+        
+        if is_assigned or is_creator:
+            assigned_contracts.append({
+                "contract_id": contract.id,
+                "grant_name": contract.grant_name,
+                "status": contract.status,
+                "created_by": contract.created_by,
+                "is_creator": is_creator,
+                "is_assigned": is_assigned,
+                "assigned_as": [],
+                "assignment_data": {
+                    "assigned_pm_users": contract.assigned_pm_users,
+                    "assigned_pgm_users": contract.assigned_pgm_users,
+                    "assigned_director_users": contract.assigned_director_users
+                }
+            })
+            
+            # Determine assignment role
+            if contract.assigned_pm_users and isinstance(contract.assigned_pm_users, list):
+                if user_id in contract.assigned_pm_users:
+                    assigned_contracts[-1]["assigned_as"].append("project_manager")
+            
+            if contract.assigned_pgm_users and isinstance(contract.assigned_pgm_users, list):
+                if user_id in contract.assigned_pgm_users:
+                    assigned_contracts[-1]["assigned_as"].append("program_manager")
+            
+            if contract.assigned_director_users and isinstance(contract.assigned_director_users, list):
+                if user_id in contract.assigned_director_users:
+                    assigned_contracts[-1]["assigned_as"].append("director")
+    
+    return {
+        "user": {
+            "id": user.id,
+            "username": user.username,
+            "role": user.role
+        },
+        "total_assigned_contracts": len(assigned_contracts),
+        "assigned_contracts": assigned_contracts
+    }
+
+
 
 @app.get("/api/contracts/{contract_id}/program-manager-reviews")
 async def get_program_manager_reviews_for_pm(
@@ -2021,9 +2357,16 @@ async def get_contract(
     
     # Check permission based on role
     if current_user.role == "project_manager":
-        # Project managers can only see contracts they created
-        if contract.created_by != current_user.id:
-            print(f"Permission denied: Contract created by {contract.created_by}, user is {current_user.id}")
+        # Project managers can see contracts they created OR are assigned to
+        is_creator = contract.created_by == current_user.id
+        is_assigned = False
+        
+        # Check if user is assigned
+        if contract.assigned_pm_users and isinstance(contract.assigned_pm_users, list):
+            is_assigned = current_user.id in contract.assigned_pm_users
+        
+        if not is_creator and not is_assigned:
+            print(f"Permission denied: Contract created by {contract.created_by}, user is {current_user.id}, assigned: {is_assigned}")
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="You don't have permission to view this contract"
@@ -4348,6 +4691,587 @@ async def debug_contract_deliverables(
             "contract_id": d.contract_id
         } for d in deliverables]
     }
+
+
+@app.get("/api/notifications")
+async def get_notifications(
+    unread_only: bool = False,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get user notifications"""
+    notifications = NotificationService.get_user_notifications(db, current_user.id, unread_only)
+    
+    return [
+        {
+            "id": n.id,
+            "type": n.notification_type,
+            "title": n.title,
+            "message": n.message,
+            "contract_id": n.contract_id,
+            "is_read": n.is_read,
+            "created_at": n.created_at.isoformat(),
+            "read_at": n.read_at.isoformat() if n.read_at else None
+        }
+        for n in notifications
+    ]
+
+@app.post("/api/notifications/{notification_id}/read")
+async def mark_notification_read(
+    notification_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Mark notification as read"""
+    notification = NotificationService.mark_as_read(db, notification_id, current_user.id)
+    
+    if not notification:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    
+    return {"message": "Notification marked as read", "notification_id": notification_id}
+
+@app.get("/api/notifications/unread-count")
+async def get_unread_count(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get count of unread notifications"""
+    notifications = NotificationService.get_user_notifications(db, current_user.id, unread_only=True)
+    return {"unread_count": len(notifications)}
+
+
+# In main.py, add this endpoint:
+@app.get("/api/debug/contract/{contract_id}/assignments")
+async def debug_contract_assignments(
+    contract_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Debug endpoint to check contract assignments"""
+    contract = db.query(models.Contract).filter(models.Contract.id == contract_id).first()
+    if not contract:
+        raise HTTPException(status_code=404, detail="Contract not found")
+    
+    # Check permission
+    if contract.created_by != current_user.id and current_user.role != "director":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have permission to view this contract"
+        )
+    
+    # Get user details for assigned users
+    assigned_users_info = {}
+    
+    # Helper function to get user info
+    def get_user_info(user_ids):
+        if not user_ids:
+            return []
+        users = db.query(User).filter(User.id.in_(user_ids)).all()
+        return [{"id": u.id, "username": u.username, "full_name": u.full_name, "email": u.email} for u in users]
+    
+    # Check all possible data structures
+    assigned_users_info["assigned_pm_users"] = get_user_info(contract.assigned_pm_users or [])
+    assigned_users_info["assigned_pgm_users"] = get_user_info(contract.assigned_pgm_users or [])
+    assigned_users_info["assigned_director_users"] = get_user_info(contract.assigned_director_users or [])
+    
+    # Check comprehensive_data for assignments
+    comp_data_assignments = {}
+    if contract.comprehensive_data:
+        if "assigned_users" in contract.comprehensive_data:
+            comp_data_assignments = contract.comprehensive_data["assigned_users"]
+        if "agreement_metadata" in contract.comprehensive_data:
+            comp_data_assignments["agreement_metadata"] = contract.comprehensive_data["agreement_metadata"]
+    
+    return {
+        "contract_id": contract.id,
+        "grant_name": contract.grant_name,
+        "filename": contract.filename,
+        "created_by": contract.created_by,
+        "created_by_user": db.query(User).filter(User.id == contract.created_by).first().username if contract.created_by else None,
+        
+        # Database column values
+        "db_columns": {
+            "assigned_pm_users": contract.assigned_pm_users,
+            "assigned_pgm_users": contract.assigned_pgm_users,
+            "assigned_director_users": contract.assigned_director_users,
+            "type_of_pm_users": type(contract.assigned_pm_users).__name__ if contract.assigned_pm_users else None,
+            "type_of_pgm_users": type(contract.assigned_pgm_users).__name__ if contract.assigned_pgm_users else None,
+            "type_of_dir_users": type(contract.assigned_director_users).__name__ if contract.assigned_director_users else None
+        },
+        
+        # User info
+        "assigned_users_info": assigned_users_info,
+        
+        # Comprehensive data assignments
+        "comprehensive_data_assignments": comp_data_assignments,
+        
+        # All comprehensive data (truncated)
+        "comprehensive_data_keys": list(contract.comprehensive_data.keys()) if contract.comprehensive_data else [],
+        
+        # Current user info
+        "current_user": {
+            "id": current_user.id,
+            "username": current_user.username,
+            "role": current_user.role
+        },
+        
+        # Query test - check if user is assigned
+        "is_user_assigned": {
+            "in_pm_users": current_user.id in (contract.assigned_pm_users or []),
+            "in_pgm_users": current_user.id in (contract.assigned_pgm_users or []),
+            "in_dir_users": current_user.id in (contract.assigned_director_users or [])
+        }
+    }
+
+
+@app.get("/api/agreements/assigned-drafts")
+async def get_assigned_drafts(
+    skip: int = 0,
+    limit: int = 100,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get all draft agreements assigned to current user - FIXED VERSION with assigned_by and all assigned users"""
+    
+    # Only project managers and program managers can see assigned drafts
+    if current_user.role not in ["project_manager", "program_manager", "director"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only Project Managers, Program Managers, and Directors can view assigned drafts"
+        )
+    
+    try:
+        print(f"DEBUG: Fetching assigned drafts for user {current_user.id} ({current_user.username})")
+        
+        # Get ALL draft contracts
+        all_drafts = db.query(models.Contract).filter(
+            models.Contract.status == "draft"
+        ).all()
+        
+        print(f"DEBUG: Found {len(all_drafts)} total draft contracts")
+        
+        assigned_drafts = []
+        
+        for draft in all_drafts:
+            # Debug info for each draft
+            print(f"DEBUG: Checking draft {draft.id} - {draft.grant_name}")
+            print(f"  PM Users: {draft.assigned_pm_users}, Type: {type(draft.assigned_pm_users)}")
+            print(f"  PGM Users: {draft.assigned_pgm_users}, Type: {type(draft.assigned_pgm_users)}")
+            print(f"  Director Users: {draft.assigned_director_users}, Type: {type(draft.assigned_director_users)}")
+            
+            # Check if user is in any of the assignment lists
+            is_assigned = False
+            assignment_role = None
+            
+            # Check assigned_pm_users
+            if draft.assigned_pm_users:
+                try:
+                    # Handle different data types
+                    if isinstance(draft.assigned_pm_users, list):
+                        if current_user.id in draft.assigned_pm_users:
+                            is_assigned = True
+                            assignment_role = "project_manager"
+                            print(f"  ✅ User found in PM users (list)")
+                    elif isinstance(draft.assigned_pm_users, str):
+                        # Try to parse as JSON
+                        import json
+                        try:
+                            pm_list = json.loads(draft.assigned_pm_users)
+                            if isinstance(pm_list, list) and current_user.id in pm_list:
+                                is_assigned = True
+                                assignment_role = "project_manager"
+                                print(f"  ✅ User found in PM users (JSON string)")
+                        except:
+                            # Try comma-separated
+                            pm_ids = [int(id_str.strip()) for id_str in draft.assigned_pm_users.split(',') if id_str.strip().isdigit()]
+                            if current_user.id in pm_ids:
+                                is_assigned = True
+                                assignment_role = "project_manager"
+                                print(f"  ✅ User found in PM users (comma-separated)")
+                except Exception as e:
+                    print(f"  ❌ Error checking PM users: {e}")
+            
+            # Check assigned_pgm_users
+            if not is_assigned and draft.assigned_pgm_users:
+                try:
+                    if isinstance(draft.assigned_pgm_users, list):
+                        if current_user.id in draft.assigned_pgm_users:
+                            is_assigned = True
+                            assignment_role = "program_manager"
+                            print(f"  ✅ User found in PGM users (list)")
+                    elif isinstance(draft.assigned_pgm_users, str):
+                        import json
+                        try:
+                            pgm_list = json.loads(draft.assigned_pgm_users)
+                            if isinstance(pgm_list, list) and current_user.id in pgm_list:
+                                is_assigned = True
+                                assignment_role = "program_manager"
+                                print(f"  ✅ User found in PGM users (JSON string)")
+                        except:
+                            pgm_ids = [int(id_str.strip()) for id_str in draft.assigned_pgm_users.split(',') if id_str.strip().isdigit()]
+                            if current_user.id in pgm_ids:
+                                is_assigned = True
+                                assignment_role = "program_manager"
+                                print(f"  ✅ User found in PGM users (comma-separated)")
+                except Exception as e:
+                    print(f"  ❌ Error checking PGM users: {e}")
+            
+            # Check assigned_director_users
+            if not is_assigned and draft.assigned_director_users:
+                try:
+                    if isinstance(draft.assigned_director_users, list):
+                        if current_user.id in draft.assigned_director_users:
+                            is_assigned = True
+                            assignment_role = "director"
+                            print(f"  ✅ User found in Director users (list)")
+                    elif isinstance(draft.assigned_director_users, str):
+                        import json
+                        try:
+                            dir_list = json.loads(draft.assigned_director_users)
+                            if isinstance(dir_list, list) and current_user.id in dir_list:
+                                is_assigned = True
+                                assignment_role = "director"
+                                print(f"  ✅ User found in Director users (JSON string)")
+                        except:
+                            dir_ids = [int(id_str.strip()) for id_str in draft.assigned_director_users.split(',') if id_str.strip().isdigit()]
+                            if current_user.id in dir_ids:
+                                is_assigned = True
+                                assignment_role = "director"
+                                print(f"  ✅ User found in Director users (comma-separated)")
+                except Exception as e:
+                    print(f"  ❌ Error checking Director users: {e}")
+            
+            if is_assigned:
+                # Get assigned_by information from comprehensive_data
+                assigned_by_info = {
+                    "id": None,
+                    "name": "Unknown",
+                    "role": "Unknown"
+                }
+                
+                # Get ALL assigned users information
+                all_assigned_users_info = []
+                
+                # Get user details for assigned PMs
+                if draft.assigned_pm_users:
+                    pm_user_ids = []
+                    if isinstance(draft.assigned_pm_users, list):
+                        pm_user_ids = draft.assigned_pm_users
+                    elif isinstance(draft.assigned_pm_users, str):
+                        try:
+                            import json
+                            pm_user_ids = json.loads(draft.assigned_pm_users)
+                        except:
+                            pm_user_ids = [int(id_str.strip()) for id_str in draft.assigned_pm_users.split(',') if id_str.strip().isdigit()]
+                    
+                    for user_id in pm_user_ids:
+                        try:
+                            user_obj = db.query(User).filter(User.id == user_id).first()
+                            if user_obj:
+                                all_assigned_users_info.append({
+                                    "id": user_obj.id,
+                                    "name": user_obj.full_name or user_obj.username,
+                                    "role": user_obj.role,
+                                    "assignment_type": "project_manager"
+                                })
+                        except:
+                            pass
+                
+                # Get user details for assigned PGMs
+                if draft.assigned_pgm_users:
+                    pgm_user_ids = []
+                    if isinstance(draft.assigned_pgm_users, list):
+                        pgm_user_ids = draft.assigned_pgm_users
+                    elif isinstance(draft.assigned_pgm_users, str):
+                        try:
+                            import json
+                            pgm_user_ids = json.loads(draft.assigned_pgm_users)
+                        except:
+                            pgm_user_ids = [int(id_str.strip()) for id_str in draft.assigned_pgm_users.split(',') if id_str.strip().isdigit()]
+                    
+                    for user_id in pgm_user_ids:
+                        try:
+                            user_obj = db.query(User).filter(User.id == user_id).first()
+                            if user_obj:
+                                all_assigned_users_info.append({
+                                    "id": user_obj.id,
+                                    "name": user_obj.full_name or user_obj.username,
+                                    "role": user_obj.role,
+                                    "assignment_type": "program_manager"
+                                })
+                        except:
+                            pass
+                
+                # Get user details for assigned Directors
+                if draft.assigned_director_users:
+                    director_user_ids = []
+                    if isinstance(draft.assigned_director_users, list):
+                        director_user_ids = draft.assigned_director_users
+                    elif isinstance(draft.assigned_director_users, str):
+                        try:
+                            import json
+                            director_user_ids = json.loads(draft.assigned_director_users)
+                        except:
+                            director_user_ids = [int(id_str.strip()) for id_str in draft.assigned_director_users.split(',') if id_str.strip().isdigit()]
+                    
+                    for user_id in director_user_ids:
+                        try:
+                            user_obj = db.query(User).filter(User.id == user_id).first()
+                            if user_obj:
+                                all_assigned_users_info.append({
+                                    "id": user_obj.id,
+                                    "name": user_obj.full_name or user_obj.username,
+                                    "role": user_obj.role,
+                                    "assignment_type": "director"
+                                })
+                        except:
+                            pass
+                
+                if draft.comprehensive_data:
+                    # Check for assignment history
+                    if "assignment_history" in draft.comprehensive_data:
+                        assignment_history = draft.comprehensive_data["assignment_history"]
+                        if assignment_history:
+                            # Get the most recent assignment for current user
+                            for entry in assignment_history:
+                                if "assigned_users" in entry:
+                                    assigned_users = entry["assigned_users"]
+                                    if current_user.id in assigned_users:
+                                        assigned_by_info["id"] = entry.get("assigned_by")
+                                        assigned_by_info["name"] = entry.get("assigned_by_name", "Unknown")
+                                        assigned_by_info["role"] = entry.get("assigned_by_role", "Unknown")
+                                        break
+                    
+                    # Fallback to assignment tracking
+                    if assigned_by_info["id"] is None and "assignment_tracking" in draft.comprehensive_data:
+                        assignment_data = draft.comprehensive_data["assignment_tracking"]
+                        if isinstance(assignment_data, dict):
+                            assigned_by_info["id"] = assignment_data.get("assigned_by")
+                            assigned_by_info["name"] = assignment_data.get("assigned_by_name", "Unknown")
+                            assigned_by_info["role"] = assignment_data.get("assigned_by_role", "Unknown")
+                
+                # If no assignment info found, try to get from audit fields
+                if assigned_by_info["id"] is None:
+                    if draft.last_edited_by:
+                        try:
+                            assigner = db.query(User).filter(User.id == draft.last_edited_by).first()
+                            if assigner:
+                                assigned_by_info["id"] = assigner.id
+                                assigned_by_info["name"] = assigner.full_name or assigner.username
+                                assigned_by_info["role"] = assigner.role
+                        except:
+                            pass
+                
+                assigned_drafts.append({
+                    "id": draft.id,
+                    "filename": draft.filename,
+                    "grant_name": draft.grant_name,
+                    "contract_number": draft.contract_number,
+                    "grantor": draft.grantor,
+                    "grantee": draft.grantee,
+                    "total_amount": draft.total_amount,
+                    "start_date": draft.start_date,
+                    "end_date": draft.end_date,
+                    "purpose": draft.purpose,
+                    "uploaded_at": draft.uploaded_at,
+                    "status": draft.status,
+                    "created_by": draft.created_by,
+                    "assigned_pm_users": draft.assigned_pm_users,
+                    "assigned_pgm_users": draft.assigned_pgm_users,
+                    "assigned_director_users": draft.assigned_director_users,
+                    "comprehensive_data": draft.comprehensive_data,
+                    "assignment_role": assignment_role,
+                    "assigned_by": assigned_by_info,
+                    "assigned_at": draft.last_edited_at or draft.uploaded_at,
+                    # NEW: Include all assigned users information
+                    "all_assigned_users": all_assigned_users_info,
+                    "assigned_pm_count": len([u for u in all_assigned_users_info if u["assignment_type"] == "project_manager"]),
+                    "assigned_pgm_count": len([u for u in all_assigned_users_info if u["assignment_type"] == "program_manager"]),
+                    "assigned_director_count": len([u for u in all_assigned_users_info if u["assignment_type"] == "director"])
+                })
+                
+                print(f"  ✅ Draft {draft.id} assigned to user by {assigned_by_info['name']}")
+                print(f"  ✅ Total assigned users: {len(all_assigned_users_info)}")
+            else:
+                print(f"  ❌ Draft {draft.id} NOT assigned to user")
+        
+        print(f"DEBUG: Total assigned drafts: {len(assigned_drafts)}")
+        
+        # Apply pagination
+        paginated_drafts = assigned_drafts[skip:skip + limit]
+        
+        # Helper function to safely format dates
+        def format_date(date_value):
+            if date_value and hasattr(date_value, 'isoformat'):
+                return date_value.isoformat()
+            return date_value
+        
+        # Format response
+        formatted_drafts = []
+        for draft in paginated_drafts:
+            formatted_drafts.append({
+                "id": draft["id"],
+                "filename": draft["filename"] or "Unknown",
+                "uploaded_at": format_date(draft["uploaded_at"]),
+                "status": draft["status"] or "draft",
+                "contract_number": draft["contract_number"],
+                "grant_name": draft["grant_name"] or "Unnamed Contract",
+                "grantor": draft["grantor"] or "Unknown Grantor",
+                "grantee": draft["grantee"] or "Unknown Grantee",
+                "total_amount": float(draft["total_amount"]) if draft["total_amount"] else 0.0,
+                "start_date": format_date(draft["start_date"]),
+                "end_date": format_date(draft["end_date"]),
+                "purpose": draft["purpose"],
+                "created_by": draft["created_by"],
+                "assigned_pm_users": draft["assigned_pm_users"] or [],
+                "assigned_pgm_users": draft["assigned_pgm_users"] or [],
+                "assigned_director_users": draft["assigned_director_users"] or [],
+                "comprehensive_data": draft["comprehensive_data"],
+                # Assignment information
+                "assignment_role": draft["assignment_role"],
+                "assigned_by": draft["assigned_by"],
+                "assigned_at": format_date(draft["assigned_at"]),
+                # NEW: All assigned users
+                "all_assigned_users": draft["all_assigned_users"],
+                "assigned_pm_count": draft["assigned_pm_count"],
+                "assigned_pgm_count": draft["assigned_pgm_count"],
+                "assigned_director_count": draft["assigned_director_count"]
+            })
+        
+        # Calculate statistics
+        total_assigned_pms = sum(d["assigned_pm_count"] for d in assigned_drafts)
+        total_assigned_pgms = sum(d["assigned_pgm_count"] for d in assigned_drafts)
+        total_assigned_directors = sum(d["assigned_director_count"] for d in assigned_drafts)
+        unique_assigners = set(d["assigned_by"]["id"] for d in assigned_drafts if d["assigned_by"]["id"])
+        
+        return {
+            "drafts": formatted_drafts,
+            "total": len(assigned_drafts),
+            "skip": skip,
+            "limit": limit,
+            "assignment_summary": {
+                "assigned_by_pm": len([d for d in assigned_drafts if d["assigned_by"]["role"] == "project_manager"]),
+                "assigned_by_pgm": len([d for d in assigned_drafts if d["assigned_by"]["role"] == "program_manager"]),
+                "assigned_by_director": len([d for d in assigned_drafts if d["assigned_by"]["role"] == "director"]),
+                "unknown_assigner": len([d for d in assigned_drafts if d["assigned_by"]["id"] is None]),
+                # NEW: Total assigned users statistics
+                "total_assigned_pms": total_assigned_pms,
+                "total_assigned_pgms": total_assigned_pgms,
+                "total_assigned_directors": total_assigned_directors,
+                "unique_assigners": len(unique_assigners)
+            }
+        }
+        
+    except Exception as e:
+        print(f"ERROR in get_assigned_drafts: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Failed to fetch assigned drafts: {str(e)}")
+
+@app.post("/api/fix/contract-assignments")
+async def fix_contract_assignments(
+    contract_id: int = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Fix contract assignment data issues"""
+    if current_user.role != "director":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only Directors can run data fixes"
+        )
+    
+    try:
+        import json
+        
+        if contract_id:
+            contracts = [db.query(models.Contract).filter(models.Contract.id == contract_id).first()]
+            if not contracts[0]:
+                raise HTTPException(status_code=404, detail="Contract not found")
+        else:
+            # Get all contracts with draft status
+            contracts = db.query(models.Contract).filter(
+                models.Contract.status == "draft"
+            ).all()
+        
+        fixed_count = 0
+        results = []
+        
+        for contract in contracts:
+            print(f"\nFixing contract {contract.id}: {contract.grant_name}")
+            
+            # Check and fix assigned_pm_users
+            if contract.assigned_pm_users and not isinstance(contract.assigned_pm_users, list):
+                print(f"  Fixing PM users: {contract.assigned_pm_users}, Type: {type(contract.assigned_pm_users)}")
+                try:
+                    if isinstance(contract.assigned_pm_users, str):
+                        if contract.assigned_pm_users.startswith('['):
+                            contract.assigned_pm_users = json.loads(contract.assigned_pm_users)
+                        else:
+                            # Comma-separated string
+                            contract.assigned_pm_users = [int(id_str.strip()) for id_str in contract.assigned_pm_users.split(',') if id_str.strip().isdigit()]
+                    else:
+                        # Convert to list if it's a single integer or other type
+                        contract.assigned_pm_users = [int(contract.assigned_pm_users)]
+                    print(f"  Fixed to: {contract.assigned_pm_users}")
+                    fixed_count += 1
+                except Exception as e:
+                    print(f"  Error fixing PM users: {e}")
+                    contract.assigned_pm_users = []
+            
+            # Check and fix assigned_pgm_users
+            if contract.assigned_pgm_users and not isinstance(contract.assigned_pgm_users, list):
+                print(f"  Fixing PGM users: {contract.assigned_pgm_users}, Type: {type(contract.assigned_pgm_users)}")
+                try:
+                    if isinstance(contract.assigned_pgm_users, str):
+                        if contract.assigned_pgm_users.startswith('['):
+                            contract.assigned_pgm_users = json.loads(contract.assigned_pgm_users)
+                        else:
+                            contract.assigned_pgm_users = [int(id_str.strip()) for id_str in contract.assigned_pgm_users.split(',') if id_str.strip().isdigit()]
+                    else:
+                        contract.assigned_pgm_users = [int(contract.assigned_pgm_users)]
+                    print(f"  Fixed to: {contract.assigned_pgm_users}")
+                    fixed_count += 1
+                except Exception as e:
+                    print(f"  Error fixing PGM users: {e}")
+                    contract.assigned_pgm_users = []
+            
+            # Check and fix assigned_director_users
+            if contract.assigned_director_users and not isinstance(contract.assigned_director_users, list):
+                print(f"  Fixing Director users: {contract.assigned_director_users}, Type: {type(contract.assigned_director_users)}")
+                try:
+                    if isinstance(contract.assigned_director_users, str):
+                        if contract.assigned_director_users.startswith('['):
+                            contract.assigned_director_users = json.loads(contract.assigned_director_users)
+                        else:
+                            contract.assigned_director_users = [int(id_str.strip()) for id_str in contract.assigned_director_users.split(',') if id_str.strip().isdigit()]
+                    else:
+                        contract.assigned_director_users = [int(contract.assigned_director_users)]
+                    print(f"  Fixed to: {contract.assigned_director_users}")
+                    fixed_count += 1
+                except Exception as e:
+                    print(f"  Error fixing Director users: {e}")
+                    contract.assigned_director_users = []
+            
+            results.append({
+                "contract_id": contract.id,
+                "grant_name": contract.grant_name,
+                "assigned_pm_users": contract.assigned_pm_users,
+                "assigned_pgm_users": contract.assigned_pgm_users,
+                "assigned_director_users": contract.assigned_director_users
+            })
+        
+        db.commit()
+        
+        return {
+            "message": f"Fixed {fixed_count} assignment fields across {len(contracts)} contracts",
+            "results": results
+        }
+        
+    except Exception as e:
+        db.rollback()
+        print(f"ERROR in fix_contract_assignments: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to fix assignments: {str(e)}")        
 
 if __name__ == "__main__":
     import uvicorn

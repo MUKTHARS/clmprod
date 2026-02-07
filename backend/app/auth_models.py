@@ -119,3 +119,20 @@ class RolePermission(Base):
     creator = relationship("User", foreign_keys=[created_by])
     
     __table_args__ = (UniqueConstraint('role', 'module_id', 'permission', name='uq_role_module_permission'),)
+
+class UserNotification(Base):
+    __tablename__ = "user_notifications"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    notification_type = Column(String, nullable=False)  # 'agreement_assigned', 'review_requested', etc.
+    title = Column(String, nullable=False)
+    message = Column(Text, nullable=False)
+    contract_id = Column(Integer, ForeignKey("contracts.id"), nullable=True)
+    is_read = Column(Boolean, default=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    read_at = Column(DateTime(timezone=True), nullable=True)
+    
+    # Relationships
+    user = relationship("User", backref="notifications")
+    contract = relationship("Contract", backref="notifications")    
