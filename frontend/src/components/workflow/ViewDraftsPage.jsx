@@ -116,7 +116,7 @@ function ViewDraftsPage({ user }) {
     }).format(amount);
   };
 
-  const getStatusBadge = (status) => {
+const getStatusBadge = (status) => {
     switch (status) {
       case 'draft':
         return (
@@ -130,6 +130,13 @@ function ViewDraftsPage({ user }) {
           <span className="status-badge under-review">
             <AlertCircle size={12} />
             Under Review
+          </span>
+        );
+      case 'reviewed':
+        return (
+          <span className="status-badge reviewed">
+            <FileCheck size={12} />
+            Reviewed
           </span>
         );
       case 'approved':

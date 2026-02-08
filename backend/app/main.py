@@ -3832,7 +3832,7 @@ async def get_director_review_for_program_manager(
 ):
     """
     Get Director's review decisions for Program Manager to view
-    Program Managers can see contracts they have reviewed
+    Program Managers can see contracts they have reviewed OR are assigned to
     """
     # Check if user is program manager
     if current_user.role != "program_manager":
@@ -3845,6 +3845,9 @@ async def get_director_review_for_program_manager(
     contract = db.query(models.Contract).filter(models.Contract.id == contract_id).first()
     if not contract:
         raise HTTPException(status_code=404, detail="Contract not found")
+    
+    # ✅ FIX: Check if this Program Manager is ASSIGNED to this contract
+    is_assigned = is_user_assigned_to_contract(current_user.id, contract, db)
     
     # Check if this Program Manager has reviewed/commented on this contract
     user_comment = db.query(ReviewComment).filter(
@@ -3859,12 +3862,14 @@ async def get_director_review_for_program_manager(
         if review_data.get("reviewed_by") == current_user.id:
             has_program_manager_review = True
     
-    if not user_comment and not has_program_manager_review:
+    # ✅ FIX: Allow access if user is ASSIGNED, has reviewed, OR has review data
+    if not user_comment and not has_program_manager_review and not is_assigned:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You can only view director decisions for contracts you have reviewed"
+            detail="You can only view director decisions for contracts you are assigned to or have reviewed"
         )
     
+    # Rest of the function remains the same...
     # Get comprehensive data
     comp_data = contract.comprehensive_data or {}
     
@@ -4831,7 +4836,7 @@ async def get_assigned_drafts(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get all draft agreements assigned to current user - FIXED VERSION with assigned_by and all assigned users"""
+    """Get all draft AND under_review agreements assigned to current user"""
     
     # Only project managers and program managers can see assigned drafts
     if current_user.role not in ["project_manager", "program_manager", "director"]:
@@ -4843,21 +4848,18 @@ async def get_assigned_drafts(
     try:
         print(f"DEBUG: Fetching assigned drafts for user {current_user.id} ({current_user.username})")
         
-        # Get ALL draft contracts
+        # ✅ FIX: Get BOTH draft AND under_review contracts
         all_drafts = db.query(models.Contract).filter(
-            models.Contract.status == "draft"
+            models.Contract.status.in_(["draft", "under_review"])
         ).all()
         
-        print(f"DEBUG: Found {len(all_drafts)} total draft contracts")
+        print(f"DEBUG: Found {len(all_drafts)} total draft/under_review contracts")
         
         assigned_drafts = []
         
         for draft in all_drafts:
             # Debug info for each draft
-            print(f"DEBUG: Checking draft {draft.id} - {draft.grant_name}")
-            print(f"  PM Users: {draft.assigned_pm_users}, Type: {type(draft.assigned_pm_users)}")
-            print(f"  PGM Users: {draft.assigned_pgm_users}, Type: {type(draft.assigned_pgm_users)}")
-            print(f"  Director Users: {draft.assigned_director_users}, Type: {type(draft.assigned_director_users)}")
+            print(f"DEBUG: Checking contract {draft.id} - {draft.grant_name} - Status: {draft.status}")
             
             # Check if user is in any of the assignment lists
             is_assigned = False
@@ -4871,7 +4873,6 @@ async def get_assigned_drafts(
                         if current_user.id in draft.assigned_pm_users:
                             is_assigned = True
                             assignment_role = "project_manager"
-                            print(f"  ✅ User found in PM users (list)")
                     elif isinstance(draft.assigned_pm_users, str):
                         # Try to parse as JSON
                         import json
@@ -4880,14 +4881,12 @@ async def get_assigned_drafts(
                             if isinstance(pm_list, list) and current_user.id in pm_list:
                                 is_assigned = True
                                 assignment_role = "project_manager"
-                                print(f"  ✅ User found in PM users (JSON string)")
                         except:
                             # Try comma-separated
                             pm_ids = [int(id_str.strip()) for id_str in draft.assigned_pm_users.split(',') if id_str.strip().isdigit()]
                             if current_user.id in pm_ids:
                                 is_assigned = True
                                 assignment_role = "project_manager"
-                                print(f"  ✅ User found in PM users (comma-separated)")
                 except Exception as e:
                     print(f"  ❌ Error checking PM users: {e}")
             
@@ -4898,7 +4897,6 @@ async def get_assigned_drafts(
                         if current_user.id in draft.assigned_pgm_users:
                             is_assigned = True
                             assignment_role = "program_manager"
-                            print(f"  ✅ User found in PGM users (list)")
                     elif isinstance(draft.assigned_pgm_users, str):
                         import json
                         try:
@@ -4906,13 +4904,11 @@ async def get_assigned_drafts(
                             if isinstance(pgm_list, list) and current_user.id in pgm_list:
                                 is_assigned = True
                                 assignment_role = "program_manager"
-                                print(f"  ✅ User found in PGM users (JSON string)")
                         except:
                             pgm_ids = [int(id_str.strip()) for id_str in draft.assigned_pgm_users.split(',') if id_str.strip().isdigit()]
                             if current_user.id in pgm_ids:
                                 is_assigned = True
                                 assignment_role = "program_manager"
-                                print(f"  ✅ User found in PGM users (comma-separated)")
                 except Exception as e:
                     print(f"  ❌ Error checking PGM users: {e}")
             
@@ -4923,7 +4919,6 @@ async def get_assigned_drafts(
                         if current_user.id in draft.assigned_director_users:
                             is_assigned = True
                             assignment_role = "director"
-                            print(f"  ✅ User found in Director users (list)")
                     elif isinstance(draft.assigned_director_users, str):
                         import json
                         try:
@@ -4931,13 +4926,11 @@ async def get_assigned_drafts(
                             if isinstance(dir_list, list) and current_user.id in dir_list:
                                 is_assigned = True
                                 assignment_role = "director"
-                                print(f"  ✅ User found in Director users (JSON string)")
                         except:
                             dir_ids = [int(id_str.strip()) for id_str in draft.assigned_director_users.split(',') if id_str.strip().isdigit()]
                             if current_user.id in dir_ids:
                                 is_assigned = True
                                 assignment_role = "director"
-                                print(f"  ✅ User found in Director users (comma-separated)")
                 except Exception as e:
                     print(f"  ❌ Error checking Director users: {e}")
             
@@ -5074,7 +5067,7 @@ async def get_assigned_drafts(
                     "end_date": draft.end_date,
                     "purpose": draft.purpose,
                     "uploaded_at": draft.uploaded_at,
-                    "status": draft.status,
+                    "status": draft.status,  # ✅ This will now show "draft" OR "under_review"
                     "created_by": draft.created_by,
                     "assigned_pm_users": draft.assigned_pm_users,
                     "assigned_pgm_users": draft.assigned_pgm_users,
@@ -5083,19 +5076,17 @@ async def get_assigned_drafts(
                     "assignment_role": assignment_role,
                     "assigned_by": assigned_by_info,
                     "assigned_at": draft.last_edited_at or draft.uploaded_at,
-                    # NEW: Include all assigned users information
                     "all_assigned_users": all_assigned_users_info,
                     "assigned_pm_count": len([u for u in all_assigned_users_info if u["assignment_type"] == "project_manager"]),
                     "assigned_pgm_count": len([u for u in all_assigned_users_info if u["assignment_type"] == "program_manager"]),
                     "assigned_director_count": len([u for u in all_assigned_users_info if u["assignment_type"] == "director"])
                 })
                 
-                print(f"  ✅ Draft {draft.id} assigned to user by {assigned_by_info['name']}")
-                print(f"  ✅ Total assigned users: {len(all_assigned_users_info)}")
+                print(f"  ✅ Contract {draft.id} ({draft.status}) assigned to user by {assigned_by_info['name']}")
             else:
-                print(f"  ❌ Draft {draft.id} NOT assigned to user")
+                print(f"  ❌ Contract {draft.id} NOT assigned to user")
         
-        print(f"DEBUG: Total assigned drafts: {len(assigned_drafts)}")
+        print(f"DEBUG: Total assigned contracts (draft + under_review): {len(assigned_drafts)}")
         
         # Apply pagination
         paginated_drafts = assigned_drafts[skip:skip + limit]
@@ -5127,11 +5118,9 @@ async def get_assigned_drafts(
                 "assigned_pgm_users": draft["assigned_pgm_users"] or [],
                 "assigned_director_users": draft["assigned_director_users"] or [],
                 "comprehensive_data": draft["comprehensive_data"],
-                # Assignment information
                 "assignment_role": draft["assignment_role"],
                 "assigned_by": draft["assigned_by"],
                 "assigned_at": format_date(draft["assigned_at"]),
-                # NEW: All assigned users
                 "all_assigned_users": draft["all_assigned_users"],
                 "assigned_pm_count": draft["assigned_pm_count"],
                 "assigned_pgm_count": draft["assigned_pgm_count"],
@@ -5139,6 +5128,8 @@ async def get_assigned_drafts(
             })
         
         # Calculate statistics
+        total_draft = len([d for d in assigned_drafts if d["status"] == "draft"])
+        total_under_review = len([d for d in assigned_drafts if d["status"] == "under_review"])
         total_assigned_pms = sum(d["assigned_pm_count"] for d in assigned_drafts)
         total_assigned_pgms = sum(d["assigned_pgm_count"] for d in assigned_drafts)
         total_assigned_directors = sum(d["assigned_director_count"] for d in assigned_drafts)
@@ -5150,11 +5141,12 @@ async def get_assigned_drafts(
             "skip": skip,
             "limit": limit,
             "assignment_summary": {
+                "draft_count": total_draft,
+                "under_review_count": total_under_review,
                 "assigned_by_pm": len([d for d in assigned_drafts if d["assigned_by"]["role"] == "project_manager"]),
                 "assigned_by_pgm": len([d for d in assigned_drafts if d["assigned_by"]["role"] == "program_manager"]),
                 "assigned_by_director": len([d for d in assigned_drafts if d["assigned_by"]["role"] == "director"]),
                 "unknown_assigner": len([d for d in assigned_drafts if d["assigned_by"]["id"] is None]),
-                # NEW: Total assigned users statistics
                 "total_assigned_pms": total_assigned_pms,
                 "total_assigned_pgms": total_assigned_pgms,
                 "total_assigned_directors": total_assigned_directors,
@@ -5167,10 +5159,6 @@ async def get_assigned_drafts(
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to fetch assigned drafts: {str(e)}")
-
-
-# In C:\saple.ai\POC\backend\app\main.py, add this endpoint:
-
 @app.get("/api/agreements/assigned-by-me")
 async def get_agreements_assigned_by_me(
     skip: int = 0,
