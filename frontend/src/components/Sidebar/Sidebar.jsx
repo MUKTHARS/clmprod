@@ -244,42 +244,65 @@ const Sidebar = ({ user, onLogout }) => {
   // Memoize the menu items
   const menuItems = useMemo(() => getMenuItems(), [getMenuItems]);
 
-  // Get pending counts for badges
-  const getPendingCounts = useCallback(async (itemId) => {
-    if (!itemId) return null;
+const getPendingCounts = useCallback(async (itemId) => {
+  if (!itemId) return null;
+  
+  const token = localStorage.getItem('token');
+  
+  try {
+    // Use HTTP instead of HTTPS for local development to avoid SSL errors
+    const baseUrl = API_CONFIG.BASE_URL.replace('https://', 'http://');
     
-    const token = localStorage.getItem('token');
-    
-    try {
-      // Use HTTP instead of HTTPS for local development to avoid SSL errors
-      const baseUrl = API_CONFIG.BASE_URL.replace('https://', 'http://');
-      
-      if (itemId === 'review') {
-        const response = await fetch(`${baseUrl}/api/contracts/status/under_review`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        if (response.ok) {
-          const data = await response.json();
-          return data.length;
+    if (itemId === 'review') {
+      // For Program Manager review tab
+      const response = await fetch(`${baseUrl}/api/contracts/status/under_review`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
         }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        return data.length;
       }
+    }
+    
+    if (itemId === 'director-decisions') {
+      // For Program Manager to see Director decisions
+      const response = await fetch(`${baseUrl}/api/contracts/program-manager/reviewed-by-director?limit=1`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       
-      if (itemId === 'director-decisions') {
-        const response = await fetch(`${baseUrl}/api/contracts/program-manager/reviewed-by-director?limit=1`, {
+      if (response.ok) {
+        const data = await response.json();
+        return data.total || data.summary?.total || 0;
+      }
+    }
+    
+    // ✅ FIX: For Director approvals tab - only count assigned contracts
+    if (itemId === 'approvals') {
+      // Get the user role
+      const userStr = localStorage.getItem('user');
+      if (!userStr) return null;
+      
+      const user = JSON.parse(userStr);
+      
+      if (user.role === 'director') {
+        // Use the new endpoint for Directors
+        const response = await fetch(`${baseUrl}/api/contracts/director/assigned-approvals-count`, {
           headers: {
-            'Authorization': `Bearer ${token}`
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
           }
         });
         
         if (response.ok) {
           const data = await response.json();
-          return data.total || data.summary?.total || 0;
+          return data.assigned_approvals_count || 0;
         }
-      }
-      
-      if (itemId === 'approvals') {
+      } else {
+        // For other roles (if needed), use the old endpoint
         const response = await fetch(`${baseUrl}/api/contracts/status/reviewed`, {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -290,13 +313,14 @@ const Sidebar = ({ user, onLogout }) => {
           return data.length;
         }
       }
-    } catch (error) {
-      console.error('Failed to fetch count:', error);
-      return null;
     }
-    
+  } catch (error) {
+    console.error('Failed to fetch count:', error);
     return null;
-  }, []);
+  }
+  
+  return null;
+}, []);
 
   // Fetch user permissions - FIXED: Added proper dependencies
   useEffect(() => {

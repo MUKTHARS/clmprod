@@ -4278,6 +4278,7 @@ async def get_review_summary(
         "change_requests": contract.comprehensive_data.get("change_requests", []) if contract.comprehensive_data else []
     }
 
+
 @app.post("/api/contracts/{contract_id}/director/final-approval")
 async def director_final_approval(
     contract_id: int,
@@ -4286,7 +4287,7 @@ async def director_final_approval(
     db: Session = Depends(get_db),
     request: Request = None
 ):
-    """Final approval by Director - Can approve, reject, or lock contract"""
+    """Final approval by Director - ONLY for assigned Directors"""
     # Only directors can perform final approval
     if current_user.role != "director":
         raise HTTPException(
@@ -4298,6 +4299,30 @@ async def director_final_approval(
     contract = db.query(models.Contract).filter(models.Contract.id == contract_id).first()
     if not contract:
         raise HTTPException(status_code=404, detail="Contract not found")
+    
+    # ✅ FIX: Check if this director is assigned to the contract
+    is_assigned = False
+    if contract.assigned_director_users:
+        try:
+            if isinstance(contract.assigned_director_users, list):
+                is_assigned = current_user.id in contract.assigned_director_users
+            elif isinstance(contract.assigned_director_users, str):
+                import json
+                try:
+                    dir_list = json.loads(contract.assigned_director_users)
+                    if isinstance(dir_list, list):
+                        is_assigned = current_user.id in dir_list
+                except:
+                    dir_ids = [int(id_str.strip()) for id_str in contract.assigned_director_users.split(',') if id_str.strip().isdigit()]
+                    is_assigned = current_user.id in dir_ids
+        except Exception as e:
+            print(f"Error checking director assignment: {e}")
+    
+    if not is_assigned:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not assigned to this contract and cannot approve it"
+        )
     
     # Check if contract is in reviewed status
     if contract.status != "reviewed":
@@ -4340,7 +4365,8 @@ async def director_final_approval(
             "risk_accepted": risk_accepted,
             "business_sign_off": business_sign_off,
             "contract_locked": lock_contract,
-            "lock_timestamp": datetime.utcnow().isoformat() if lock_contract else None
+            "lock_timestamp": datetime.utcnow().isoformat() if lock_contract else None,
+            "director_assigned_to_contract": True  # ✅ Add flag
         }
         
         contract.comprehensive_data["director_final_approval"] = director_approval
@@ -4364,7 +4390,8 @@ async def director_final_approval(
             "new_status": contract.status,
             "risk_accepted": risk_accepted,
             "business_sign_off": business_sign_off,
-            "contract_locked": lock_contract
+            "contract_locked": lock_contract,
+            "director_assigned": True  # ✅ Add flag
         })
         
         contract.comprehensive_data["approval_history"] = approval_history
@@ -4384,7 +4411,8 @@ async def director_final_approval(
                 "new_status": contract.status,
                 "risk_accepted": risk_accepted,
                 "business_sign_off": business_sign_off,
-                "contract_locked": lock_contract
+                "contract_locked": lock_contract,
+                "director_assigned": True  # ✅ Add flag
             }, 
             request=request
         )
@@ -4394,12 +4422,14 @@ async def director_final_approval(
             "contract_id": contract_id,
             "status": contract.status,
             "locked": lock_contract,
-            "approval_data": director_approval
+            "approval_data": director_approval,
+            "director_assigned": True  # ✅ Add flag
         }
         
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to process final approval: {str(e)}")
+
 
 
 @app.get("/api/contracts/{contract_id}/director/view-complete")
@@ -4408,7 +4438,7 @@ async def director_view_complete_contract(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get complete contract information including all reviews, comments, and history - Director only"""
+    """Get complete contract information including all reviews, comments, and history - ONLY for assigned Directors"""
     # Only directors can view complete information
     if current_user.role != "director":
         raise HTTPException(
@@ -4422,10 +4452,24 @@ async def director_view_complete_contract(
         raise HTTPException(status_code=404, detail="Contract not found")
     
     # ✅ FIX: Check if this director is assigned to the contract
-    is_assigned = is_user_assigned_to_contract(current_user.id, contract, db)
+    is_assigned = False
+    if contract.assigned_director_users:
+        try:
+            if isinstance(contract.assigned_director_users, list):
+                is_assigned = current_user.id in contract.assigned_director_users
+            elif isinstance(contract.assigned_director_users, str):
+                import json
+                try:
+                    dir_list = json.loads(contract.assigned_director_users)
+                    if isinstance(dir_list, list):
+                        is_assigned = current_user.id in dir_list
+                except:
+                    dir_ids = [int(id_str.strip()) for id_str in contract.assigned_director_users.split(',') if id_str.strip().isdigit()]
+                    is_assigned = current_user.id in dir_ids
+        except Exception as e:
+            print(f"Error checking director assignment: {e}")
     
-    # If not assigned and not in status that requires director attention, restrict access
-    if not is_assigned and contract.status not in ["reviewed", "approved", "rejected"]:
+    if not is_assigned:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You are not assigned to this contract"
@@ -4521,12 +4565,74 @@ async def director_view_complete_contract(
         "is_locked": comp_data.get("locked_by") is not None,
         "locked_info": {
             "locked_by": comp_data.get("locked_by"),
-       "director_assigned": is_assigned       "locked_by_name": comp_data.get("locked_by_name"),
+       "director_assigned": is_assigned,
+          "locked_by_name": comp_data.get("locked_by_name"),
             "locked_at": comp_data.get("locked_at")
         } if comp_data.get("locked_by") else None,
         "director_assigned": is_assigned  # ✅ Add this flag
     }
 
+
+# In main.py, add this new endpoint:
+
+@app.get("/api/contracts/director/assigned-approvals-count")
+async def get_director_assigned_approvals_count(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get count of contracts pending approval for the current Director (only assigned ones)"""
+    if current_user.role != "director":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only Directors can view approval counts"
+        )
+    
+    try:
+        # Get all contracts in 'reviewed' status
+        all_reviewed_contracts = db.query(models.Contract).filter(
+            models.Contract.status == "reviewed"
+        ).all()
+        
+        assigned_count = 0
+        
+        for contract in all_reviewed_contracts:
+            # Check if current director is assigned
+            is_assigned = False
+            
+            if contract.assigned_director_users:
+                try:
+                    if isinstance(contract.assigned_director_users, list):
+                        is_assigned = current_user.id in contract.assigned_director_users
+                    elif isinstance(contract.assigned_director_users, str):
+                        import json
+                        try:
+                            dir_list = json.loads(contract.assigned_director_users)
+                            if isinstance(dir_list, list):
+                                is_assigned = current_user.id in dir_list
+                        except:
+                            dir_ids = [int(id_str.strip()) for id_str in contract.assigned_director_users.split(',') if id_str.strip().isdigit()]
+                            is_assigned = current_user.id in dir_ids
+                except Exception as e:
+                    print(f"Error checking director assignment for count: {e}")
+            
+            if is_assigned:
+                assigned_count += 1
+        
+        return {
+            "assigned_approvals_count": assigned_count,
+            "director_id": current_user.id,
+            "director_name": current_user.full_name or current_user.username
+        }
+        
+    except Exception as e:
+        print(f"ERROR in get_director_assigned_approvals_count: {str(e)}")
+        return {
+            "assigned_approvals_count": 0,
+            "director_id": current_user.id,
+            "error": str(e)
+        }
+
+        
 @app.get("/api/contracts/director/dashboard")
 async def get_director_dashboard_contracts(
     skip: int = 0,
@@ -4534,74 +4640,113 @@ async def get_director_dashboard_contracts(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get all contracts for Director dashboard - Director only"""
+    """Get all contracts for Director dashboard - ONLY assigned contracts"""
     if current_user.role != "director":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only Directors can view dashboard"
         )
     
-    # Director can see ALL contracts
-    query = db.query(models.Contract)
-    
-    # Apply ordering
-    contracts = query.order_by(
-        models.Contract.uploaded_at.desc()
-    ).offset(skip).limit(limit).all()
-    
-    # Format response
-    contracts_dict = []
-    for contract in contracts:
-        # Helper function to safely format dates
-        def format_date(date_value):
-            if date_value and hasattr(date_value, 'isoformat'):
-                return date_value.isoformat()
-            return date_value
+    try:
+        print(f"DEBUG: Getting dashboard contracts for Director {current_user.id}")
         
-        # Build the contract dictionary
-        contract_dict = {
-            "id": contract.id,
-            "filename": contract.filename or "Unknown",
-            "uploaded_at": format_date(contract.uploaded_at),
-            "status": contract.status or "draft",
-            "investment_id": contract.investment_id,
-            "project_id": contract.project_id,
-            "grant_id": contract.grant_id,
-            "extracted_reference_ids": contract.extracted_reference_ids or [],
-            "comprehensive_data": contract.comprehensive_data or {},
-            "contract_number": contract.contract_number,
-            "grant_name": contract.grant_name or "Unnamed Contract",
-            "grantor": contract.grantor or "Unknown Grantor",
-            "grantee": contract.grantee or "Unknown Grantee",
-            "total_amount": float(contract.total_amount) if contract.total_amount else 0.0,
-            "start_date": format_date(contract.start_date),
-            "end_date": format_date(contract.end_date),
-            "purpose": contract.purpose,
-            "payment_schedule": contract.payment_schedule,
-            "terms_conditions": contract.terms_conditions,
-            "chroma_id": contract.chroma_id,
-            "created_by": contract.created_by,
-            "version": contract.version or 1,
-            "review_comments": contract.review_comments,
-            "basic_data": {
-                "id": contract.id,
-                "contract_number": contract.contract_number,
-                "grant_name": contract.grant_name or "Unnamed Contract",
-                "grantor": contract.grantor or "Unknown Grantor",
-                "grantee": contract.grantee or "Unknown Grantee",
-                "total_amount": float(contract.total_amount) if contract.total_amount else 0.0,
-                "start_date": format_date(contract.start_date),
-                "end_date": format_date(contract.end_date),
-                "purpose": contract.purpose,
-                "status": contract.status or "draft",
-                "version": contract.version or 1,
-                "created_by": contract.created_by
-            }
-        }
+        # ✅ FIX: Get ALL contracts assigned to this director
+        all_contracts = db.query(models.Contract).all()
         
-        contracts_dict.append(contract_dict)
-    
-    return contracts_dict
+        assigned_contracts = []
+        
+        for contract in all_contracts:
+            # Check if current director is assigned
+            is_assigned = False
+            
+            # Check assigned_director_users
+            if contract.assigned_director_users:
+                try:
+                    if isinstance(contract.assigned_director_users, list):
+                        if current_user.id in contract.assigned_director_users:
+                            is_assigned = True
+                    elif isinstance(contract.assigned_director_users, str):
+                        # Try to parse as JSON
+                        import json
+                        try:
+                            dir_list = json.loads(contract.assigned_director_users)
+                            if isinstance(dir_list, list) and current_user.id in dir_list:
+                                is_assigned = True
+                        except:
+                            # Try comma-separated
+                            dir_ids = [int(id_str.strip()) for id_str in contract.assigned_director_users.split(',') if id_str.strip().isdigit()]
+                            if current_user.id in dir_ids:
+                                is_assigned = True
+                except Exception as e:
+                    print(f"Error checking Director assignment for contract {contract.id}: {e}")
+            
+            if is_assigned:
+                # Helper function to safely format dates
+                def format_date(date_value):
+                    if date_value and hasattr(date_value, 'isoformat'):
+                        return date_value.isoformat()
+                    return date_value
+                
+                # Build the contract dictionary
+                contract_dict = {
+                    "id": contract.id,
+                    "filename": contract.filename or "Unknown",
+                    "uploaded_at": format_date(contract.uploaded_at),
+                    "status": contract.status or "draft",
+                    "investment_id": contract.investment_id,
+                    "project_id": contract.project_id,
+                    "grant_id": contract.grant_id,
+                    "extracted_reference_ids": contract.extracted_reference_ids or [],
+                    "comprehensive_data": contract.comprehensive_data or {},
+                    "contract_number": contract.contract_number,
+                    "grant_name": contract.grant_name or "Unnamed Contract",
+                    "grantor": contract.grantor or "Unknown Grantor",
+                    "grantee": contract.grantee or "Unknown Grantee",
+                    "total_amount": float(contract.total_amount) if contract.total_amount else 0.0,
+                    "start_date": format_date(contract.start_date),
+                    "end_date": format_date(contract.end_date),
+                    "purpose": contract.purpose,
+                    "payment_schedule": contract.payment_schedule,
+                    "terms_conditions": contract.terms_conditions,
+                    "chroma_id": contract.chroma_id,
+                    "created_by": contract.created_by,
+                    "version": contract.version or 1,
+                    "review_comments": contract.review_comments,
+                    "assigned_to_current_director": True,
+                    "basic_data": {
+                        "id": contract.id,
+                        "contract_number": contract.contract_number,
+                        "grant_name": contract.grant_name or "Unnamed Contract",
+                        "grantor": contract.grantor or "Unknown Grantor",
+                        "grantee": contract.grantee or "Unknown Grantee",
+                        "total_amount": float(contract.total_amount) if contract.total_amount else 0.0,
+                        "start_date": format_date(contract.start_date),
+                        "end_date": format_date(contract.end_date),
+                        "purpose": contract.purpose,
+                        "status": contract.status or "draft",
+                        "version": contract.version or 1,
+                        "created_by": contract.created_by
+                    }
+                }
+                
+                assigned_contracts.append(contract_dict)
+        
+        print(f"DEBUG: Found {len(assigned_contracts)} contracts assigned to Director {current_user.id}")
+        
+        # Apply ordering and pagination
+        assigned_contracts.sort(key=lambda x: x["uploaded_at"] or "", reverse=True)
+        paginated_contracts = assigned_contracts[skip:skip + limit]
+        
+        return paginated_contracts
+        
+    except Exception as e:
+        print(f"ERROR in get_director_dashboard_contracts: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch director dashboard contracts: {str(e)}"
+        )
 
 @app.get("/api/debug/contract/{contract_id}/status")
 async def debug_contract_status(
@@ -4633,80 +4778,136 @@ async def get_contracts_for_director_approval(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get all contracts pending director approval AND assigned to current Director"""
+    """Get all contracts pending director approval - ONLY for Directors assigned to those contracts"""
     if current_user.role != "director":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only Directors can view contracts for approval"
         )
     
-    # ✅ FIX: Get contracts that are reviewed OR assigned to this director
-    query = db.query(models.Contract).filter(
-        models.Contract.status == "reviewed"
-    )
-    
-    # Count total
-    total_count = query.count()
-
-    # Get all contracts with status 'reviewed' (ready for director approval)
-    contracts = query.order_by(models.Contract.uploaded_at.desc()).offset(skip).limit(limit).all()
-    
-    # ✅ FIX: Filter contracts assigned to this director
-    assigned_contracts = []
-    for contract in contracts:
-        # Check if this director is assigned to the contract
-        is_assigned = is_user_assigned_to_contract(current_user.id, contract, db)
+    try:
+        print(f"DEBUG: Getting contracts for Director {current_user.id} ({current_user.username}) approval")
         
-        if is_assigned:
-            # Get program manager review info
-            pm_review = contract.comprehensive_data.get("program_manager_review", {}) if contract.comprehensive_data else {}
-            director_tracking = contract.comprehensive_data.get("director_approval_tracking", {}) if contract.comprehensive_data else {}
+        # ✅ FIX: Get ONLY contracts that are BOTH:
+        # 1. In 'reviewed' status (ready for director approval)
+        # 2. Assigned to THIS specific director
+        
+        all_reviewed_contracts = db.query(models.Contract).filter(
+            models.Contract.status == "reviewed"
+        ).all()
+        
+        print(f"DEBUG: Found {len(all_reviewed_contracts)} contracts in 'reviewed' status")
+        
+        assigned_to_current_director = []
+        
+        for contract in all_reviewed_contracts:
+            # Check if current director is assigned to this contract
+            is_assigned = False
             
-            # Get who forwarded this contract
-            forwarded_by = director_tracking.get("forwarded_by_name", "Unknown Program Manager")
-            forwarded_at = director_tracking.get("forwarded_at")
-
-            assigned_contracts.append({
-                "id": contract.id,
-                "grant_name": contract.grant_name,
-                "filename": contract.filename,
-                "grantor": contract.grantor,
-                "grantee": contract.grantee,
-                "total_amount": contract.total_amount,
-                "start_date": contract.start_date,
-                "end_date": contract.end_date,
-                "status": contract.status,
-                "uploaded_at": contract.uploaded_at.isoformat(),
-                "program_manager_review": pm_review,
-                "has_review": bool(pm_review),
-                "review_recommendation": pm_review.get("overall_recommendation", "pending"),
-                "forwarded_by": forwarded_by,
-                "forwarded_at": forwarded_at,
-                "days_since_review": calculate_days_since_review(forwarded_at) if forwarded_at else None,
-                "priority": determine_priority(pm_review, contract.total_amount),
-                "assigned_to_current_director": True  # ✅ Add flag to indicate assignment
-            })
-    
-    # Also get any contracts specifically assigned to this director (even if not in reviewed status yet)
-    all_assigned_contracts = await get_assigned_drafts_for_director_approval(current_user, db)
-    
-    # Combine both lists
-    all_contracts = assigned_contracts + all_assigned_contracts
-    
-    # Remove duplicates
-    unique_contracts = []
-    seen_ids = set()
-    for contract in all_contracts:
-        if contract["id"] not in seen_ids:
-            seen_ids.add(contract["id"])
-            unique_contracts.append(contract)
-    
-    return {
-        "contracts": unique_contracts[:limit],  # Apply limit
-        "total": len(unique_contracts),
-        "skip": skip,
-        "limit": limit
-    }
+            # Check assigned_director_users
+            if contract.assigned_director_users:
+                try:
+                    if isinstance(contract.assigned_director_users, list):
+                        if current_user.id in contract.assigned_director_users:
+                            is_assigned = True
+                            print(f"  ✅ Contract {contract.id} assigned to Director {current_user.id} (list)")
+                    elif isinstance(contract.assigned_director_users, str):
+                        # Try to parse as JSON
+                        import json
+                        try:
+                            dir_list = json.loads(contract.assigned_director_users)
+                            if isinstance(dir_list, list) and current_user.id in dir_list:
+                                is_assigned = True
+                                print(f"  ✅ Contract {contract.id} assigned to Director {current_user.id} (JSON string)")
+                        except:
+                            # Try comma-separated
+                            dir_ids = [int(id_str.strip()) for id_str in contract.assigned_director_users.split(',') if id_str.strip().isdigit()]
+                            if current_user.id in dir_ids:
+                                is_assigned = True
+                                print(f"  ✅ Contract {contract.id} assigned to Director {current_user.id} (comma-separated)")
+                except Exception as e:
+                    print(f"  ❌ Error checking Director users for contract {contract.id}: {e}")
+            
+            if is_assigned:
+                # Get program manager review info
+                pm_review = contract.comprehensive_data.get("program_manager_review", {}) if contract.comprehensive_data else {}
+                director_tracking = contract.comprehensive_data.get("director_approval_tracking", {}) if contract.comprehensive_data else {}
+                
+                # Get who forwarded this contract
+                forwarded_by = director_tracking.get("forwarded_by_name", "Unknown Program Manager")
+                forwarded_at = director_tracking.get("forwarded_at")
+                
+                # Check if any other directors are also assigned
+                other_directors_assigned = []
+                if contract.assigned_director_users:
+                    if isinstance(contract.assigned_director_users, list):
+                        director_ids = contract.assigned_director_users
+                    elif isinstance(contract.assigned_director_users, str):
+                        try:
+                            import json
+                            director_ids = json.loads(contract.assigned_director_users)
+                        except:
+                            director_ids = [int(id_str.strip()) for id_str in contract.assigned_director_users.split(',') if id_str.strip().isdigit()]
+                    
+                    for dir_id in director_ids:
+                        if dir_id != current_user.id:
+                            dir_user = db.query(User).filter(User.id == dir_id).first()
+                            if dir_user:
+                                other_directors_assigned.append({
+                                    "id": dir_user.id,
+                                    "name": dir_user.full_name or dir_user.username
+                                })
+                
+                assigned_to_current_director.append({
+                    "id": contract.id,
+                    "grant_name": contract.grant_name,
+                    "filename": contract.filename,
+                    "grantor": contract.grantor,
+                    "grantee": contract.grantee,
+                    "total_amount": contract.total_amount,
+                    "start_date": contract.start_date,
+                    "end_date": contract.end_date,
+                    "status": contract.status,
+                    "uploaded_at": contract.uploaded_at.isoformat(),
+                    "program_manager_review": pm_review,
+                    "has_review": bool(pm_review),
+                    "review_recommendation": pm_review.get("overall_recommendation", "pending"),
+                    "forwarded_by": forwarded_by,
+                    "forwarded_at": forwarded_at,
+                    "days_since_review": calculate_days_since_review(forwarded_at) if forwarded_at else None,
+                    "priority": determine_priority(pm_review, contract.total_amount),
+                    "assigned_to_current_director": True,
+                    "other_directors_assigned": other_directors_assigned,
+                    "total_assigned_directors": len(director_ids) if 'director_ids' in locals() else 1
+                })
+            else:
+                print(f"  ❌ Contract {contract.id} NOT assigned to Director {current_user.id}")
+        
+        print(f"DEBUG: Total contracts assigned to Director {current_user.id}: {len(assigned_to_current_director)}")
+        
+        # Apply pagination
+        paginated_contracts = assigned_to_current_director[skip:skip + limit]
+        
+        return {
+            "contracts": paginated_contracts,
+            "total": len(assigned_to_current_director),
+            "skip": skip,
+            "limit": limit,
+            "director_info": {
+                "director_id": current_user.id,
+                "director_name": current_user.full_name or current_user.username,
+                "total_assigned_approvals": len(assigned_to_current_director)
+            }
+        }
+        
+    except Exception as e:
+        print(f"ERROR in get_contracts_for_director_approval: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch contracts for approval: {str(e)}"
+        )
 
 
 
