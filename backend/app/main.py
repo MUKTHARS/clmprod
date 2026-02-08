@@ -4279,6 +4279,122 @@ async def get_review_summary(
     }
 
 
+@app.get("/api/contracts/program-manager/director-decisions")
+async def get_program_manager_director_decisions(
+    skip: int = 0,
+    limit: int = 100,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get contracts with director decisions for the current program manager"""
+    if current_user.role != "program_manager":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only Program Managers can view director decisions"
+        )
+    
+    try:
+        # Get all contracts where this program manager reviewed
+        from app.auth_models import ReviewComment
+        
+        reviewed_contracts_subquery = db.query(ReviewComment.contract_id).filter(
+            ReviewComment.user_id == current_user.id,
+            ReviewComment.user_id.in_(
+                db.query(User.id).filter(User.role == "program_manager").subquery()
+            )
+        ).distinct().subquery()
+        
+        # Also check if user is in assigned_pgm_users
+        assigned_contracts_subquery = db.query(models.Contract.id).filter(
+            models.Contract.assigned_pgm_users.contains([current_user.id])
+        ).subquery()
+        
+        # Combine both queries
+        all_contract_ids = set()
+        
+        # Get from review comments
+        reviewed_ids = [r[0] for r in db.query(ReviewComment.contract_id).filter(
+            ReviewComment.user_id == current_user.id
+        ).distinct().all()]
+        all_contract_ids.update(reviewed_ids)
+        
+        # Get from assigned users
+        assigned_contracts = db.query(models.Contract).filter(
+            models.Contract.assigned_pgm_users.contains([current_user.id])
+        ).all()
+        assigned_ids = [c.id for c in assigned_contracts]
+        all_contract_ids.update(assigned_ids)
+        
+        # Get contracts with director decisions
+        contracts = db.query(models.Contract).filter(
+            models.Contract.id.in_(list(all_contract_ids)),
+            models.Contract.status.in_(["approved", "rejected"])
+        ).order_by(models.Contract.uploaded_at.desc()).offset(skip).limit(limit).all()
+        
+        # Format response
+        formatted_contracts = []
+        for contract in contracts:
+            director_decision = contract.comprehensive_data.get("director_final_approval", {}) if contract.comprehensive_data else {}
+            pm_review = contract.comprehensive_data.get("program_manager_review", {}) if contract.comprehensive_data else {}
+            
+            # Check if this specific program manager reviewed
+            user_reviewed = db.query(ReviewComment).filter(
+                ReviewComment.contract_id == contract.id,
+                ReviewComment.user_id == current_user.id
+            ).first() is not None
+            
+            formatted_contracts.append({
+                "id": contract.id,
+                "grant_name": contract.grant_name,
+                "filename": contract.filename,
+                "grantor": contract.grantor,
+                "grantee": contract.grantee,
+                "total_amount": contract.total_amount,
+                "start_date": contract.start_date,
+                "end_date": contract.end_date,
+                "status": contract.status,
+                "uploaded_at": contract.uploaded_at.isoformat() if contract.uploaded_at else None,
+                
+                # Program Manager's review
+                "program_manager_review": pm_review,
+                "program_manager_recommendation": pm_review.get("overall_recommendation", "pending"),
+                "program_manager_reviewed_at": pm_review.get("reviewed_at"),
+                "program_manager_review_summary": pm_review.get("review_summary"),
+                
+                # Director's decision
+                "director_decision": director_decision,
+                "director_decision_status": director_decision.get("final_decision"),
+                "director_decision_comments": director_decision.get("approval_comments"),
+                "director_decided_at": director_decision.get("approved_at"),
+                "director_name": director_decision.get("approved_by_name"),
+                
+                # Additional info
+                "is_locked": director_decision.get("contract_locked", False),
+                "risk_accepted": director_decision.get("risk_accepted", False),
+                "business_sign_off": director_decision.get("business_sign_off", False),
+                "user_reviewed_this_contract": user_reviewed,
+                "is_assigned_to_contract": contract.id in assigned_ids
+            })
+        
+        return {
+            "contracts": formatted_contracts,
+            "total": len(contracts),
+            "skip": skip,
+            "limit": limit,
+            "summary": {
+                "approved": len([c for c in contracts if c.status == "approved"]),
+                "rejected": len([c for c in contracts if c.status == "rejected"]),
+                "total": len(contracts)
+            }
+        }
+        
+    except Exception as e:
+        print(f"ERROR in get_program_manager_director_decisions: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch director decisions: {str(e)}"
+        )
+
 @app.post("/api/contracts/{contract_id}/director/final-approval")
 async def director_final_approval(
     contract_id: int,
@@ -4366,7 +4482,7 @@ async def director_final_approval(
             "business_sign_off": business_sign_off,
             "contract_locked": lock_contract,
             "lock_timestamp": datetime.utcnow().isoformat() if lock_contract else None,
-            "director_assigned_to_contract": True  # ✅ Add flag
+            "director_assigned_to_contract": True
         }
         
         contract.comprehensive_data["director_final_approval"] = director_approval
@@ -4391,10 +4507,75 @@ async def director_final_approval(
             "risk_accepted": risk_accepted,
             "business_sign_off": business_sign_off,
             "contract_locked": lock_contract,
-            "director_assigned": True  # ✅ Add flag
+            "director_assigned": True
         })
         
         contract.comprehensive_data["approval_history"] = approval_history
+        
+        # ✅ CRITICAL FIX: Send notifications ONLY to assigned Program Managers
+        # Get the Program Manager(s) who reviewed this contract
+        from app.auth_models import ReviewComment, UserNotification
+        
+        # Find all Program Managers who commented on this contract
+        program_manager_reviews = db.query(ReviewComment).filter(
+            ReviewComment.contract_id == contract_id,
+            ReviewComment.user_id.in_(
+                db.query(User.id).filter(User.role == "program_manager").subquery()
+            )
+        ).distinct(ReviewComment.user_id).all()
+        
+        # Also check assigned_pgm_users
+        assigned_pgm_users = []
+        if contract.assigned_pgm_users:
+            if isinstance(contract.assigned_pgm_users, list):
+                assigned_pgm_users = contract.assigned_pgm_users
+            elif isinstance(contract.assigned_pgm_users, str):
+                try:
+                    import json
+                    assigned_pgm_users = json.loads(contract.assigned_pgm_users)
+                except:
+                    assigned_pgm_users = [int(id_str.strip()) for id_str in contract.assigned_pgm_users.split(',') if id_str.strip().isdigit()]
+        
+        # Combine both lists and remove duplicates
+        all_pgm_users = list(set([review.user_id for review in program_manager_reviews] + assigned_pgm_users))
+        
+        # Send notifications ONLY to relevant program managers
+        if all_pgm_users:
+            for pgm_user_id in all_pgm_users:
+                # Verify this is actually a program manager
+                pgm_user = db.query(User).filter(
+                    User.id == pgm_user_id,
+                    User.role == "program_manager",
+                    User.is_active == True
+                ).first()
+                
+                if pgm_user:
+                    # Create notification
+                    notification = UserNotification(
+                        user_id=pgm_user_id,
+                        notification_type="director_decision",
+                        title=f"Director {decision.capitalize()}d Contract",
+                        message=f"Contract '{contract.grant_name or contract.filename}' has been {decision}d by Director {current_user.full_name or current_user.username}. Comments: {comments}",
+                        contract_id=contract_id,
+                        is_read=False,
+                        created_at=datetime.utcnow()
+                    )
+                    db.add(notification)
+                    
+            print(f"✅ Sent notifications to {len(all_pgm_users)} program managers")
+        
+        # Also notify the Project Manager (contract creator)
+        if contract.created_by:
+            pm_notification = UserNotification(
+                user_id=contract.created_by,
+                notification_type="contract_finalized",
+                title=f"Contract {decision.capitalize()}d by Director",
+                message=f"Your contract '{contract.grant_name or contract.filename}' has been {decision}d by Director {current_user.full_name or current_user.username}.",
+                contract_id=contract_id,
+                is_read=False,
+                created_at=datetime.utcnow()
+            )
+            db.add(pm_notification)
         
         db.commit()
         
@@ -4412,7 +4593,9 @@ async def director_final_approval(
                 "risk_accepted": risk_accepted,
                 "business_sign_off": business_sign_off,
                 "contract_locked": lock_contract,
-                "director_assigned": True  # ✅ Add flag
+                "director_assigned": True,
+                "notified_pgms": len(all_pgm_users),
+                "notified_pm": bool(contract.created_by)
             }, 
             request=request
         )
@@ -4423,7 +4606,11 @@ async def director_final_approval(
             "status": contract.status,
             "locked": lock_contract,
             "approval_data": director_approval,
-            "director_assigned": True  # ✅ Add flag
+            "director_assigned": True,
+            "notifications_sent": {
+                "program_managers": len(all_pgm_users),
+                "project_manager": 1 if contract.created_by else 0
+            }
         }
         
     except Exception as e:
@@ -4632,7 +4819,7 @@ async def get_director_assigned_approvals_count(
             "error": str(e)
         }
 
-        
+
 @app.get("/api/contracts/director/dashboard")
 async def get_director_dashboard_contracts(
     skip: int = 0,
