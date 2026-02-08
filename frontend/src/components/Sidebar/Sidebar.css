@@ -881,3 +881,28 @@
     padding-left: 28px !important;
   }
 }
+
+.no-icon-placeholder {
+  width: 22px;
+  height: 22px;
+}
+
+.submenu-item .no-icon-placeholder {
+  width: 18px;
+  height: 18px;
+}
+
+/* Ensure nav-icon has consistent sizing */
+.nav-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.submenu-item .nav-icon {
+  width: 20px;
+  height: 20px;
+}

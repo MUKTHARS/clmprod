@@ -26,6 +26,8 @@ import CopilotPage from './components/copilot/CopilotPage';
 import SuperAdminDashboard from './components/admin/SuperAdminDashboard';
 import ViewDraftsPage from './components/workflow/ViewDraftsPage';
 import DraftManagementPage from './pages/DraftManagementPage';
+import AssignedAgreementsPage from './pages/AssignedAgreementsPage';
+import AssignedByMePage from './pages/AssignedByMePage';
 // import ArchivePage from './pages/ArchivePage';
 function AppContent({ user, isAuthenticated, loading, contracts, onLogin, onLogout, onUploadComplete, fetchContracts }) {
   const location = useLocation();
@@ -191,7 +193,11 @@ function AppContent({ user, isAuthenticated, loading, contracts, onLogin, onLogo
                 </PrivateRoute>
               } 
             />
-
+<Route path="/agreements/assigned" element={
+  <PrivateRoute user={user}>
+    <AssignedAgreementsPage user={user} />
+  </PrivateRoute>
+} />
             <Route 
               path="/program-manager/director-decisions" 
               element={
@@ -217,6 +223,11 @@ function AppContent({ user, isAuthenticated, loading, contracts, onLogin, onLogo
               } 
             />
 
+<Route path="/agreements/assigned-by-me" element={
+  <PrivateRoute user={user}>
+    <AssignedByMePage user={user} />
+  </PrivateRoute>
+} />
             <Route 
               path="/admin" 
               element={

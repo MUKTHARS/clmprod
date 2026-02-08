@@ -28,20 +28,22 @@ const Sidebar = ({ user, onLogout }) => {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState({
     draft: false,
+    assigned: false,
     archive: false,
     admin: false
   });
   const [badgeCounts, setBadgeCounts] = useState({});
   const [isDraftSubmenuActive, setIsDraftSubmenuActive] = useState(false);
+  const [isAssignedSubmenuActive, setIsAssignedSubmenuActive] = useState(false);
 
   // Memoize the getMenuItems function to prevent recreation on every render
   const getMenuItems = useCallback(() => {
     const userRole = user?.role || '';
     
-    if (!userRole) {
-      return { allItems: [], regularItems: [], draftParent: null, draftSubmenuItems: [], archiveItems: [], adminItems: [] };
-    }
-
+  if (!userRole) {
+    return { allItems: [], regularItems: [], draftParent: null, draftSubmenuItems: [], archiveItems: [], adminItems: [], assignedParent: null, assignedSubmenuItems: [] };
+  }
+    
     const allItems = [
       // COMMON ITEMS FOR ALL USERS
       { 
@@ -138,7 +140,8 @@ const Sidebar = ({ user, onLogout }) => {
         permission: 'can_view_drafts',
         roles: ['project_manager'],
         isDraftSubmenu: true,
-        parentId: 'draft-parent'
+        parentId: 'draft-parent',
+        showIcon: false // Added flag to indicate no icon
       },
       { 
         id: 'assigned-drafts', 
@@ -148,7 +151,8 @@ const Sidebar = ({ user, onLogout }) => {
         permission: 'can_view_assigned_drafts',
         roles: ['project_manager'],
         isDraftSubmenu: true,
-        parentId: 'draft-parent'
+        parentId: 'draft-parent',
+        showIcon: false // Added flag to indicate no icon
       },
       
       // ARCHIVE ITEMS
@@ -161,8 +165,40 @@ const Sidebar = ({ user, onLogout }) => {
         roles: ['project_manager', 'director'],
         isArchiveSection: true
       },
+      { 
+        id: 'assigned-parent', 
+        label: 'Assigned Agreements', 
+        icon: UserCheck, 
+        path: '#', 
+        permission: 'can_view_assigned_agreements',
+        roles: ['program_manager', 'director'],
+        isAssignedParent: true,
+        hasSubmenu: true
+      },
+      { 
+        id: 'assigned-to-me', 
+        label: 'Assigned to Me', 
+        icon: null,
+        path: '/agreements/assigned', 
+        permission: 'can_view_assigned_agreements',
+        roles: ['program_manager', 'director'],
+        isAssignedSubmenu: true,
+        parentId: 'assigned-parent',
+        showIcon: false // Added flag to indicate no icon
+      },
+      { 
+        id: 'assigned-by-me', 
+        label: 'Assigned by Me', 
+        icon: null,
+        path: '/agreements/assigned-by-me', 
+        permission: 'can_view_assigned_by_me',
+        roles: ['program_manager', 'director'],
+        isAssignedSubmenu: true,
+        parentId: 'assigned-parent',
+        showIcon: false // Added flag to indicate no icon
+      },
     ];
-
+    
     // Filter items based on user role
     const filteredItems = allItems.filter(item => {
       // Dashboard is always visible to all roles
@@ -185,21 +221,25 @@ const Sidebar = ({ user, onLogout }) => {
     });
 
     // Separate items
-    const regularItems = filteredItems.filter(item => !item.isAdmin && !item.isDraftParent && !item.isDraftSubmenu && !item.isArchiveSection);
+    const regularItems = filteredItems.filter(item => !item.isAdmin && !item.isDraftParent && !item.isDraftSubmenu && !item.isArchiveSection && !item.isAssignedParent && !item.isAssignedSubmenu);
     const draftParent = filteredItems.find(item => item.isDraftParent);
     const draftSubmenuItems = filteredItems.filter(item => item.isDraftSubmenu);
     const archiveItems = filteredItems.filter(item => item.isArchiveSection);
     const adminItems = filteredItems.filter(item => item.isAdmin);
+    const assignedParent = filteredItems.find(item => item.isAssignedParent);
+    const assignedSubmenuItems = filteredItems.filter(item => item.isAssignedSubmenu);
 
     return {
       allItems: filteredItems,
       regularItems,
       draftParent,
       draftSubmenuItems,
+      assignedParent,
+      assignedSubmenuItems,
       archiveItems,
       adminItems
     };
-  }, [user?.role]); // Only recreate when user role changes
+  }, [user?.role]); 
 
   // Memoize the menu items
   const menuItems = useMemo(() => getMenuItems(), [getMenuItems]);
@@ -339,6 +379,26 @@ const Sidebar = ({ user, onLogout }) => {
     checkDraftSubmenuActive();
   }, [location.pathname, menuItems.draftSubmenuItems, menuItems.draftParent]);
 
+  // Check if assigned submenu is active
+  useEffect(() => {
+    const checkAssignedSubmenuActive = () => {
+      const isActive = menuItems.assignedSubmenuItems?.some(item => 
+        location.pathname === item.path || location.pathname.startsWith(item.path)
+      );
+      setIsAssignedSubmenuActive(isActive);
+      
+      // Auto-expand assigned menu if a submenu is active
+      if (isActive && menuItems.assignedParent) {
+        setExpandedMenus(prev => ({
+          ...prev,
+          assigned: true
+        }));
+      }
+    };
+    
+    checkAssignedSubmenuActive();
+  }, [location.pathname, menuItems.assignedSubmenuItems, menuItems.assignedParent]);
+
   const handleNavigation = useCallback((path) => {
     navigate(path);
   }, [navigate]);
@@ -359,6 +419,24 @@ const Sidebar = ({ user, onLogout }) => {
     navigate('/login');
   }, [onLogout, navigate]);
 
+  // Helper function to render icon safely
+  const renderIcon = (item) => {
+    const IconComponent = item.icon;
+    
+    // Check if we should show icon for this item
+    if (item.showIcon === false) {
+      return <div className="no-icon-placeholder" />;
+    }
+    
+    // Check if IconComponent is a valid React component
+    if (IconComponent && typeof IconComponent === 'function') {
+      return <IconComponent size={item.isDraftSubmenu || item.isAssignedSubmenu ? 18 : 22} />;
+    }
+    
+    // Fallback for invalid icons
+    return <div className="no-icon-placeholder" />;
+  };
+
   return (
     <aside className="sidebar">
       <div className="sidebar-header">
@@ -374,7 +452,6 @@ const Sidebar = ({ user, onLogout }) => {
         <ul className="nav-menu">
           {/* Regular Items */}
           {menuItems.regularItems.map((item) => {
-            const IconComponent = item.icon;
             const isActive = location.pathname === item.path || 
                             (item.path !== '/dashboard' && location.pathname.startsWith(item.path));
             const badgeCount = badgeCounts[item.id];
@@ -387,7 +464,7 @@ const Sidebar = ({ user, onLogout }) => {
                   title={item.label}
                 >
                   <span className="nav-icon">
-                    <IconComponent size={22} />
+                    {renderIcon(item)}
                   </span>
                   <span className="nav-label">{item.label}</span>
                   {badgeCount && (
@@ -413,7 +490,7 @@ const Sidebar = ({ user, onLogout }) => {
                   title={menuItems.draftParent.label}
                 >
                   <span className="nav-icon">
-                    <FolderOpen size={22} />
+                    {renderIcon(menuItems.draftParent)}
                   </span>
                   <span className="nav-label">{menuItems.draftParent.label}</span>
                   <span className="menu-arrow">
@@ -437,7 +514,59 @@ const Sidebar = ({ user, onLogout }) => {
                             title={subItem.label}
                           >
                             <span className="nav-icon">
-                              {subItem.icon ? <subItem.icon size={18} /> : <div className="submenu-icon-placeholder" />}
+                              {renderIcon(subItem)}
+                            </span>
+                            <span className="nav-label">{subItem.label}</span>
+                            {isSubActive && <span className="nav-indicator" />}
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </li>
+            </>
+          )}
+
+          {/* Assigned Agreements for Program Managers and Directors */}
+          {menuItems.assignedParent && (
+            <>
+              <div className="nav-section-divider">
+                <div className="nav-section-label">ASSIGNED AGREEMENTS</div>
+              </div>
+              
+              <li key={menuItems.assignedParent.id}>
+                <button
+                  className={`nav-item assigned-parent ${expandedMenus.assigned || isAssignedSubmenuActive ? 'active' : ''}`}
+                  onClick={() => toggleMenu('assigned')}
+                  title={menuItems.assignedParent.label}
+                >
+                  <span className="nav-icon">
+                    {renderIcon(menuItems.assignedParent)}
+                  </span>
+                  <span className="nav-label">{menuItems.assignedParent.label}</span>
+                  <span className="menu-arrow">
+                    {expandedMenus.assigned ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                  </span>
+                  {(expandedMenus.assigned || isAssignedSubmenuActive) && <span className="nav-indicator" />}
+                </button>
+                
+                {/* Assigned Submenu */}
+                {expandedMenus.assigned && menuItems.assignedSubmenuItems?.length > 0 && (
+                  <ul className="submenu">
+                    {menuItems.assignedSubmenuItems.map((subItem) => {
+                      const isSubActive = location.pathname === subItem.path || 
+                                         location.pathname.startsWith(subItem.path);
+                      
+                      return (
+                        <li key={subItem.id}>
+                          <button
+                            className={`nav-item submenu-item ${isSubActive ? 'active' : ''}`}
+                            onClick={() => handleNavigation(subItem.path)}
+                            title={subItem.label}
+                          >
+                            <span className="nav-icon">
+                              {renderIcon(subItem)}
                             </span>
                             <span className="nav-label">{subItem.label}</span>
                             {isSubActive && <span className="nav-indicator" />}
@@ -459,7 +588,6 @@ const Sidebar = ({ user, onLogout }) => {
               </div>
               
               {menuItems.archiveItems.map((item) => {
-                const IconComponent = item.icon;
                 const isActive = location.pathname === item.path || 
                                 location.pathname.startsWith(item.path);
                 
@@ -471,7 +599,7 @@ const Sidebar = ({ user, onLogout }) => {
                       title={item.label}
                     >
                       <span className="nav-icon">
-                        <IconComponent size={22} />
+                        {renderIcon(item)}
                       </span>
                       <span className="nav-label">{item.label}</span>
                       {isActive && <span className="nav-indicator" />}
@@ -490,7 +618,6 @@ const Sidebar = ({ user, onLogout }) => {
               </div>
               
               {menuItems.adminItems.map((item) => {
-                const IconComponent = item.icon;
                 const isActive = location.pathname === item.path || 
                                 (item.path !== '/dashboard' && location.pathname.startsWith(item.path));
                 
@@ -502,7 +629,7 @@ const Sidebar = ({ user, onLogout }) => {
                       title={item.label}
                     >
                       <span className="nav-icon">
-                        <IconComponent size={22} />
+                        {renderIcon(item)}
                       </span>
                       <span className="nav-label">{item.label}</span>
                       {isActive && <span className="nav-indicator" />}

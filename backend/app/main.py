@@ -5168,6 +5168,224 @@ async def get_assigned_drafts(
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to fetch assigned drafts: {str(e)}")
 
+
+# In C:\saple.ai\POC\backend\app\main.py, add this endpoint:
+
+@app.get("/api/agreements/assigned-by-me")
+async def get_agreements_assigned_by_me(
+    skip: int = 0,
+    limit: int = 100,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get all draft agreements assigned by current user"""
+    
+    # Only program managers and directors can see agreements they assigned
+    if current_user.role not in ["program_manager", "director"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only Program Managers and Directors can view agreements they assigned"
+        )
+    
+    try:
+        print(f"DEBUG: Fetching agreements assigned by user {current_user.id} ({current_user.username})")
+        
+        # Get ALL draft contracts
+        all_drafts = db.query(models.Contract).filter(
+            models.Contract.status == "draft"
+        ).all()
+        
+        print(f"DEBUG: Found {len(all_drafts)} total draft contracts")
+        
+        assigned_by_me_drafts = []
+        
+        for draft in all_drafts:
+            # Check comprehensive data for assignment history
+            if draft.comprehensive_data and "assignment_history" in draft.comprehensive_data:
+                assignment_history = draft.comprehensive_data["assignment_history"]
+                
+                # Check if current user assigned anyone to this draft
+                for entry in assignment_history:
+                    if entry.get("assigned_by") == current_user.id:
+                        # Found an assignment made by current user
+                        print(f"DEBUG: Found draft {draft.id} assigned by {current_user.id}")
+                        
+                        # Get all assigned users information
+                        all_assigned_users_info = []
+                        
+                        # Get user details for assigned PMs
+                        pm_user_ids = []
+                        if draft.assigned_pm_users:
+                            if isinstance(draft.assigned_pm_users, list):
+                                pm_user_ids = draft.assigned_pm_users
+                            elif isinstance(draft.assigned_pm_users, str):
+                                try:
+                                    import json
+                                    pm_user_ids = json.loads(draft.assigned_pm_users)
+                                except:
+                                    pm_user_ids = [int(id_str.strip()) for id_str in draft.assigned_pm_users.split(',') if id_str.strip().isdigit()]
+                        
+                        for user_id in pm_user_ids:
+                            try:
+                                user_obj = db.query(User).filter(User.id == user_id).first()
+                                if user_obj:
+                                    all_assigned_users_info.append({
+                                        "id": user_obj.id,
+                                        "name": user_obj.full_name or user_obj.username,
+                                        "role": user_obj.role,
+                                        "assignment_type": "project_manager"
+                                    })
+                            except:
+                                pass
+                        
+                        # Get user details for assigned PGMs
+                        pgm_user_ids = []
+                        if draft.assigned_pgm_users:
+                            if isinstance(draft.assigned_pgm_users, list):
+                                pgm_user_ids = draft.assigned_pgm_users
+                            elif isinstance(draft.assigned_pgm_users, str):
+                                try:
+                                    import json
+                                    pgm_user_ids = json.loads(draft.assigned_pgm_users)
+                                except:
+                                    pgm_user_ids = [int(id_str.strip()) for id_str in draft.assigned_pgm_users.split(',') if id_str.strip().isdigit()]
+                        
+                        for user_id in pgm_user_ids:
+                            try:
+                                user_obj = db.query(User).filter(User.id == user_id).first()
+                                if user_obj:
+                                    all_assigned_users_info.append({
+                                        "id": user_obj.id,
+                                        "name": user_obj.full_name or user_obj.username,
+                                        "role": user_obj.role,
+                                        "assignment_type": "program_manager"
+                                    })
+                            except:
+                                pass
+                        
+                        # Get user details for assigned Directors
+                        director_user_ids = []
+                        if draft.assigned_director_users:
+                            if isinstance(draft.assigned_director_users, list):
+                                director_user_ids = draft.assigned_director_users
+                            elif isinstance(draft.assigned_director_users, str):
+                                try:
+                                    import json
+                                    director_user_ids = json.loads(draft.assigned_director_users)
+                                except:
+                                    director_user_ids = [int(id_str.strip()) for id_str in draft.assigned_director_users.split(',') if id_str.strip().isdigit()]
+                        
+                        for user_id in director_user_ids:
+                            try:
+                                user_obj = db.query(User).filter(User.id == user_id).first()
+                                if user_obj:
+                                    all_assigned_users_info.append({
+                                        "id": user_obj.id,
+                                        "name": user_obj.full_name or user_obj.username,
+                                        "role": user_obj.role,
+                                        "assignment_type": "director"
+                                    })
+                            except:
+                                pass
+                        
+                        assigned_by_me_drafts.append({
+                            "id": draft.id,
+                            "filename": draft.filename,
+                            "grant_name": draft.grant_name,
+                            "contract_number": draft.contract_number,
+                            "grantor": draft.grantor,
+                            "grantee": draft.grantee,
+                            "total_amount": draft.total_amount,
+                            "start_date": draft.start_date,
+                            "end_date": draft.end_date,
+                            "purpose": draft.purpose,
+                            "uploaded_at": draft.uploaded_at,
+                            "status": draft.status,
+                            "created_by": draft.created_by,
+                            "assigned_pm_users": draft.assigned_pm_users,
+                            "assigned_pgm_users": draft.assigned_pgm_users,
+                            "assigned_director_users": draft.assigned_director_users,
+                            "comprehensive_data": draft.comprehensive_data,
+                            "assignment_role": current_user.role,
+                            "assigned_by": {
+                                "id": entry.get("assigned_by"),
+                                "name": entry.get("assigned_by_name", "Unknown"),
+                                "role": entry.get("assigned_by_role", "Unknown")
+                            },
+                            "assigned_at": entry.get("assigned_at"),
+                            "all_assigned_users": all_assigned_users_info,
+                            "assigned_pm_count": len([u for u in all_assigned_users_info if u["assignment_type"] == "project_manager"]),
+                            "assigned_pgm_count": len([u for u in all_assigned_users_info if u["assignment_type"] == "program_manager"]),
+                            "assigned_director_count": len([u for u in all_assigned_users_info if u["assignment_type"] == "director"])
+                        })
+                        break  # Found this user's assignment, move to next draft
+        
+        print(f"DEBUG: Total drafts assigned by user: {len(assigned_by_me_drafts)}")
+        
+        # Apply pagination
+        paginated_drafts = assigned_by_me_drafts[skip:skip + limit]
+        
+        # Helper function to safely format dates
+        def format_date(date_value):
+            if date_value and hasattr(date_value, 'isoformat'):
+                return date_value.isoformat()
+            return date_value
+        
+        # Format response
+        formatted_drafts = []
+        for draft in paginated_drafts:
+            formatted_drafts.append({
+                "id": draft["id"],
+                "filename": draft["filename"] or "Unknown",
+                "uploaded_at": format_date(draft["uploaded_at"]),
+                "status": draft["status"] or "draft",
+                "contract_number": draft["contract_number"],
+                "grant_name": draft["grant_name"] or "Unnamed Contract",
+                "grantor": draft["grantor"] or "Unknown Grantor",
+                "grantee": draft["grantee"] or "Unknown Grantee",
+                "total_amount": float(draft["total_amount"]) if draft["total_amount"] else 0.0,
+                "start_date": format_date(draft["start_date"]),
+                "end_date": format_date(draft["end_date"]),
+                "purpose": draft["purpose"],
+                "created_by": draft["created_by"],
+                "assigned_pm_users": draft["assigned_pm_users"] or [],
+                "assigned_pgm_users": draft["assigned_pgm_users"] or [],
+                "assigned_director_users": draft["assigned_director_users"] or [],
+                "comprehensive_data": draft["comprehensive_data"],
+                "assignment_role": draft["assignment_role"],
+                "assigned_by": draft["assigned_by"],
+                "assigned_at": format_date(draft["assigned_at"]),
+                "all_assigned_users": draft["all_assigned_users"],
+                "assigned_pm_count": draft["assigned_pm_count"],
+                "assigned_pgm_count": draft["assigned_pgm_count"],
+                "assigned_director_count": draft["assigned_director_count"]
+            })
+        
+        # Calculate statistics
+        total_assigned_pms = sum(d["assigned_pm_count"] for d in assigned_by_me_drafts)
+        total_assigned_pgms = sum(d["assigned_pgm_count"] for d in assigned_by_me_drafts)
+        total_assigned_directors = sum(d["assigned_director_count"] for d in assigned_by_me_drafts)
+        
+        return {
+            "drafts": formatted_drafts,
+            "total": len(assigned_by_me_drafts),
+            "skip": skip,
+            "limit": limit,
+            "assignment_summary": {
+                "total_assigned_pms": total_assigned_pms,
+                "total_assigned_pgms": total_assigned_pgms,
+                "total_assigned_directors": total_assigned_directors,
+                "total_agreements": len(assigned_by_me_drafts)
+            }
+        }
+        
+    except Exception as e:
+        print(f"ERROR in get_agreements_assigned_by_me: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Failed to fetch agreements assigned by you: {str(e)}")
+
+        
 @app.post("/api/fix/contract-assignments")
 async def fix_contract_assignments(
     contract_id: int = None,
