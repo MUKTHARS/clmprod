@@ -49,6 +49,7 @@ import ComprehensiveView from './ComprehensiveView';
 import API_CONFIG from './config';
 import ProjectManagerActions from './components/workflow/ProjectManagerActions';
 import './styles/ContractDetailsPage.css';
+
 import AgreementWorkflow from './components/workflow/AgreementWorkflow';
 function ContractDetailsPage({ user = null }) {
   const { id } = useParams();
@@ -1539,11 +1540,14 @@ const hasDeliverableBeenUploaded = (index) => {
 
         </div>
 
-{/* Project Manager Actions Section - For non-draft agreements */}
-{user && user.role === "project_manager" && contractData && contractData.status !== 'draft' && (
+{/* Project Manager Actions Section - For ALL project manager contracts */}
+{user && user.role === "project_manager" && contractData && (
   <div className="section-card">
     <div className="section-header">
       <h3>Project Manager Actions</h3>
+      <span className="contract-status-badge">
+        Contract Status: <strong>{contractData.status}</strong>
+      </span>
     </div>
     
     <div className="workflow-section">
@@ -1557,7 +1561,7 @@ const hasDeliverableBeenUploaded = (index) => {
       />
     </div>
   </div>
-)}  
+)}
 
         {/* Project Manager Comments Section */}
         {user && user.role === "project_manager" && contractData && (

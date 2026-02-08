@@ -316,13 +316,7 @@ function AssignedAgreementsPage({ user }) {
     <div className="assigned-agreements-page">
       <div className="agreements-header">
         <div className="header-left">
-          <button 
-            className="btn-back"
-            onClick={() => navigate('/dashboard')}
-          >
-            <ArrowLeft size={18} />
-            Back to Dashboard
-          </button>
+
           <h1>
             Agreements Assigned to Me
           </h1>

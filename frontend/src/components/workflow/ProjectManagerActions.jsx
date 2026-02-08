@@ -285,108 +285,108 @@ function ProjectManagerActions({ contract, user, onActionComplete }) {
     }
   };
 
-  return (
-    <div className="project-manager-actions">
-      <div className="actions-header">
-        <h3>
-          <User size={20} />
-          Project Manager Actions
-        </h3>
-        <div className={`status-badge ${contract.status}`}>
-          {contract.status}
+return (
+  <div className="pm-actions-container">
+    <div className="pm-actions-header">
+      <h3>
+        <User size={20} />
+        Project Manager Actions
+      </h3>
+      <div className={`pm-status-badge ${contract.status}`}>
+        {contract.status}
+      </div>
+    </div>
+
+    {/* Available Actions Based on Status */}
+    {(contract.status === 'draft' || contract.status === 'rejected') && (
+      <div className="pm-available-actions">
+        <button
+          className="pm-action-btn primary"
+          onClick={() => setActiveAction('submit_review')}
+          disabled={loading}
+        >
+          <Send size={16} />
+          {contract.status === 'rejected' ? 'Resubmit for Review' : 'Submit for Review'}
+        </button>
+
+        <button
+          className="pm-action-btn secondary"
+          onClick={() => setActiveAction('fix_metadata')}
+          disabled={loading}
+        >
+          <Edit size={16} />
+          Fix Metadata
+        </button>
+
+        {contract.status === 'rejected' && (
+          <button
+            className="pm-action-btn secondary"
+            onClick={() => setActiveAction('respond_comments')}
+            disabled={loading}
+          >
+            <MessageSquare size={16} />
+            Respond to Comments
+          </button>
+        )}
+
+        <button
+          className="pm-action-btn secondary"
+          onClick={() => {
+            setShowComments(!showComments);
+            if (!showComments) {
+              fetchReviewComments();
+            }
+          }}
+        >
+          <RefreshCw size={16} />
+          {showComments ? 'Hide' : 'View'} All Comments ({reviewComments.length})
+        </button>
+      </div>
+    )}
+
+    {/* Action Forms */}
+    {activeAction === 'submit_review' && (
+      <div className="pm-action-form">
+        <h4>Submit Contract for Review</h4>
+        <textarea
+          value={formData.notes}
+          onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+          placeholder="Add any notes or comments for the reviewers..."
+          rows={4}
+        />
+        <div className="pm-form-actions">
+          <button
+            className="pm-btn-secondary"
+            onClick={() => setActiveAction(null)}
+            disabled={loading}
+          >
+            Cancel
+          </button>
+          <button
+            className="pm-btn-primary"
+            onClick={handleSubmitForReview}
+            disabled={!formData.notes.trim() || loading}
+          >
+            {loading ? (
+              <>
+                <Loader2 size={14} className="pm-spinning" />
+                Submitting...
+              </>
+            ) : (
+              <>
+                <Send size={14} />
+                Submit for Review
+              </>
+            )}
+          </button>
         </div>
       </div>
+    )}
 
-      {/* Available Actions Based on Status */}
-      {(contract.status === 'draft' || contract.status === 'rejected') && (
-        <div className="available-actions">
-          <button
-            className="action-btn primary"
-            onClick={() => setActiveAction('submit_review')}
-            disabled={loading}
-          >
-            <Send size={16} />
-            {contract.status === 'rejected' ? 'Resubmit for Review' : 'Submit for Review'}
-          </button>
-
-          <button
-            className="action-btn secondary"
-            onClick={() => setActiveAction('fix_metadata')}
-            disabled={loading}
-          >
-            <Edit size={16} />
-            Fix Metadata
-          </button>
-
-          {contract.status === 'rejected' && (
-            <button
-              className="action-btn secondary"
-              onClick={() => setActiveAction('respond_comments')}
-              disabled={loading}
-            >
-              <MessageSquare size={16} />
-              Respond to Comments
-            </button>
-          )}
-
-          <button
-            className="action-btn secondary"
-            onClick={() => {
-              setShowComments(!showComments);
-              if (!showComments) {
-                fetchReviewComments();
-              }
-            }}
-          >
-            <RefreshCw size={16} />
-            {showComments ? 'Hide' : 'View'} All Comments ({reviewComments.length})
-          </button>
-        </div>
-      )}
-
-      {/* Action Forms */}
-      {activeAction === 'submit_review' && (
-        <div className="action-form">
-          <h4>Submit Contract for Review</h4>
-          <textarea
-            value={formData.notes}
-            onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-            placeholder="Add any notes or comments for the reviewers..."
-            rows={4}
-          />
-          <div className="form-actions">
-            <button
-              className="btn-secondary"
-              onClick={() => setActiveAction(null)}
-              disabled={loading}
-            >
-              Cancel
-            </button>
-            <button
-              className="btn-primary"
-              onClick={handleSubmitForReview}
-              disabled={!formData.notes.trim() || loading}
-            >
-              {loading ? (
-                <>
-                  <Loader2 size={14} className="spinning" />
-                  Submitting...
-                </>
-              ) : (
-                <>
-                  <Send size={14} />
-                  Submit for Review
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {activeAction === 'fix_metadata' && (
-        <div className="action-form">
-          <h4>Fix Contract Metadata</h4>
-          <div className="metadata-form">
+    {activeAction === 'fix_metadata' && (
+      <div className="pm-action-form">
+        <h4>Fix Contract Metadata</h4>
+        <div className="pm-metadata-form">
             <div className="form-group">
               <label>Grant Name</label>
               <input
@@ -539,14 +539,14 @@ function ProjectManagerActions({ contract, user, onActionComplete }) {
       )}
 
       {/* All Comments Display */}
-      {showComments && reviewComments.length > 0 && (
-        <div className="all-comments-section">
-          <h4>
-            <MessageSquare size={16} />
-            All Comments ({reviewComments.length})
-          </h4>
-          <div className="comments-list">
-            {reviewComments.map((comment, index) => {
+  {showComments && reviewComments.length > 0 && (
+      <div className="pm-all-comments-section">
+        <h4>
+          <MessageSquare size={16} />
+          All Comments ({reviewComments.length})
+        </h4>
+        <div className="pm-comments-list">
+          {reviewComments.map((comment, index) => {
               const isProjectManager = comment.user_role === "project_manager";
               const isSubmission = comment.comment_type === "project_manager_submission";
               
