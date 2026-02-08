@@ -1617,6 +1617,64 @@ async def submit_contract_for_review(
         
         contract.comprehensive_data["review_history"] = review_history
         
+        # ✅ CRITICAL FIX: Send notifications ONLY to assigned Program Managers
+        from app.notification_service import NotificationService
+        from app.auth_models import User as AuthUser
+        
+        # Get assigned Program Manager users from the contract
+        assigned_program_managers = []
+        
+        # Check both database columns and comprehensive_data for assigned users
+        if contract.assigned_pgm_users:
+            if isinstance(contract.assigned_pgm_users, list):
+                assigned_program_managers = contract.assigned_pgm_users
+            elif isinstance(contract.assigned_pgm_users, str):
+                try:
+                    import json
+                    assigned_program_managers = json.loads(contract.assigned_pgm_users)
+                except:
+                    # Try comma-separated
+                    assigned_program_managers = [int(id_str.strip()) for id_str in contract.assigned_pgm_users.split(',') if id_str.strip().isdigit()]
+        
+        # Also check comprehensive_data for assignments
+        if not assigned_program_managers and contract.comprehensive_data:
+            if "assigned_users" in contract.comprehensive_data:
+                assigned_users_data = contract.comprehensive_data["assigned_users"]
+                if assigned_users_data and "pgm_users" in assigned_users_data:
+                    assigned_program_managers = assigned_users_data["pgm_users"]
+            elif "agreement_metadata" in contract.comprehensive_data:
+                metadata = contract.comprehensive_data["agreement_metadata"]
+                if metadata and "assigned_pgm_users" in metadata:
+                    assigned_program_managers = metadata["assigned_pgm_users"]
+        
+        # Remove duplicates
+        assigned_program_managers = list(set(assigned_program_managers)) if assigned_program_managers else []
+        
+        print(f"DEBUG: Contract {contract_id} has {len(assigned_program_managers)} assigned Program Managers: {assigned_program_managers}")
+        
+        # Send notifications ONLY to assigned Program Managers
+        if assigned_program_managers:
+            for pgm_user_id in assigned_program_managers:
+                pgm_user = db.query(AuthUser).filter(
+                    AuthUser.id == pgm_user_id,
+                    AuthUser.role == "program_manager",
+                    AuthUser.is_active == True
+                ).first()
+                
+                if pgm_user:
+                    print(f"DEBUG: Creating notification for Program Manager {pgm_user_id} ({pgm_user.username})")
+                    
+                    notification = UserNotification(
+                        user_id=pgm_user_id,
+                        notification_type="agreement_published",
+                        title="New Contract for Review",
+                        message=f"Contract '{contract.grant_name or contract.filename}' has been submitted for review by {current_user.full_name or current_user.username}",
+                        contract_id=contract_id,
+                        is_read=False,
+                        created_at=datetime.utcnow()
+                    )
+                    db.add(notification)
+        
         db.commit()
         
         # Log activity
@@ -1630,7 +1688,9 @@ async def submit_contract_for_review(
                 "old_status": old_status,
                 "new_status": "under_review",
                 "version_number": version_number,
-                "notes": submit_data.notes
+                "notes": submit_data.notes,
+                "assigned_program_managers_count": len(assigned_program_managers),
+                "assigned_program_managers": assigned_program_managers
             }, 
             request=request
         )
@@ -1639,13 +1699,13 @@ async def submit_contract_for_review(
             "message": "Contract submitted for review",
             "contract_id": contract_id,
             "version_number": version_number,
-            "status": "under_review"
+            "status": "under_review",
+            "assigned_program_managers_notified": len(assigned_program_managers)
         }
         
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to submit for review: {str(e)}")
-
 
 
 @app.post("/api/contracts/{contract_id}/project-manager/fix-metadata")
@@ -2845,6 +2905,143 @@ async def update_contract_status_endpoint(
         "contract_id": contract_id,
         "status": status
     }
+
+
+@app.get("/api/contracts/status/under_review")
+async def get_contracts_under_review(
+    skip: int = 0,
+    limit: int = 100,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get all contracts under review - Program Manager can see only contracts assigned to them"""
+    if current_user.role != "program_manager":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only Program Managers can view contracts under review"
+        )
+    
+    try:
+        # Get ALL contracts with status 'under_review'
+        all_under_review = db.query(models.Contract).filter(
+            models.Contract.status == "under_review"
+        ).all()
+        
+        print(f"DEBUG: Found {len(all_under_review)} total contracts under review")
+        
+        # Filter to only show contracts assigned to this Program Manager
+        assigned_contracts = []
+        
+        for contract in all_under_review:
+            is_assigned = False
+            
+            # Check if this Program Manager is assigned to this contract
+            if contract.assigned_pgm_users:
+                try:
+                    if isinstance(contract.assigned_pgm_users, list):
+                        if current_user.id in contract.assigned_pgm_users:
+                            is_assigned = True
+                            print(f"DEBUG: Contract {contract.id} - User {current_user.id} found in assigned_pgm_users list")
+                    elif isinstance(contract.assigned_pgm_users, str):
+                        import json
+                        try:
+                            pgm_list = json.loads(contract.assigned_pgm_users)
+                            if isinstance(pgm_list, list) and current_user.id in pgm_list:
+                                is_assigned = True
+                                print(f"DEBUG: Contract {contract.id} - User {current_user.id} found in assigned_pgm_users JSON string")
+                        except:
+                            # Try comma-separated
+                            pgm_ids = [int(id_str.strip()) for id_str in contract.assigned_pgm_users.split(',') if id_str.strip().isdigit()]
+                            if current_user.id in pgm_ids:
+                                is_assigned = True
+                                print(f"DEBUG: Contract {contract.id} - User {current_user.id} found in assigned_pgm_users comma-separated")
+                except Exception as e:
+                    print(f"ERROR checking assignment for contract {contract.id}: {e}")
+            
+            # Also check comprehensive_data for assignments
+            if not is_assigned and contract.comprehensive_data:
+                # Check assigned_users
+                if "assigned_users" in contract.comprehensive_data:
+                    assigned_users = contract.comprehensive_data["assigned_users"]
+                    if assigned_users and "pgm_users" in assigned_users:
+                        if current_user.id in assigned_users["pgm_users"]:
+                            is_assigned = True
+                            print(f"DEBUG: Contract {contract.id} - User {current_user.id} found in comprehensive_data.assigned_users.pgm_users")
+                
+                # Check agreement_metadata
+                elif "agreement_metadata" in contract.comprehensive_data:
+                    metadata = contract.comprehensive_data["agreement_metadata"]
+                    if metadata and "assigned_pgm_users" in metadata:
+                        if current_user.id in metadata["assigned_pgm_users"]:
+                            is_assigned = True
+                            print(f"DEBUG: Contract {contract.id} - User {current_user.id} found in comprehensive_data.agreement_metadata.assigned_pgm_users")
+            
+            if is_assigned:
+                assigned_contracts.append(contract)
+        
+        print(f"DEBUG: User {current_user.id} has {len(assigned_contracts)} assigned contracts under review")
+        
+        # Apply pagination
+        contracts = assigned_contracts[skip:skip + limit]
+        
+        # Helper function to safely format dates
+        def format_date(date_value):
+            if date_value and hasattr(date_value, 'isoformat'):
+                return date_value.isoformat()
+            return date_value
+        
+        # Format response
+        contracts_dict = []
+        for contract in contracts:
+            contract_dict = {
+                "id": contract.id,
+                "filename": contract.filename or "Unknown",
+                "uploaded_at": format_date(contract.uploaded_at),
+                "status": contract.status or "under_review",
+                "investment_id": contract.investment_id,
+                "project_id": contract.project_id,
+                "grant_id": contract.grant_id,
+                "extracted_reference_ids": contract.extracted_reference_ids or [],
+                "comprehensive_data": contract.comprehensive_data or {},
+                "contract_number": contract.contract_number,
+                "grant_name": contract.grant_name or "Unnamed Contract",
+                "grantor": contract.grantor or "Unknown Grantor",
+                "grantee": contract.grantee or "Unknown Grantee",
+                "total_amount": float(contract.total_amount) if contract.total_amount else 0.0,
+                "start_date": format_date(contract.start_date),
+                "end_date": format_date(contract.end_date),
+                "purpose": contract.purpose,
+                "payment_schedule": contract.payment_schedule,
+                "terms_conditions": contract.terms_conditions,
+                "chroma_id": contract.chroma_id,
+                "created_by": contract.created_by,
+                "version": contract.version or 1,
+                "basic_data": {
+                    "id": contract.id,
+                    "contract_number": contract.contract_number,
+                    "grant_name": contract.grant_name or "Unnamed Contract",
+                    "grantor": contract.grantor or "Unknown Grantor",
+                    "grantee": contract.grantee or "Unknown Grantee",
+                    "total_amount": float(contract.total_amount) if contract.total_amount else 0.0,
+                    "start_date": format_date(contract.start_date),
+                    "end_date": format_date(contract.end_date),
+                    "purpose": contract.purpose,
+                    "status": contract.status or "under_review",
+                    "version": contract.version or 1,
+                    "created_by": contract.created_by
+                }
+            }
+            contracts_dict.append(contract_dict)
+        
+        return contracts_dict
+        
+    except Exception as e:
+        print(f"ERROR in get_contracts_under_review: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return []
+
+
 
 @app.get("/api/contracts/status/{status}")
 async def get_contracts_by_status(

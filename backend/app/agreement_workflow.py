@@ -596,6 +596,8 @@ async def get_document(
         }
     )        
 
+
+
 @router.post("/drafts/{contract_id}/publish")
 async def publish_agreement(
     contract_id: int,
@@ -633,29 +635,62 @@ async def publish_agreement(
         if publish_data.publish_to_review:
             contract.status = "under_review"
             
-             # Create notifications for all assigned users
             from app.notification_service import NotificationService
+            from app.auth_models import User as AuthUser
             
-            # Get all assigned users
+            # ✅ FIX: Get ONLY assigned users from the contract
             all_assigned_users = []
-            if contract.assigned_pm_users:
-                all_assigned_users.extend(contract.assigned_pm_users)
-            if contract.assigned_pgm_users:
-                all_assigned_users.extend(contract.assigned_pgm_users)
-            if contract.assigned_director_users:
-                all_assigned_users.extend(contract.assigned_director_users)
             
-            # Remove duplicates
+            # Get assigned Program Managers
+            if contract.assigned_pgm_users:
+                if isinstance(contract.assigned_pgm_users, list):
+                    all_assigned_users.extend(contract.assigned_pgm_users)
+                elif isinstance(contract.assigned_pgm_users, str):
+                    try:
+                        import json
+                        pgm_list = json.loads(contract.assigned_pgm_users)
+                        if isinstance(pgm_list, list):
+                            all_assigned_users.extend(pgm_list)
+                    except:
+                        pgm_ids = [int(id_str.strip()) for id_str in contract.assigned_pgm_users.split(',') if id_str.strip().isdigit()]
+                        all_assigned_users.extend(pgm_ids)
+            
+            # Also check comprehensive_data for assignments
+            if contract.comprehensive_data:
+                if "assigned_users" in contract.comprehensive_data:
+                    assigned_users = contract.comprehensive_data["assigned_users"]
+                    if assigned_users and "pgm_users" in assigned_users:
+                        all_assigned_users.extend(assigned_users["pgm_users"])
+                elif "agreement_metadata" in contract.comprehensive_data:
+                    metadata = contract.comprehensive_data["agreement_metadata"]
+                    if metadata and "assigned_pgm_users" in metadata:
+                        all_assigned_users.extend(metadata["assigned_pgm_users"])
+            
+            # Remove duplicates and ensure they are Program Managers
             all_assigned_users = list(set(all_assigned_users))
             
-            if all_assigned_users:
+            print(f"DEBUG: Publishing contract {contract_id} - Assigned Program Managers: {all_assigned_users}")
+            
+            # Filter to only include active Program Managers
+            valid_program_managers = []
+            for user_id in all_assigned_users:
+                user = db.query(AuthUser).filter(
+                    AuthUser.id == user_id,
+                    AuthUser.role == "program_manager",
+                    AuthUser.is_active == True
+                ).first()
+                if user:
+                    valid_program_managers.append(user_id)
+            
+            if valid_program_managers:
                 NotificationService.create_publish_notification(
                     db=db,
                     contract_id=contract_id,
                     contract_name=contract.grant_name or contract.filename,
                     published_by_user=current_user,
-                    assigned_users=all_assigned_users
+                    assigned_users=valid_program_managers
                 )
+                print(f"DEBUG: Notifications sent to {len(valid_program_managers)} Program Managers")
 
             # Create a version snapshot
             from app.models import ContractVersion
@@ -713,7 +748,8 @@ async def publish_agreement(
                 "timestamp": datetime.utcnow().isoformat(),
                 "notes": publish_data.notes,
                 "published_to_review": publish_data.publish_to_review,
-                "version_number": version_number
+                "version_number": version_number,
+                "notified_program_managers": valid_program_managers
             })
             
             contract.comprehensive_data["publish_history"] = publish_history
@@ -730,7 +766,8 @@ async def publish_agreement(
             details={
                 "contract_id": contract_id,
                 "publish_to_review": publish_data.publish_to_review,
-                "notes": publish_data.notes
+                "notes": publish_data.notes,
+                "notified_program_managers_count": len(valid_program_managers) if publish_data.publish_to_review else 0
             }
         )
         
@@ -740,7 +777,8 @@ async def publish_agreement(
             "message": message,
             "contract_id": contract_id,
             "status": contract.status,
-            "published_at": contract.published_at.isoformat() if contract.published_at else None
+            "published_at": contract.published_at.isoformat() if contract.published_at else None,
+            "program_managers_notified": len(valid_program_managers) if publish_data.publish_to_review else 0
         }
         
     except Exception as e:
@@ -749,6 +787,7 @@ async def publish_agreement(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to publish agreement: {str(e)}"
         )
+
 
 @router.get("/users/available")
 async def get_available_users(
