@@ -44,21 +44,27 @@ function Dashboard({ contracts, loading, refreshContracts, user }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [normalizedContracts, setNormalizedContracts] = useState([]);
 
-  useEffect(() => {
-    if (contracts && Array.isArray(contracts)) {
-      const normalized = contracts
-        .map((contract, index) => {
-          return normalizeContractData(contract);
-        })
-        .filter(contract => contract !== null);
-      
-      setNormalizedContracts(normalized);
-      calculateStats(normalized);
-    } else {
-      setNormalizedContracts([]);
-      resetStats();
-    }
-  }, [contracts]);
+useEffect(() => {
+  if (contracts && Array.isArray(contracts)) {
+    // Filter for approved contracts only
+    const approvedContracts = contracts.filter(contract => 
+      contract.status === 'approved' || 
+      contract.Status === 'approved'
+    );
+    
+    const normalized = approvedContracts
+      .map((contract, index) => {
+        return normalizeContractData(contract);
+      })
+      .filter(contract => contract !== null);
+    
+    setNormalizedContracts(normalized);
+    calculateStats(normalized);
+  } else {
+    setNormalizedContracts([]);
+    resetStats();
+  }
+}, [contracts]);
 
   const normalizeContractData = (contract) => {
     if (!contract) return null;
@@ -144,57 +150,62 @@ function Dashboard({ contracts, loading, refreshContracts, user }) {
     });
   };
 
-  const calculateStats = (contractsData) => {
-    let totalAmount = 0;
-    let fundsReceived = 0;
-    let fundsRemaining = 0;
-    let upcomingDeadlines = 0;
-    let highRiskCount = 0;
-    const today = new Date();
+const calculateStats = (contractsData) => {
+  // Only calculate stats for approved contracts
+  const approvedContracts = contractsData.filter(contract => 
+    contract.status === 'approved'
+  );
+  
+  let totalAmount = 0;
+  let fundsReceived = 0;
+  let fundsRemaining = 0;
+  let upcomingDeadlines = 0;
+  let highRiskCount = 0;
+  const today = new Date();
+  
+  approvedContracts.forEach(contract => {
+    const amount = contract.total_amount || 0;
+    totalAmount += amount;
     
-    contractsData.forEach(contract => {
-      const amount = contract.total_amount || 0;
-      totalAmount += amount;
-      
-      // Calculate actual received amount from payment schedule
-      let received = calculateReceivedAmount(contract);
-      
-      fundsReceived += received;
-      fundsRemaining += (amount - received);
-      
-      if (contract.end_date) {
-        try {
-          const endDate = new Date(contract.end_date);
-          if (!isNaN(endDate.getTime())) {
-            const daysDiff = Math.ceil((endDate - today) / (1000 * 60 * 60 * 24));
-            if (daysDiff > 0 && daysDiff <= 30) {
-              upcomingDeadlines++;
-              if (daysDiff <= 7) highRiskCount++;
-            }
+    // Calculate actual received amount from payment schedule
+    let received = calculateReceivedAmount(contract);
+    
+    fundsReceived += received;
+    fundsRemaining += (amount - received);
+    
+    if (contract.end_date) {
+      try {
+        const endDate = new Date(contract.end_date);
+        if (!isNaN(endDate.getTime())) {
+          const daysDiff = Math.ceil((endDate - today) / (1000 * 60 * 60 * 24));
+          if (daysDiff > 0 && daysDiff <= 30) {
+            upcomingDeadlines++;
+            if (daysDiff <= 7) highRiskCount++;
           }
-        } catch (e) {
-          console.error('Error parsing date:', contract.end_date);
         }
+      } catch (e) {
+        console.error('Error parsing date:', contract.end_date);
       }
-    });
+    }
+  });
 
-    const completionRate = contractsData.length > 0 
-      ? Math.round((contractsData.filter(c => c.status === 'processed').length / contractsData.length) * 100)
-      : 0;
+  const completionRate = approvedContracts.length > 0 
+    ? Math.round((approvedContracts.filter(c => c.status === 'approved').length / approvedContracts.length) * 100)
+    : 0;
 
-    const riskLevel = highRiskCount > 3 ? 'High' : highRiskCount > 0 ? 'Medium' : 'Low';
+  const riskLevel = highRiskCount > 3 ? 'High' : highRiskCount > 0 ? 'Medium' : 'Low';
 
-    setStats({
-      totalGrants: contractsData.length,
-      totalAmount,
-      activeContracts: contractsData.filter(c => c.status === 'processed').length,
-      upcomingDeadlines,
-      fundsReceived,
-      fundsRemaining,
-      completionRate,
-      riskLevel
-    });
-  };
+  setStats({
+    totalGrants: approvedContracts.length,
+    totalAmount,
+    activeContracts: approvedContracts.length, // All approved are active
+    upcomingDeadlines,
+    fundsReceived,
+    fundsRemaining,
+    completionRate: 100, // All approved contracts are 100% complete
+    riskLevel
+  });
+};
 
   const calculateReceivedAmount = (contract) => {
     let received = 0;
@@ -293,6 +304,18 @@ function Dashboard({ contracts, loading, refreshContracts, user }) {
     return `CONT-${contract.id || 'Unknown'}`;
   };
 
+
+  const getStatusColorForApproved = (status) => {
+  // For approved contracts dashboard, always return 'approved'
+  return 'approved';
+};
+
+const getStatusIconForApproved = (status) => {
+  // For approved contracts dashboard, always show check circle
+  return <CheckCircle size={14} className="status-icon approved" />;
+};
+
+
   const getStatusIcon = (status) => {
     switch (status) {
       case 'processed':
@@ -339,178 +362,178 @@ function Dashboard({ contracts, loading, refreshContracts, user }) {
     (contract.contract_number && contract.contract_number.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  const renderContractRow = (contract) => {
-    if (!contract) return null;
-    
-    const totalAmount = contract.total_amount || 0;
-    const fundsReceived = calculateReceivedAmount(contract);
-    const progressPercentage = totalAmount > 0 ? Math.round((fundsReceived / totalAmount) * 100) : 0;
-    
-    return (
-      <tr key={contract.id} className="contract-row">
-        <td>
-          <div className="contract-info">
-            <div className="contract-name-only">
-              {contract.grant_name || contract.filename || 'Unnamed Grant'}
-            </div>
-          </div>
-        </td>
-        <td>
-          <div className="contract-id-only">
-            {getContractDisplayId(contract)}
-          </div>
-        </td>
-        <td>
-          <div className="grantor-cell">
-            <span>{contract.grantor || 'N/A'}</span>
-          </div>
-        </td>
-        <td>
-          <div className="amount-cell">
-            <span>{formatCurrency(contract.total_amount)}</span>
-          </div>
-        </td>
-        <td>
-          <div className="date-cell">
-            <span>{contract.uploaded_at ? new Date(contract.uploaded_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}</span>
-          </div>
-        </td>
-        <td>
-          <div className="date-cell">
-            <span>{contract.end_date ? new Date(contract.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}</span>
-          </div>
-        </td>
-        <td>
-          <div className="status-cell">
-            {getStatusIcon(contract.status)}
-            <span className={`status-text ${getStatusColor(contract.status)}`}>
-              {contract.status || 'unknown'}
-            </span>
-          </div>
-        </td>
-        <td>
-          <div className="progress-cell">
-            <div className="progress-container">
-              <div className="progress-bar">
-                <div 
-                  className="progress-fill"
-                  style={{ 
-                    width: `${progressPercentage}%`,
-                    backgroundColor: getProgressColor(progressPercentage)
-                  }}
-                ></div>
-              </div>
-              <div className="progress-text">
-                {progressPercentage}%
-              </div>
-            </div>
-          </div>
-        </td>
-        <td>
-          <div className="action-buttons">
-            <button 
-              className="btn-action"
-              onClick={() => navigate(`/contracts/${contract.id}`)}
-              title="View details"
-            >
-              <Eye size={16} />
-            </button>
-            <button 
-              className="btn-action"
-              title="Download"
-              onClick={() => {}}
-            >
-              <Download size={16} />
-            </button>
-          </div>
-        </td>
-      </tr>
-    );
-  };
-
-  const renderContractCard = (contract) => {
-    if (!contract) return null;
-    
-    const totalAmount = contract.total_amount || 0;
-    const fundsReceived = calculateReceivedAmount(contract);
-    const progressPercentage = totalAmount > 0 ? Math.round((fundsReceived / totalAmount) * 100) : 0;
-    
-    return (
-      <div key={contract.id} className="contract-card">
-        <div className="card-header">
-          <div className="contract-status">
-            {getStatusIcon(contract.status)}
-            <span className={`status-text ${contract.status}`}>
-              {contract.status || 'unknown'}
-            </span>
-          </div>
-        </div>
-
-        <div className="card-content">
-          <h3 className="contract-name-small">
+const renderContractRow = (contract) => {
+  if (!contract) return null;
+  
+  const totalAmount = contract.total_amount || 0;
+  const fundsReceived = calculateReceivedAmount(contract);
+  const progressPercentage = totalAmount > 0 ? Math.round((fundsReceived / totalAmount) * 100) : 0;
+  
+  return (
+    <tr key={contract.id} className="contract-row">
+      <td>
+        <div className="contract-info">
+          <div className="contract-name-only">
             {contract.grant_name || contract.filename || 'Unnamed Grant'}
-          </h3>
-          <p className="contract-id-small">
-            ID: {getContractDisplayId(contract)}
-          </p>
-
-          <div className="contract-meta">
-            <div className="meta-item">
-              <span>{contract.grantor || 'No grantor'}</span>
+          </div>
+        </div>
+      </td>
+      <td>
+        <div className="contract-id-only">
+          {getContractDisplayId(contract)}
+        </div>
+      </td>
+      <td>
+        <div className="grantor-cell">
+          <span>{contract.grantor || 'N/A'}</span>
+        </div>
+      </td>
+      <td>
+        <div className="amount-cell">
+          <span>{formatCurrency(contract.total_amount)}</span>
+        </div>
+      </td>
+      <td>
+        <div className="date-cell">
+          <span>{contract.uploaded_at ? new Date(contract.uploaded_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}</span>
+        </div>
+      </td>
+      <td>
+        <div className="date-cell">
+          <span>{contract.end_date ? new Date(contract.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}</span>
+        </div>
+      </td>
+      <td>
+        <div className="status-cell">
+          {getStatusIconForApproved(contract.status)} {/* CHANGED HERE */}
+          <span className={`status-text ${getStatusColorForApproved(contract.status)}`}> {/* CHANGED HERE */}
+            approved {/* Hardcoded as approved */}
+          </span>
+        </div>
+      </td>
+      <td>
+        <div className="progress-cell">
+          <div className="progress-container">
+            <div className="progress-bar">
+              <div 
+                className="progress-fill"
+                style={{ 
+                  width: `${progressPercentage}%`,
+                  backgroundColor: getProgressColor(progressPercentage)
+                }}
+              ></div>
             </div>
-            <div className="meta-item">
-              <span>{contract.uploaded_at ? new Date(contract.uploaded_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'No date'}</span>
+            <div className="progress-text">
+              {progressPercentage}%
             </div>
           </div>
+        </div>
+      </td>
+      <td>
+        <div className="action-buttons">
+          <button 
+            className="btn-action"
+            onClick={() => navigate(`/contracts/${contract.id}`)}
+            title="View details"
+          >
+            <Eye size={16} />
+          </button>
+          <button 
+            className="btn-action"
+            title="Download"
+            onClick={() => {}}
+          >
+            <Download size={16} />
+          </button>
+        </div>
+      </td>
+    </tr>
+  );
+};
 
-          <div className="contract-amount">
-            <span>{formatCurrency(contract.total_amount)}</span>
+const renderContractCard = (contract) => {
+  if (!contract) return null;
+  
+  const totalAmount = contract.total_amount || 0;
+  const fundsReceived = calculateReceivedAmount(contract);
+  const progressPercentage = totalAmount > 0 ? Math.round((fundsReceived / totalAmount) * 100) : 0;
+  
+  return (
+    <div key={contract.id} className="contract-card">
+      <div className="card-header">
+        <div className="contract-status">
+          {getStatusIconForApproved(contract.status)} {/* CHANGED HERE */}
+          <span className={`status-text approved`}> {/* Hardcoded as approved */}
+            approved
+          </span>
+        </div>
+      </div>
+
+      <div className="card-content">
+        <h3 className="contract-name-small">
+          {contract.grant_name || contract.filename || 'Unnamed Grant'}
+        </h3>
+        <p className="contract-id-small">
+          ID: {getContractDisplayId(contract)}
+        </p>
+
+        <div className="contract-meta">
+          <div className="meta-item">
+            <span>{contract.grantor || 'No grantor'}</span>
           </div>
+          <div className="meta-item">
+            <span>{contract.uploaded_at ? new Date(contract.uploaded_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'No date'}</span>
+          </div>
+        </div>
 
-          <div className="contract-progress">
-            <div className="progress-container">
-              <div className="progress-bar">
-                <div 
-                  className="progress-fill"
-                  style={{ 
-                    width: `${progressPercentage}%`,
-                    backgroundColor: getProgressColor(progressPercentage)
-                  }}
-                ></div>
-              </div>
-              <div className="progress-text">
-                <span>Progress: {progressPercentage}%</span>
-              </div>
+        <div className="contract-amount">
+          <span>{formatCurrency(contract.total_amount)}</span>
+        </div>
+
+        <div className="contract-progress">
+          <div className="progress-container">
+            <div className="progress-bar">
+              <div 
+                className="progress-fill"
+                style={{ 
+                  width: `${progressPercentage}%`,
+                  backgroundColor: getProgressColor(progressPercentage)
+                }}
+              ></div>
             </div>
-          </div>
-
-          <div className="contract-timeline">
-            <div className="timeline-item">
-              <span className="timeline-label">Ends in</span>
-              <span className={`timeline-value ${getDaysColor(getDaysRemaining(contract.end_date))}`}>
-                {getDaysRemaining(contract.end_date)}
-              </span>
+            <div className="progress-text">
+              <span>Progress: {progressPercentage}%</span>
             </div>
           </div>
         </div>
 
-        <div className="card-footer">
-          <div className="action-buttons">
-            <button 
-              className="btn-action"
-              onClick={() => navigate(`/contracts/${contract.id}`)}
-              title="View details"
-            >
-              <Eye size={16} />
-            </button>
-            <button className="btn-action" title="Download">
-              <Download size={16} />
-            </button>
+        <div className="contract-timeline">
+          <div className="timeline-item">
+            <span className="timeline-label">Ends in</span>
+            <span className={`timeline-value ${getDaysColor(getDaysRemaining(contract.end_date))}`}>
+              {getDaysRemaining(contract.end_date)}
+            </span>
           </div>
         </div>
       </div>
-    );
-  };
+
+      <div className="card-footer">
+        <div className="action-buttons">
+          <button 
+            className="btn-action"
+            onClick={() => navigate(`/contracts/${contract.id}`)}
+            title="View details"
+          >
+            <Eye size={16} />
+          </button>
+          <button className="btn-action" title="Download">
+            <Download size={16} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
   return (
     <div className="dashboard">
