@@ -455,12 +455,6 @@ function UploadPage({ setLoading, onUploadComplete }) {
 
               <div className="extraction-actions">
                 <button 
-                  className="btn-upload-another"
-                  onClick={handleUploadAnother}
-                >
-                  Upload Another
-                </button>
-                <button 
                   className="btn-view-contract"
                   onClick={handleViewContract}
                 >

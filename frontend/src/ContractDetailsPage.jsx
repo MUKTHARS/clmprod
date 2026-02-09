@@ -1542,11 +1542,7 @@ const hasDeliverableBeenUploaded = (index) => {
 
 {/* Project Manager Actions Section - For ALL project manager contracts */}
 {user && user.role === "project_manager" && contractData && (
- 
- 
-    
-  
-      <ProjectManagerActions 
+ <ProjectManagerActions 
         contract={contractData}
         user={user}
         onActionComplete={() => {
@@ -1554,11 +1550,10 @@ const hasDeliverableBeenUploaded = (index) => {
           fetchReviewComments();
         }}
       />
-
 )}
 
         {/* Project Manager Comments Section */}
-        {user && user.role === "project_manager" && contractData && (
+        {/* {user && user.role === "project_manager" && contractData && (
           <div className="section-card">
             <div className="section-header">
               <h3>Comments({pmComments.length})</h3>
@@ -1638,7 +1633,7 @@ const hasDeliverableBeenUploaded = (index) => {
               </div>
             </div>
           </div>
-        )}
+        )} */}
       </div>
 
       {/* Upload Modal */}
