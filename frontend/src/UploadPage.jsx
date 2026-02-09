@@ -28,6 +28,7 @@ function UploadPage({ setLoading, onUploadComplete }) {
   const [stageProgress, setStageProgress] = useState({});
   const [extractionDetails, setExtractionDetails] = useState(null);
   const [showExtractionResults, setShowExtractionResults] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const navigate = useNavigate();
 
   const extractionStages = [
@@ -50,6 +51,7 @@ function UploadPage({ setLoading, onUploadComplete }) {
       setStageProgress({});
       setExtractionDetails(null);
       setShowExtractionResults(false);
+      setIsProcessing(false);
     } else {
       setUploadStatus('Please select a valid PDF file');
       setFile(null);
@@ -85,6 +87,7 @@ function UploadPage({ setLoading, onUploadComplete }) {
     formData.append('file', file);
 
     setLoading(true);
+    setIsProcessing(true);
     setCurrentStage('uploading');
     setUploadStatus('Uploading file...');
     setUploadProgress(0);
@@ -180,6 +183,7 @@ function UploadPage({ setLoading, onUploadComplete }) {
     } catch (error) {
       console.error('Upload error:', error);
       setCurrentStage('error');
+      setIsProcessing(false);
       
       let errorMessage = 'Upload failed';
       if (error.response) {
@@ -203,7 +207,8 @@ function UploadPage({ setLoading, onUploadComplete }) {
       setUploadProgress(0);
       setStageProgress({});
     } finally {
-      setTimeout(() => setLoading(false), 1000);
+      setLoading(false);
+      setIsProcessing(false);
     }
   };
 
@@ -221,6 +226,7 @@ function UploadPage({ setLoading, onUploadComplete }) {
     setUploadProgress(0);
     setCurrentStage('idle');
     setStageProgress({});
+    setIsProcessing(false);
     const fileInput = document.getElementById('pdf-upload');
     if (fileInput) fileInput.value = '';
   };
@@ -268,6 +274,7 @@ function UploadPage({ setLoading, onUploadComplete }) {
         setStageProgress({});
         setExtractionDetails(null);
         setShowExtractionResults(false);
+        setIsProcessing(false);
       } else {
         setUploadStatus('Please select a valid PDF file');
         setFile(null);
@@ -319,6 +326,7 @@ function UploadPage({ setLoading, onUploadComplete }) {
                       setFile(null);
                       setShowExtractionResults(false);
                       setExtractionDetails(null);
+                      setIsProcessing(false);
                       document.getElementById('pdf-upload').value = '';
                     }}
                   >
@@ -329,14 +337,13 @@ function UploadPage({ setLoading, onUploadComplete }) {
                 <div className="upload-actions">
                   <button 
                     onClick={handleUpload} 
-                    className="btn-upload-mainz"
-                    disabled={!localStorage.getItem('token') || currentStage !== 'idle'}
+                    className="btn-upload-mains"
+                    disabled={!localStorage.getItem('token') || isProcessing}
                   >
-                    {currentStage === 'idle' ? (
+                    {!isProcessing ? (
                       <>
-                        <Upload size={16} />
+                        <Upload size={26} />
                         <span>Analyze Contract</span>
-                        {/* <ChevronRight size={16} /> */}
                       </>
                     ) : (
                       <>
@@ -351,8 +358,8 @@ function UploadPage({ setLoading, onUploadComplete }) {
           </div>
         </div>
 
-        {/* Processing Section - Only show when processing and not complete */}
-        {(currentStage !== 'idle' && currentStage !== 'complete' && currentStage !== 'error' && !showExtractionResults) && (
+        {/* Processing Section - Only show when processing */}
+        {isProcessing && !showExtractionResults && (
           <div className="processing-section">
             <div className="processing-header">
               <h3>Processing Contract</h3>
@@ -408,45 +415,45 @@ function UploadPage({ setLoading, onUploadComplete }) {
 
         {/* Extraction Results Section */}
         {showExtractionResults && extractionDetails && (
-          <div className="extraction-results-section-fixed">
-            <div className="success-message-fixed">
-              <CheckCircle size={24} className="text-green-500" />
+          <div className="extraction-results-section">
+            <div className="success-message">
+              <CheckCircle size={24} className="success-icon" />
               <div>
                 <h3>Contract Saved to Drafts!</h3>
                 <p>Contract has been extracted and saved as draft.</p>
               </div>
             </div>
 
-            <div className="extraction-details-card-fixed">
+            <div className="extraction-details-card">
               <h4>Extracted Contract Details</h4>
-              <div className="extraction-grid-fixed">
-                <div className="extraction-field-fixed">
-                  <span className="field-label-fixed">Contract Name</span>
-                  <span className="field-value-fixed">{extractionDetails.grant_name}</span>
+              <div className="extraction-grid">
+                <div className="extraction-field">
+                  <span className="field-label">Contract Name</span>
+                  <span className="field-value">{extractionDetails.grant_name}</span>
                 </div>
-                <div className="extraction-field-fixed">
-                  <span className="field-label-fixed">Contract ID</span>
-                  <span className="field-value-fixed">{extractionDetails.id}</span>
+                <div className="extraction-field">
+                  <span className="field-label">Contract ID</span>
+                  <span className="field-value">{extractionDetails.id}</span>
                 </div>
-                <div className="extraction-field-fixed">
-                  <span className="field-label-fixed">Status</span>
-                  <span className="field-value-fixed status-badge-fixed draft-fixed">Draft</span>
+                <div className="extraction-field">
+                  <span className="field-label">Status</span>
+                  <span className="field-value status-badge draft">Draft</span>
                 </div>
-                <div className="extraction-field-fixed">
-                  <span className="field-label-fixed">Total Amount</span>
-                  <span className="field-value-fixed">{formatCurrency(extractionDetails.total_amount)}</span>
+                <div className="extraction-field">
+                  <span className="field-label">Total Amount</span>
+                  <span className="field-value">{formatCurrency(extractionDetails.total_amount)}</span>
                 </div>
-                <div className="extraction-field-fixed">
-                  <span className="field-label-fixed">Grantor</span>
-                  <span className="field-value-fixed">{extractionDetails.grantor || 'Not specified'}</span>
+                <div className="extraction-field">
+                  <span className="field-label">Grantor</span>
+                  <span className="field-value">{extractionDetails.grantor || 'Not specified'}</span>
                 </div>
-                <div className="extraction-field-fixed">
-                  <span className="field-label-fixed">Upload Date</span>
-                  <span className="field-value-fixed">{formatDate(extractionDetails.uploaded_at)}</span>
+                <div className="extraction-field">
+                  <span className="field-label">Upload Date</span>
+                  <span className="field-value">{formatDate(extractionDetails.uploaded_at)}</span>
                 </div>
               </div>
 
-              <div className="extraction-actions-fixed">
+              <div className="extraction-actions">
                 <button 
                   className="btn-upload-another"
                   onClick={handleUploadAnother}
@@ -474,8 +481,8 @@ function UploadPage({ setLoading, onUploadComplete }) {
 
         {/* Error State */}
         {currentStage === 'error' && (
-          <div className="error-section-fixed">
-            <div className="error-message-fixed">
+          <div className="error-section">
+            <div className="error-message">
               <AlertCircle size={20} />
               <div>
                 <h3>Upload Failed</h3>
@@ -483,12 +490,13 @@ function UploadPage({ setLoading, onUploadComplete }) {
               </div>
             </div>
             <button 
-              className="btn-retry-fixed"
+              className="btn-retry"
               onClick={() => {
                 setCurrentStage('idle');
                 setUploadStatus('');
                 setUploadProgress(0);
                 setStageProgress({});
+                setIsProcessing(false);
               }}
             >
               Try Again
@@ -834,14 +842,14 @@ export default UploadPage;
 //                 <div className="upload-actions">
 //                   <button 
 //                     onClick={handleUpload} 
-//                     className="btn-upload-main"
+//                     className="btn-upload-mainz"
 //                     disabled={!localStorage.getItem('token') || currentStage !== 'idle'}
 //                   >
 //                     {currentStage === 'idle' ? (
 //                       <>
 //                         <Upload size={16} />
 //                         <span>Analyze Contract</span>
-//                         <ChevronRight size={16} />
+//                         {/* <ChevronRight size={16} /> */}
 //                       </>
 //                     ) : (
 //                       <>
@@ -856,8 +864,8 @@ export default UploadPage;
 //           </div>
 //         </div>
 
-//         {/* Processing Section */}
-//         {(currentStage !== 'idle' && currentStage !== 'complete' && currentStage !== 'error') && (
+//         {/* Processing Section - Only show when processing and not complete */}
+//         {(currentStage !== 'idle' && currentStage !== 'complete' && currentStage !== 'error' && !showExtractionResults) && (
 //           <div className="processing-section">
 //             <div className="processing-header">
 //               <h3>Processing Contract</h3>
@@ -913,8 +921,8 @@ export default UploadPage;
 
 //         {/* Extraction Results Section */}
 //         {showExtractionResults && extractionDetails && (
-//           <div className="extraction-results-section">
-//             <div className="success-message">
+//           <div className="extraction-results-section-fixed">
+//             <div className="success-message-fixed">
 //               <CheckCircle size={24} className="text-green-500" />
 //               <div>
 //                 <h3>Contract Saved to Drafts!</h3>
@@ -922,51 +930,51 @@ export default UploadPage;
 //               </div>
 //             </div>
 
-//             <div className="extraction-details-card">
+//             <div className="extraction-details-card-fixed">
 //               <h4>Extracted Contract Details</h4>
-//               <div className="extraction-grid">
-//                 <div className="extraction-field">
-//                   <span className="field-label">Contract Name</span>
-//                   <span className="field-value">{extractionDetails.grant_name}</span>
+//               <div className="extraction-grid-fixed">
+//                 <div className="extraction-field-fixed">
+//                   <span className="field-label-fixed">Contract Name</span>
+//                   <span className="field-value-fixed">{extractionDetails.grant_name}</span>
 //                 </div>
-//                 <div className="extraction-field">
-//                   <span className="field-label">Contract ID</span>
-//                   <span className="field-value">{extractionDetails.id}</span>
+//                 <div className="extraction-field-fixed">
+//                   <span className="field-label-fixed">Contract ID</span>
+//                   <span className="field-value-fixed">{extractionDetails.id}</span>
 //                 </div>
-//                 <div className="extraction-field">
-//                   <span className="field-label">Status</span>
-//                   <span className="field-value status-badge draft">Draft</span>
+//                 <div className="extraction-field-fixed">
+//                   <span className="field-label-fixed">Status</span>
+//                   <span className="field-value-fixed status-badge-fixed draft-fixed">Draft</span>
 //                 </div>
-//                 <div className="extraction-field">
-//                   <span className="field-label">Total Amount</span>
-//                   <span className="field-value">{formatCurrency(extractionDetails.total_amount)}</span>
+//                 <div className="extraction-field-fixed">
+//                   <span className="field-label-fixed">Total Amount</span>
+//                   <span className="field-value-fixed">{formatCurrency(extractionDetails.total_amount)}</span>
 //                 </div>
-//                 <div className="extraction-field">
-//                   <span className="field-label">Grantor</span>
-//                   <span className="field-value">{extractionDetails.grantor || 'Not specified'}</span>
+//                 <div className="extraction-field-fixed">
+//                   <span className="field-label-fixed">Grantor</span>
+//                   <span className="field-value-fixed">{extractionDetails.grantor || 'Not specified'}</span>
 //                 </div>
-//                 <div className="extraction-field">
-//                   <span className="field-label">Upload Date</span>
-//                   <span className="field-value">{formatDate(extractionDetails.uploaded_at)}</span>
+//                 <div className="extraction-field-fixed">
+//                   <span className="field-label-fixed">Upload Date</span>
+//                   <span className="field-value-fixed">{formatDate(extractionDetails.uploaded_at)}</span>
 //                 </div>
 //               </div>
 
-//               <div className="extraction-actions">
+//               <div className="extraction-actions-fixed">
 //                 <button 
-//                   className="btn-secondary"
+//                   className="btn-upload-another"
 //                   onClick={handleUploadAnother}
 //                 >
 //                   Upload Another
 //                 </button>
 //                 <button 
-//                   className="btn-primary"
+//                   className="btn-view-contract"
 //                   onClick={handleViewContract}
 //                 >
 //                   <Eye size={16} />
 //                   View Contract
 //                 </button>
 //                 <button 
-//                   className="btn-outline"
+//                   className="btn-view-drafts"
 //                   onClick={handleViewInDrafts}
 //                 >
 //                   <FileText size={16} />
@@ -979,8 +987,8 @@ export default UploadPage;
 
 //         {/* Error State */}
 //         {currentStage === 'error' && (
-//           <div className="error-section">
-//             <div className="error-message">
+//           <div className="error-section-fixed">
+//             <div className="error-message-fixed">
 //               <AlertCircle size={20} />
 //               <div>
 //                 <h3>Upload Failed</h3>
@@ -988,7 +996,7 @@ export default UploadPage;
 //               </div>
 //             </div>
 //             <button 
-//               className="btn-retry"
+//               className="btn-retry-fixed"
 //               onClick={() => {
 //                 setCurrentStage('idle');
 //                 setUploadStatus('');
