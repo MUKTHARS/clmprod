@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any
 from fastapi import Query, Response, Form
 from fastapi.responses import RedirectResponse, JSONResponse
-from app.auth_models import User, UserSession, ActivityLog, ContractPermission, ReviewComment
+from app.auth_models import User, UserSession, ActivityLog, ContractPermission, ReviewComment, UserNotification
 from app.s3_service import s3_service
 from app.deliverable_models import ContractDeliverable
 from app.admin_routes import router as admin_router
