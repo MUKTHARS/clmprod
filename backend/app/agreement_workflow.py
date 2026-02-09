@@ -825,3 +825,164 @@ async def get_available_users(
         }
         for user in users
     ]
+
+    
+    
+@router.post("/approved/{contract_id}/final-publish")
+async def final_publish_approved_agreement(
+    contract_id: int,
+    publish_data: PublishAgreementRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Final publish for approved agreements - Project Manager only
+    This is different from the draft publish endpoint
+    """
+    if current_user.role != "project_manager":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only Project Managers can publish agreements"
+        )
+    
+    # Get the contract - specifically look for approved status
+    contract = db.query(Contract).filter(
+        Contract.id == contract_id,
+        Contract.status == "approved"  # Changed from "draft" to "approved"
+    ).first()
+    
+    if not contract:
+        # Provide more specific error message
+        contract_exists = db.query(Contract).filter(Contract.id == contract_id).first()
+        if contract_exists:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Cannot publish contract with status '{contract_exists.status}'. Only approved contracts can be finalized."
+            )
+        else:
+            raise HTTPException(status_code=404, detail="Contract not found")
+    
+    # Check if user has permission (contract creator)
+    if contract.created_by != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the contract creator can publish approved agreements"
+        )
+    
+    try:
+        # Update audit fields
+        contract.published_at = datetime.utcnow()
+        contract.published_by = current_user.id
+        
+        if publish_data.notes:
+            contract.notes = publish_data.notes
+        
+        # For approved contracts, we don't send to review - just mark as finalized
+        # You could create a new status like "finalized" or "published"
+        contract.status = "published"  # Or keep as "approved" if you prefer
+        
+        # Create a version snapshot
+        from app.models import ContractVersion
+        
+        last_version = db.query(ContractVersion).filter(
+            ContractVersion.contract_id == contract_id
+        ).order_by(ContractVersion.version_number.desc()).first()
+        
+        version_number = (last_version.version_number + 1) if last_version else 1
+        
+        version_data = {
+            "final_publish_data": {
+                "published_at": datetime.utcnow().isoformat(),
+                "published_by": current_user.id,
+                "published_by_name": current_user.full_name or current_user.username,
+                "notes": publish_data.notes
+            },
+            "contract_data": contract.comprehensive_data or {},
+            "basic_data": {
+                "grant_name": contract.grant_name,
+                "contract_number": contract.contract_number,
+                "grantor": contract.grantor,
+                "grantee": contract.grantee,
+                "total_amount": contract.total_amount,
+                "start_date": contract.start_date,
+                "end_date": contract.end_date,
+                "purpose": contract.purpose,
+                "status": contract.status
+            }
+        }
+        
+        version = ContractVersion(
+            contract_id=contract_id,
+            version_number=version_number,
+            created_by=current_user.id,
+            contract_data=version_data,
+            changes_description=f"Final publication: {publish_data.notes}" if publish_data.notes else "Final publication of approved agreement",
+            version_type="final_publish"
+        )
+        
+        db.add(version)
+        
+        # Update contract version
+        contract.version = version_number
+        
+        # Add to comprehensive data history
+        if not contract.comprehensive_data:
+            contract.comprehensive_data = {}
+        
+        publish_history = contract.comprehensive_data.get("publish_history", [])
+        publish_history.append({
+            "action": "final_published",
+            "by_user_id": current_user.id,
+            "by_user_name": current_user.full_name or current_user.username,
+            "timestamp": datetime.utcnow().isoformat(),
+            "notes": publish_data.notes,
+            "version_number": version_number,
+            "final_status": contract.status
+        })
+        
+        contract.comprehensive_data["publish_history"] = publish_history
+        
+        # Lock the contract after final publication
+        if not contract.comprehensive_data.get("finalization"):
+            contract.comprehensive_data["finalization"] = {}
+        
+        contract.comprehensive_data["finalization"].update({
+            "finalized_at": datetime.utcnow().isoformat(),
+            "finalized_by": current_user.id,
+            "finalized_by_name": current_user.full_name or current_user.username,
+            "locked": True
+        })
+        
+        db.commit()
+        
+        # Log activity
+        log_activity(
+            db,
+            current_user.id,
+            "final_publish",
+            contract_id=contract_id,
+            details={
+                "contract_id": contract_id,
+                "notes": publish_data.notes,
+                "version_number": version_number,
+                "final_status": contract.status
+            }
+        )
+        
+        return {
+            "message": "Agreement published and finalized successfully",
+            "contract_id": contract_id,
+            "status": contract.status,
+            "published_at": contract.published_at.isoformat() if contract.published_at else None,
+            "version_number": version_number,
+            "locked": True
+        }
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to finalize and publish agreement: {str(e)}"
+        )
+
+

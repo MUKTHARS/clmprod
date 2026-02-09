@@ -110,46 +110,46 @@ const fetchApprovedContracts = async () => {
   }
 };
 
-  const handleFinalPublish = async (contractId) => {
-    if (!confirm('Are you sure you want to finalize and publish this contract? This action cannot be undone.')) {
-      return;
+const handleFinalPublish = async (contractId) => {
+  if (!confirm('Are you sure you want to finalize and publish this contract? This action cannot be undone.')) {
+    return;
+  }
+
+  try {
+    setLoading(true);
+    const token = localStorage.getItem('token');
+    
+    // Use the new endpoint for approved contracts
+    const response = await fetch(`${API_CONFIG.BASE_URL}/api/agreements/approved/${contractId}/final-publish`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        notes: publishNotes || 'Contract finalized and published',
+        publish_to_review: false // Final publish, not for review
+      })
+    });
+
+    if (response.ok) {
+      const result = await response.json();
+      alert('Contract published successfully!');
+      setShowPublishModal(false);
+      setPublishNotes('');
+      setSelectedContract(null);
+      fetchApprovedContracts();
+    } else {
+      const error = await response.json();
+      alert(`Failed to publish contract: ${error.detail}`);
     }
-
-    try {
-      setLoading(true);
-      const token = localStorage.getItem('token');
-      
-      const response = await fetch(`${API_CONFIG.BASE_URL}/api/agreements/drafts/${contractId}/publish`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          notes: publishNotes || 'Contract finalized and published',
-          publish_to_review: false // Final publish, not for review
-        })
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        alert('Contract published successfully!');
-        setShowPublishModal(false);
-        setPublishNotes('');
-        setSelectedContract(null);
-        fetchApprovedContracts();
-      } else {
-        const error = await response.json();
-        alert(`Failed to publish contract: ${error.detail}`);
-      }
-    } catch (error) {
-      console.error('Error publishing contract:', error);
-      alert('Failed to publish contract');
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  } catch (error) {
+    console.error('Error publishing contract:', error);
+    alert('Failed to publish contract');
+  } finally {
+    setLoading(false);
+  }
+};
   const formatCurrency = (amount) => {
     if (!amount && amount !== 0) return '-';
     return new Intl.NumberFormat('en-US', {
