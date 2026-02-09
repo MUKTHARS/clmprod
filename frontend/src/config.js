@@ -1,5 +1,5 @@
 // Get the API URL from environment variables
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://localhost:4001';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://grantapi.saple.ai';
 const FRONTEND_URL = window.location.origin;
 
 // Clean the URL (remove trailing slash)
