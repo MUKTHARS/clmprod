@@ -555,7 +555,7 @@ function Dashboard({ contracts, loading, refreshContracts, user }) {
       {/* Recent Grants Section */}
       <div className="recent-contracts">
         <div className="section-controls">
-          <div className="search-box">
+          {/* <div className="search-box">
             <Search size={16} />
             <input
               type="text"
@@ -564,7 +564,7 @@ function Dashboard({ contracts, loading, refreshContracts, user }) {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="search-input"
             />
-          </div>
+          </div> */}
           
           <div className="controls-right">
             <div className="view-toggle">

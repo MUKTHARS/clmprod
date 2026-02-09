@@ -1089,7 +1089,7 @@ const hasDeliverableBeenUploaded = (index) => {
           </button> */}
           
           <div className="header-actions-right">
-            <div className="quick-actions-mini">
+            {/* <div className="quick-actions-mini">
               <button className="action-btn-mini" title="Export PDF">
                 <Download size={14} />
               </button>
@@ -1105,7 +1105,7 @@ const hasDeliverableBeenUploaded = (index) => {
               <button className="action-btn-mini" title="Reminder">
                 <Bell size={14} />
               </button>
-            </div>
+            </div> */}
           </div>
         </div>
 

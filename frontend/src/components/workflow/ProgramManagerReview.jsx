@@ -788,7 +788,7 @@ const handleSubmitReview = async () => {
                 </div>
               </div>
 
-              <div className="form-group">
+              {/* <div className="form-group">
                 <label>Key Issues</label>
                 <div className="input-help">
                   <AlertTriangle size={14} />
@@ -857,7 +857,7 @@ const handleSubmitReview = async () => {
                     className="risk-textarea"
                   />
                 </div>
-              </div>
+              </div> */}
 
 <div className="review-summary-actions">
   <button
