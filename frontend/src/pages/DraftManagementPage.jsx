@@ -33,7 +33,8 @@ import {
   UserCog,
   ChevronsRight,
   UserX,
-  MoreHorizontal
+  MoreHorizontal,
+  Settings
 } from 'lucide-react';
 import API_CONFIG from '../config';
 import './DraftManagementPage.css';
@@ -567,7 +568,7 @@ function DraftManagementPage({ user }) {
                   onClick={() => handleOpenWorkflow(draft)}
                   title="Manage Agreement Workflow"
                 >
-                  <FileText size={16} />
+                  <Settings size={16} />
                 </button>
               </>
             )}

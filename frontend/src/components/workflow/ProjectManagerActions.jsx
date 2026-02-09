@@ -308,7 +308,7 @@ return (
           <Send size={16} />
           {contract.status === 'rejected' ? 'Resubmit for Review' : 'Submit for Review'}
         </button>
-
+{/* 
         <button
           className="pm-action-btn secondary"
           onClick={() => setActiveAction('fix_metadata')}
@@ -316,7 +316,7 @@ return (
         >
           <Edit size={16} />
           Fix Metadata
-        </button>
+        </button> */}
 
         {contract.status === 'rejected' && (
           <button

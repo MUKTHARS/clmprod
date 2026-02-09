@@ -999,10 +999,10 @@ const hasDeliverableBeenUploaded = (index) => {
           <AlertCircle className="error-icon" size={48} />
           <h2>Contract ID Missing</h2>
           <p>No contract ID was provided in the URL.</p>
-          <button className="btn-primary" onClick={() => navigate('/contracts')}>
+          {/* <button className="btn-primary" onClick={() => navigate('/contracts')}>
             <ArrowLeft size={16} />
             Back to Contracts
-          </button>
+          </button> */}
         </div>
       </div>
     );
@@ -1016,10 +1016,10 @@ const hasDeliverableBeenUploaded = (index) => {
           <AlertCircle className="error-icon" size={48} />
           <h2>Invalid Contract ID</h2>
           <p>The contract ID "{id}" is not valid.</p>
-          <button className="btn-primary" onClick={() => navigate('/contracts')}>
+          {/* <button className="btn-primary" onClick={() => navigate('/contracts')}>
             <ArrowLeft size={16} />
             Back to Contracts
-          </button>
+          </button> */}
         </div>
       </div>
     );
@@ -1033,10 +1033,10 @@ const hasDeliverableBeenUploaded = (index) => {
           <h2>Contract Not Found</h2>
           <p>The contract with ID {contractId} could not be found.</p>
           <div className="error-actions">
-            <button className="btn-primary" onClick={() => navigate('/contracts')}>
+            {/* <button className="btn-primary" onClick={() => navigate('/contracts')}>
               <ArrowLeft size={16} />
               Back to Contracts
-            </button>
+            </button> */}
             <button className="btn-secondary" onClick={() => fetchContractData(contractId)}>
               <RefreshCw size={16} />
               Try Again
@@ -1083,10 +1083,10 @@ const hasDeliverableBeenUploaded = (index) => {
       {/* Header Section */}
       <div className="contract-header">
         <div className="header-top">
-          <button className="btn-back" onClick={() => navigate('/contracts')}>
+          {/* <button className="btn-back" onClick={() => navigate('/contracts')}>
             <ArrowLeft size={20} />
             <span>Back to Contracts</span>
-          </button>
+          </button> */}
           
           <div className="header-actions-right">
             <div className="quick-actions-mini">
@@ -1542,15 +1542,10 @@ const hasDeliverableBeenUploaded = (index) => {
 
 {/* Project Manager Actions Section - For ALL project manager contracts */}
 {user && user.role === "project_manager" && contractData && (
-  <div className="section-card">
-    <div className="section-header">
-      <h3>Project Manager Actions</h3>
-      <span className="contract-status-badge">
-        Contract Status: <strong>{contractData.status}</strong>
-      </span>
-    </div>
+ 
+ 
     
-    <div className="workflow-section">
+  
       <ProjectManagerActions 
         contract={contractData}
         user={user}
@@ -1559,8 +1554,7 @@ const hasDeliverableBeenUploaded = (index) => {
           fetchReviewComments();
         }}
       />
-    </div>
-  </div>
+
 )}
 
         {/* Project Manager Comments Section */}

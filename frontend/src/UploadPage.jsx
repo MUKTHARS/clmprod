@@ -172,7 +172,7 @@ function UploadPage({ setLoading, onUploadComplete }) {
         
         // Show success message
         setTimeout(() => {
-          alert(`✅ Contract saved to drafts successfully!\nContract ID: ${response.data.id}`);
+          alert(`✅ Grant saved to drafts successfully!\Grant ID: ${response.data.id}`);
         }, 500);
       }
       
@@ -303,7 +303,7 @@ function UploadPage({ setLoading, onUploadComplete }) {
                 <div className="dropzone-content">
                   <Upload size={48} className="dropzone-icon" />
                   <div className="dropzone-text">
-                    <h3>Upload Contract PDF</h3>
+                    <h3>Upload Grant PDF</h3>
                     <p>Click to browse or drag & drop your PDF file here</p>
                   </div>
                   <div className="file-type-badge">
@@ -343,7 +343,7 @@ function UploadPage({ setLoading, onUploadComplete }) {
                     {!isProcessing ? (
                       <>
                         <Upload size={26} />
-                        <span>Analyze Contract</span>
+                        <span>Analyze Grant</span>
                       </>
                     ) : (
                       <>
@@ -362,8 +362,8 @@ function UploadPage({ setLoading, onUploadComplete }) {
         {isProcessing && !showExtractionResults && (
           <div className="processing-section">
             <div className="processing-header">
-              <h3>Processing Contract</h3>
-              <p className="processing-subtitle">Extracting contract data...</p>
+              <h3>Processing Grant</h3>
+              <p className="processing-subtitle">Extracting grant data...</p>
             </div>
 
             <div className="progress-container">
@@ -416,23 +416,23 @@ function UploadPage({ setLoading, onUploadComplete }) {
         {/* Extraction Results Section */}
         {showExtractionResults && extractionDetails && (
           <div className="extraction-results-section">
-            <div className="success-message">
+            {/* <div className="success-message">
               <CheckCircle size={24} className="success-icon" />
               <div>
-                <h3>Contract Saved to Drafts!</h3>
-                <p>Contract has been extracted and saved as draft.</p>
+                <h3>Grant Saved to Drafts!</h3>
+                <p>Grant has been extracted and saved as draft.</p>
               </div>
-            </div>
+            </div> */}
 
             <div className="extraction-details-card">
-              <h4>Extracted Contract Details</h4>
+              {/* <h4>Extracted Grant Details</h4> */}
               <div className="extraction-grid">
                 <div className="extraction-field">
-                  <span className="field-label">Contract Name</span>
+                  <span className="field-label">Grant Name</span>
                   <span className="field-value">{extractionDetails.grant_name}</span>
                 </div>
                 <div className="extraction-field">
-                  <span className="field-label">Contract ID</span>
+                  <span className="field-label">Grant ID</span>
                   <span className="field-value">{extractionDetails.id}</span>
                 </div>
                 <div className="extraction-field">
@@ -465,7 +465,7 @@ function UploadPage({ setLoading, onUploadComplete }) {
                   onClick={handleViewContract}
                 >
                   <Eye size={16} />
-                  View Contract
+                  View Grant
                 </button>
                 <button 
                   className="btn-view-drafts"
