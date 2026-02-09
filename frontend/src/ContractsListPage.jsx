@@ -36,115 +36,119 @@ function ContractsListPage({ contracts: propContracts = [], user }) {
     }
   }, [propContracts, searchTerm, statusFilter, dateFilter]);
 
-  const normalizeContractData = (contract) => {
-    if (!contract || typeof contract !== 'object') {
-      return {
-        id: Math.floor(Math.random() * 1000),
-        filename: 'Unknown Contract',
-        grant_name: 'Unknown Contract',
-        grantor: 'Unknown',
-        total_amount: 0,
-        status: 'unknown'
-      };
-    }
-    
-    const contractId = contract.id || contract.contract_id;
-    
-    const normalized = {
-      id: contractId || Math.random().toString(36).substr(2, 9),
-      filename: contract.filename || 'Unnamed Contract',
-      uploaded_at: contract.uploaded_at,
-      status: contract.status || 'processed',
-      investment_id: contract.investment_id,
-      project_id: contract.project_id,
-      grant_id: contract.grant_id,
-      extracted_reference_ids: contract.extracted_reference_ids || [],
-      comprehensive_data: contract.comprehensive_data || null
-    };
-    
-    normalized.grant_name = contract.grant_name || 
-                           contract.filename || 
-                           'Unnamed Contract';
-    
-    normalized.grantor = contract.grantor || 'Unknown Grantor';
-    normalized.grantee = contract.grantee || 'Unknown Grantee';
-    normalized.total_amount = contract.total_amount || 0;
-    normalized.contract_number = contract.contract_number;
-    normalized.start_date = contract.start_date;
-    normalized.end_date = contract.end_date;
-    normalized.purpose = contract.purpose;
-    
-    if (normalized.comprehensive_data && typeof normalized.comprehensive_data === 'object') {
-      const compData = normalized.comprehensive_data;
-      const contractDetails = compData.contract_details || compData.contractDetails || {};
-      const parties = compData.parties || compData.Parties || {};
-      const financial = compData.financial_details || compData.financialDetails || {};
-      
-      normalized.grant_name = contractDetails.grant_name || 
-                             contractDetails.grantName || 
-                             normalized.grant_name;
-      
-      normalized.grantor = parties.grantor?.organization_name || 
-                          parties.grantor?.organizationName || 
-                          normalized.grantor;
-      
-      normalized.grantee = parties.grantee?.organization_name || 
-                          parties.grantee?.organizationName || 
-                          normalized.grantee;
-      
-      normalized.total_amount = financial.total_grant_amount || 
-                               financial.totalGrantAmount || 
-                               normalized.total_amount;
-    }
-    
-    return normalized;
+const normalizeContractData = (contract) => {
+  if (!contract || typeof contract !== 'object') {
+    return null; // Return null instead of default object
+  }
+  
+  // Only process approved contracts
+  if (contract.status !== 'approved' && contract.Status !== 'approved') {
+    return null;
+  }
+  
+  const contractId = contract.id || contract.contract_id;
+  
+  const normalized = {
+    id: contractId || Math.random().toString(36).substr(2, 9),
+    filename: contract.filename || 'Unnamed Contract',
+    uploaded_at: contract.uploaded_at,
+    status: 'approved', // Force status to approved
+    investment_id: contract.investment_id,
+    project_id: contract.project_id,
+    grant_id: contract.grant_id,
+    extracted_reference_ids: contract.extracted_reference_ids || [],
+    comprehensive_data: contract.comprehensive_data || null
   };
+  
+  normalized.grant_name = contract.grant_name || 
+                         contract.filename || 
+                         'Unnamed Contract';
+  
+  normalized.grantor = contract.grantor || 'Unknown Grantor';
+  normalized.grantee = contract.grantee || 'Unknown Grantee';
+  normalized.total_amount = contract.total_amount || 0;
+  normalized.contract_number = contract.contract_number;
+  normalized.start_date = contract.start_date;
+  normalized.end_date = contract.end_date;
+  normalized.purpose = contract.purpose;
+  
+  if (normalized.comprehensive_data && typeof normalized.comprehensive_data === 'object') {
+    const compData = normalized.comprehensive_data;
+    const contractDetails = compData.contract_details || compData.contractDetails || {};
+    const parties = compData.parties || compData.Parties || {};
+    const financial = compData.financial_details || compData.financialDetails || {};
+    
+    normalized.grant_name = contractDetails.grant_name || 
+                           contractDetails.grantName || 
+                           normalized.grant_name;
+    
+    normalized.grantor = parties.grantor?.organization_name || 
+                        parties.grantor?.organizationName || 
+                        normalized.grantor;
+    
+    normalized.grantee = parties.grantee?.organization_name || 
+                        parties.grantee?.organizationName || 
+                        normalized.grantee;
+    
+    normalized.total_amount = financial.total_grant_amount || 
+                             financial.totalGrantAmount || 
+                             normalized.total_amount;
+  }
+  
+  return normalized;
+};
 
-  const filterContracts = () => {
-    let filtered = [...propContracts].map(normalizeContractData);
+const filterContracts = () => {
+  // Filter for approved contracts only
+  const approvedContracts = propContracts.filter(contract => 
+    contract.status === 'approved' || contract.Status === 'approved'
+  );
+  
+  let filtered = approvedContracts.map(normalizeContractData).filter(Boolean);
 
-    if (searchTerm) {
-      filtered = filtered.filter(contract => 
-        (contract.grant_name && contract.grant_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (contract.grantor && contract.grantor.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (contract.contract_number && contract.contract_number.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (contract.filename && contract.filename.toLowerCase().includes(searchTerm.toLowerCase()))
-      );
+  if (searchTerm) {
+    filtered = filtered.filter(contract => 
+      (contract.grant_name && contract.grant_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (contract.grantor && contract.grantor.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (contract.contract_number && contract.contract_number.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (contract.filename && contract.filename.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
+  }
+
+  if (statusFilter !== 'all') {
+    // Only approved contracts, so status filter should always be 'approved'
+    filtered = filtered.filter(contract => contract.status === statusFilter);
+  }
+
+  if (dateFilter !== 'all') {
+    const today = new Date();
+    const thirtyDaysAgo = new Date(today.setDate(today.getDate() - 30));
+    
+    switch (dateFilter) {
+      case 'last30':
+        filtered = filtered.filter(contract => 
+          new Date(contract.uploaded_at) > thirtyDaysAgo
+        );
+        break;
+      case 'expiring':
+        filtered = filtered.filter(contract => {
+          if (!contract.end_date) return false;
+          const endDate = new Date(contract.end_date);
+          const daysDiff = (endDate - new Date()) / (1000 * 60 * 60 * 24);
+          return daysDiff > 0 && daysDiff <= 30;
+        });
+        break;
+      case 'expired':
+        filtered = filtered.filter(contract => {
+          if (!contract.end_date) return false;
+          return new Date(contract.end_date) < new Date();
+        });
+        break;
     }
+  }
 
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(contract => contract.status === statusFilter);
-    }
-
-    if (dateFilter !== 'all') {
-      const today = new Date();
-      const thirtyDaysAgo = new Date(today.setDate(today.getDate() - 30));
-      
-      switch (dateFilter) {
-        case 'last30':
-          filtered = filtered.filter(contract => 
-            new Date(contract.uploaded_at) > thirtyDaysAgo
-          );
-          break;
-        case 'expiring':
-          filtered = filtered.filter(contract => {
-            if (!contract.end_date) return false;
-            const endDate = new Date(contract.end_date);
-            const daysDiff = (endDate - new Date()) / (1000 * 60 * 60 * 24);
-            return daysDiff > 0 && daysDiff <= 30;
-          });
-          break;
-        case 'expired':
-          filtered = filtered.filter(contract => {
-            if (!contract.end_date) return false;
-            return new Date(contract.end_date) < new Date();
-          });
-          break;
-      }
-    }
-
-    setFilteredContracts(filtered);
-  };
+  setFilteredContracts(filtered);
+};
 
   const formatCurrency = (amount) => {
     if (!amount && amount !== 0) return '-';
@@ -196,6 +200,16 @@ function ContractsListPage({ contracts: propContracts = [], user }) {
     return `CONT-${contract.id}`;
   };
 
+  const getStatusColorForApproved = (status) => {
+  // For approved contracts list, always return 'approved'
+  return 'approved';
+};
+
+const getStatusIconForApproved = (status) => {
+  // For approved contracts list, always show check circle
+  return <CheckCircle size={14} className="status-icon approved" />;
+};
+
   const getStatusIcon = (status) => {
     switch (status) {
       case 'processed':
@@ -229,23 +243,28 @@ function ContractsListPage({ contracts: propContracts = [], user }) {
     return 'normal';
   };
 
-  const calculateMetrics = () => {
-    const contractsData = propContracts.map(normalizeContractData);
-    const totalValue = contractsData.reduce((sum, c) => sum + (c.total_amount || 0), 0);
-    const activeContracts = contractsData.filter(c => c.status === 'processed').length;
-    const expiringSoon = contractsData.filter(c => {
-      const days = getDaysRemaining(c.end_date);
-      return days !== 'N/A' && days !== 'Expired' && days !== 'Today' && parseInt(days) <= 30;
-    }).length;
+const calculateMetrics = () => {
+  // Filter for approved contracts only
+  const approvedContracts = propContracts.filter(contract => 
+    contract.status === 'approved' || contract.Status === 'approved'
+  );
+  
+  const contractsData = approvedContracts.map(normalizeContractData).filter(Boolean);
+  const totalValue = contractsData.reduce((sum, c) => sum + (c.total_amount || 0), 0);
+  const activeContracts = contractsData.length; // All approved are active
+  const expiringSoon = contractsData.filter(c => {
+    const days = getDaysRemaining(c.end_date);
+    return days !== 'N/A' && days !== 'Expired' && days !== 'Today' && parseInt(days) <= 30;
+  }).length;
 
-    return {
-      totalValue,
-      totalContracts: contractsData.length,
-      activeContracts,
-      expiringSoon,
-      averageValue: contractsData.length > 0 ? totalValue / contractsData.length : 0
-    };
+  return {
+    totalValue,
+    totalContracts: contractsData.length,
+    activeContracts,
+    expiringSoon,
+    averageValue: contractsData.length > 0 ? totalValue / contractsData.length : 0
   };
+};
 
   const metrics = calculateMetrics();
 
@@ -263,134 +282,134 @@ function ContractsListPage({ contracts: propContracts = [], user }) {
     };
   }, [showFilters]);
 
-  const renderContractRow = (contract) => {
-    const displayId = getContractDisplayId(contract);
-    const daysRemaining = getDaysRemaining(contract.end_date);
+const renderContractRow = (contract) => {
+  const displayId = getContractDisplayId(contract);
+  const daysRemaining = getDaysRemaining(contract.end_date);
 
-    return (
-      <tr key={contract.id} className="contract-row">
-        <td>
-          <div className="contract-info">
-            <div className="contract-name-only">
-              {contract.grant_name || contract.filename || 'Unnamed Contract'}
-            </div>
-          </div>
-        </td>
-        <td>
-          <div className="contract-id-only">
-            {displayId}
-          </div>
-        </td>
-        <td>
-          <div className="grantor-cell">
-            <span>{contract.grantor || 'N/A'}</span>
-          </div>
-        </td>
-        <td>
-          <div className="amount-cell">
-            <span>{formatCurrency(contract.total_amount)}</span>
-          </div>
-        </td>
-        <td>
-          <div className="date-cell">
-            <span>{formatDate(contract.uploaded_at)}</span>
-          </div>
-        </td>
-        <td>
-          <div className="date-cell">
-            <span>{formatDate(contract.end_date)}</span>
-          </div>
-        </td>
-        <td>
-          <div className="status-cell">
-            {getStatusIcon(contract.status)}
-            <span className={`status-text ${getStatusColor(contract.status)}`}>
-              {contract.status || 'unknown'}
-            </span>
-          </div>
-        </td>
-        <td>
-          <div className="action-buttons">
-            <button 
-              className="btn-action"
-              onClick={() => navigate(`/contracts/${contract.id}`)}
-              title="View details"
-            >
-              <Eye size={16} />
-            </button>
-            <button className="btn-action" title="Download">
-              <Download size={16} />
-            </button>
-          </div>
-        </td>
-      </tr>
-    );
-  };
-
-  const renderContractCard = (contract) => {
-    const displayId = getContractDisplayId(contract);
-    const daysRemaining = getDaysRemaining(contract.end_date);
-    const daysColor = getDaysColor(daysRemaining);
-
-    return (
-      <div key={contract.id} className="contract-card">
-        <div className="card-header">
-          <div className="contract-status">
-            {getStatusIcon(contract.status)}
-            <span className={`status-text ${contract.status}`}>
-              {contract.status || 'unknown'}
-            </span>
-          </div>
-        </div>
-
-        <div className="card-content">
-          <h3 className="contract-name-small">
+  return (
+    <tr key={contract.id} className="contract-row">
+      <td>
+        <div className="contract-info">
+          <div className="contract-name-only">
             {contract.grant_name || contract.filename || 'Unnamed Contract'}
-          </h3>
-          <p className="contract-id-small">
-            ID: {displayId}
-          </p>
-
-          <div className="contract-meta">
-            <div className="meta-item">
-              <span>{contract.grantor || 'No grantor'}</span>
-            </div>
-            <div className="meta-item">
-              <span>{contract.uploaded_at ? formatDate(contract.uploaded_at) : 'No date'}</span>
-            </div>
           </div>
+        </div>
+      </td>
+      <td>
+        <div className="contract-id-only">
+          {displayId}
+        </div>
+      </td>
+      <td>
+        <div className="grantor-cell">
+          <span>{contract.grantor || 'N/A'}</span>
+        </div>
+      </td>
+      <td>
+        <div className="amount-cell">
+          <span>{formatCurrency(contract.total_amount)}</span>
+        </div>
+      </td>
+      <td>
+        <div className="date-cell">
+          <span>{formatDate(contract.uploaded_at)}</span>
+        </div>
+      </td>
+      <td>
+        <div className="date-cell">
+          <span>{formatDate(contract.end_date)}</span>
+        </div>
+      </td>
+      <td>
+        <div className="status-cell">
+          {getStatusIconForApproved(contract.status)} {/* CHANGED HERE */}
+          <span className={`status-text ${getStatusColorForApproved(contract.status)}`}> {/* CHANGED HERE */}
+            approved {/* Hardcoded as approved */}
+          </span>
+        </div>
+      </td>
+      <td>
+        <div className="action-buttons">
+          <button 
+            className="btn-action"
+            onClick={() => navigate(`/contracts/${contract.id}`)}
+            title="View details"
+          >
+            <Eye size={16} />
+          </button>
+          <button className="btn-action" title="Download">
+            <Download size={16} />
+          </button>
+        </div>
+      </td>
+    </tr>
+  );
+};
 
-          <div className="contract-amount">
-            <span>{formatCurrency(contract.total_amount)}</span>
+const renderContractCard = (contract) => {
+  const displayId = getContractDisplayId(contract);
+  const daysRemaining = getDaysRemaining(contract.end_date);
+  const daysColor = getDaysColor(daysRemaining);
+
+  return (
+    <div key={contract.id} className="contract-card">
+      <div className="card-header">
+        <div className="contract-status">
+          {getStatusIconForApproved(contract.status)} {/* CHANGED HERE */}
+          <span className={`status-text approved`}> {/* Hardcoded as approved */}
+            approved
+          </span>
+        </div>
+      </div>
+
+      <div className="card-content">
+        <h3 className="contract-name-small">
+          {contract.grant_name || contract.filename || 'Unnamed Contract'}
+        </h3>
+        <p className="contract-id-small">
+          ID: {displayId}
+        </p>
+
+        <div className="contract-meta">
+          <div className="meta-item">
+            <span>{contract.grantor || 'No grantor'}</span>
           </div>
-
-          <div className="contract-timeline">
-            <div className="timeline-item">
-              <span className="timeline-label">Ends in</span>
-              <span className={`timeline-value ${daysColor}`}>
-                {daysRemaining}
-              </span>
-            </div>
+          <div className="meta-item">
+            <span>{contract.uploaded_at ? formatDate(contract.uploaded_at) : 'No date'}</span>
           </div>
         </div>
 
-        <div className="card-footer">
-          <div className="action-buttons">
-            <button 
-              className="btn-action"
-              onClick={() => navigate(`/contracts/${contract.id}`)}
-              title="View details"
-            >
-              <Eye size={16} />
-            </button>
-            <button className="btn-action" title="Download">
-              <Download size={16} />
-            </button>
+        <div className="contract-amount">
+          <span>{formatCurrency(contract.total_amount)}</span>
+        </div>
+
+        <div className="contract-timeline">
+          <div className="timeline-item">
+            <span className="timeline-label">Ends in</span>
+            <span className={`timeline-value ${daysColor}`}>
+              {daysRemaining}
+            </span>
           </div>
         </div>
       </div>
-    );
-  };
+
+      <div className="card-footer">
+        <div className="action-buttons">
+          <button 
+            className="btn-action"
+            onClick={() => navigate(`/contracts/${contract.id}`)}
+            title="View details"
+          >
+            <Eye size={16} />
+          </button>
+          <button className="btn-action" title="Download">
+            <Download size={16} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
   return (
     <div className="contracts-list-page">
@@ -506,23 +525,30 @@ function ContractsListPage({ contracts: propContracts = [], user }) {
               </div>
               
               <div className="filter-content">
-                <div className="filter-group">
-                  <label className="filter-label">Status</label>
-                  <div className="filter-options">
-                    {['all', 'processed', 'processing', 'error'].map((status) => (
-                      <button
-                        key={status}
-                        className={`filter-option ${statusFilter === status ? 'active' : ''}`}
-                        onClick={() => {
-                          setStatusFilter(status);
-                          setShowFilters(false);
-                        }}
-                      >
-                        {status === 'all' ? 'All Status' : status.charAt(0).toUpperCase() + status.slice(1)}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+<div className="filter-group">
+  <label className="filter-label">Status</label>
+  <div className="filter-options">
+    {/* Only show approved option */}
+    <button
+      className={`filter-option ${statusFilter === 'all' ? 'active' : ''}`}
+      onClick={() => {
+        setStatusFilter('all');
+        setShowFilters(false);
+      }}
+    >
+      All Approved
+    </button>
+    <button
+      className={`filter-option ${statusFilter === 'approved' ? 'active' : ''}`}
+      onClick={() => {
+        setStatusFilter('approved');
+        setShowFilters(false);
+      }}
+    >
+      Approved
+    </button>
+  </div>
+</div>
 
                 <div className="filter-group">
                   <label className="filter-label">Date Range</label>

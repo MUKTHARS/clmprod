@@ -24,7 +24,12 @@ import DirectorApproval from './components/workflow/DirectorApproval';
 import ProgramManagerDirectorDecisions from './components/workflow/ProgramManagerDirectorDecisions';
 import CopilotPage from './components/copilot/CopilotPage';
 import SuperAdminDashboard from './components/admin/SuperAdminDashboard';
-// Create a wrapper component to handle the redirect logic
+import ViewDraftsPage from './components/workflow/ViewDraftsPage';
+import DraftManagementPage from './pages/DraftManagementPage';
+import AssignedAgreementsPage from './pages/AssignedAgreementsPage';
+import AssignedByMePage from './pages/AssignedByMePage';
+import ApprovedContractsPage from './pages/ApprovedContractsPage';
+// import ArchivePage from './pages/ArchivePage';
 function AppContent({ user, isAuthenticated, loading, contracts, onLogin, onLogout, onUploadComplete, fetchContracts }) {
   const location = useLocation();
   
@@ -86,6 +91,7 @@ function AppContent({ user, isAuthenticated, loading, contracts, onLogin, onLogo
                 </PrivateRoute>
               } 
             />
+            
             <Route 
               path="/pm-dashboard" 
               element={
@@ -95,6 +101,14 @@ function AppContent({ user, isAuthenticated, loading, contracts, onLogin, onLogo
               } 
             />
             
+            {/* <Route 
+  path="/drafts" 
+  element={
+    <PrivateRoute user={user} requiredRole="project_manager">
+      <DraftManagementPage user={user} />
+    </PrivateRoute>
+  } 
+/> */}
             {/* Program Manager Routes */}
             <Route 
               path="/review" 
@@ -112,6 +126,7 @@ function AppContent({ user, isAuthenticated, loading, contracts, onLogin, onLogo
                 </PrivateRoute>
               } 
             />
+            <Route path="/drafts" element={<ViewDraftsPage user={user} />} />
             <Route 
               path="/my-reviews" 
               element={
@@ -138,7 +153,53 @@ function AppContent({ user, isAuthenticated, loading, contracts, onLogin, onLogo
                 </PrivateRoute>
               } 
             />
-            
+
+
+
+
+ <Route 
+    path="/drafts/my" 
+    element={
+      user?.role === "project_manager" ? (
+        <DraftManagementPage user={user} />
+      ) : (
+        <Navigate to="/dashboard" replace />
+      )
+    } 
+  />
+  <Route 
+    path="/drafts/assigned" 
+    element={
+      user?.role === "project_manager" ? (
+        <DraftManagementPage user={user} />
+      ) : (
+        <Navigate to="/dashboard" replace />
+      )
+    } 
+  />
+
+  <Route 
+  path="/approved-contracts" 
+  element={
+    <PrivateRoute user={user} requiredRole="project_manager">
+      <ApprovedContractsPage user={user} />
+    </PrivateRoute>
+  } 
+/>
+
+  
+{/* <Route path="/archive" element={
+  user ? (
+    <Layout>
+      <div className="archive-page" style={{ padding: '24px' }}>
+        <h1>Archive</h1>
+        <p>Archive functionality coming soon...</p>
+      </div>
+    </Layout>
+  ) : (
+    <Navigate to="/login" replace />
+  )
+} /> */}
             {/* Old review routes (keep for compatibility) */}
             <Route 
               path="/review-old" 
@@ -148,7 +209,11 @@ function AppContent({ user, isAuthenticated, loading, contracts, onLogin, onLogo
                 </PrivateRoute>
               } 
             />
-
+<Route path="/agreements/assigned" element={
+  <PrivateRoute user={user}>
+    <AssignedAgreementsPage user={user} />
+  </PrivateRoute>
+} />
             <Route 
               path="/program-manager/director-decisions" 
               element={
@@ -174,6 +239,11 @@ function AppContent({ user, isAuthenticated, loading, contracts, onLogin, onLogo
               } 
             />
 
+<Route path="/agreements/assigned-by-me" element={
+  <PrivateRoute user={user}>
+    <AssignedByMePage user={user} />
+  </PrivateRoute>
+} />
             <Route 
               path="/admin" 
               element={
@@ -216,6 +286,7 @@ function AppContent({ user, isAuthenticated, loading, contracts, onLogin, onLogo
                 </PrivateRoute>
               } 
             />
+            
             <Route 
   path="/copilot" 
   element={
@@ -225,6 +296,8 @@ function AppContent({ user, isAuthenticated, loading, contracts, onLogin, onLogo
   } 
 />
           </Routes>
+
+          
         </div>
       </div>
     </>

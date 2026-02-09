@@ -52,34 +52,34 @@ function DirectorApproval() {
     fetchContractsForApproval();
   }, []);
 
-  const fetchContractsForApproval = async () => {
-    try {
-      setLoading(true);
-      const token = localStorage.getItem('token');
-      
-      // Use Director's specific endpoint
-      const response = await fetch(`${API_CONFIG.BASE_URL}/api/contracts/director/dashboard`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        
-        // Filter to show only contracts with status "reviewed" for approval section
-        const reviewedContracts = data.filter(contract => 
-          contract.status === "reviewed"
-        );
-        
-        setContracts(reviewedContracts);
+const fetchContractsForApproval = async () => {
+  try {
+    setLoading(true);
+    const token = localStorage.getItem('token');
+    
+    // Use Director's specific endpoint
+    const response = await fetch(`${API_CONFIG.BASE_URL}/api/contracts/director/dashboard`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
       }
-    } catch (error) {
-      console.error('Failed to fetch contracts for approval:', error);
-    } finally {
-      setLoading(false);
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      
+      // FIX: Show contracts with status "reviewed" OR "approved" for Director approval section
+      const contractsForApproval = data.filter(contract => 
+        contract.status === "reviewed" || contract.status === "approved"
+      );
+      
+      setContracts(contractsForApproval);
     }
-  };
+  } catch (error) {
+    console.error('Failed to fetch contracts for approval:', error);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const fetchCompleteContractInfo = async (contractId) => {
     try {

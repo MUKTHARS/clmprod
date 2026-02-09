@@ -457,13 +457,7 @@ const handleSubmitReview = async () => {
           <FileCheck size={18} />
           Review Summary
         </button>
-        <button 
-          className={`tab-btn ${activeTab === 'contract' ? 'active' : ''}`}
-          onClick={() => setActiveTab('contract')}
-        >
-          <FileText size={18} />
-          Contract Details
-        </button>
+
       </div>
 
       {/* Review Content */}
@@ -865,28 +859,28 @@ const handleSubmitReview = async () => {
                 </div>
               </div>
 
-              <div className="form-actions-summary">
-                <button
-                  className="btn-secondary"
-                  onClick={() => setReviewSummary({
-                    review_summary: '',
-                    overall_recommendation: '',
-                    key_issues: [],
-                    risk_assessment: {},
-                    change_requests: []
-                  })}
-                >
-                  Clear Form
-                </button>
-                <button
-                  className="btn-primary"
-                  onClick={() => setShowSubmitModal(true)}
-                  disabled={!reviewSummary.review_summary.trim() || !reviewSummary.overall_recommendation}
-                >
-                  <FileCheck size={16} />
-                  Submit Review
-                </button>
-              </div>
+<div className="review-summary-actions">
+  <button
+    className="review-clear-form-btn"
+    onClick={() => setReviewSummary({
+      review_summary: '',
+      overall_recommendation: '',
+      key_issues: [],
+      risk_assessment: {},
+      change_requests: []
+    })}
+  >
+    Clear Form
+  </button>
+  <button
+    className="review-submit-btn"
+    onClick={() => setShowSubmitModal(true)}
+    disabled={!reviewSummary.review_summary.trim() || !reviewSummary.overall_recommendation}
+  >
+    <FileCheck size={16} />
+    Submit Review
+  </button>
+</div>
             </div>
           </div>
         )}
@@ -1093,29 +1087,29 @@ const handleSubmitReview = async () => {
               </div>
             </div>
             
-            <div className="modal-actions">
-              <button
-                className="btn-secondary"
-                onClick={() => setShowSubmitModal(false)}
-                disabled={submitting}
-              >
-                Cancel
-              </button>
-              <button
-                className="btn-primary"
-                onClick={handleSubmitReview}
-                disabled={submitting}
-              >
-                {submitting ? (
-                  <>
-                    <Loader2 size={16} className="spinning" />
-                    Submitting...
-                  </>
-                ) : (
-                  'Submit Review'
-                )}
-              </button>
-            </div>
+<div className="modal-actions">
+  <button
+    className="btn-secondary"
+    onClick={() => setShowSubmitModal(false)}
+    disabled={submitting}
+  >
+    Cancel
+  </button>
+  <button
+    className="modal-submit-btn"
+    onClick={handleSubmitReview}
+    disabled={submitting}
+  >
+    {submitting ? (
+      <>
+        <Loader2 size={16} className="spinning" />
+        Submitting...
+      </>
+    ) : (
+      'Submit Review'
+    )}
+  </button>
+</div>
           </div>
         </div>
       )}

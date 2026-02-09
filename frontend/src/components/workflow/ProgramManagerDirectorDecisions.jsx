@@ -52,21 +52,117 @@ const fetchDirectorDecisions = async () => {
   try {
     setLoading(true);
     const token = localStorage.getItem('token');
-    const response = await fetch(`${API_CONFIG.BASE_URL}/api/contracts/program-manager/reviewed-by-director`, {
-      headers: {
-        'Authorization': `Bearer ${token}`
+    
+    // Try multiple endpoints to get director decisions
+    let directorDecisions = [];
+    
+    // First try the specific endpoint
+    try {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/api/contracts/program-manager/reviewed-by-director`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        directorDecisions = data.contracts || [];
       }
+    } catch (e) {
+      console.log('Specific endpoint failed, trying fallback');
+    }
+    
+    // If no data, try to fetch from contracts where current user has reviewed
+    if (!directorDecisions || directorDecisions.length === 0) {
+      try {
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        const contractsResponse = await fetch(`${API_CONFIG.BASE_URL}/api/contracts/`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (contractsResponse.ok) {
+          const allContracts = await contractsResponse.json();
+          
+          // Filter contracts where:
+          // 1. Current user is a program manager who reviewed them
+          // 2. Contract has director decision
+          // 3. Contract status is approved or rejected
+          
+          directorDecisions = allContracts.filter(contract => {
+            // Check if contract has program manager review with current user
+            const hasPmReview = contract.comprehensive_data?.program_manager_review;
+            const reviewedByCurrentUser = hasPmReview && 
+              contract.comprehensive_data.program_manager_review.reviewed_by === user.id;
+            
+            // Check if contract has director decision
+            const hasDirectorDecision = contract.comprehensive_data?.director_final_approval;
+            
+            // Check status
+            const isFinalized = contract.status === 'approved' || contract.status === 'rejected';
+            
+            return (hasPmReview || reviewedByCurrentUser) && hasDirectorDecision && isFinalized;
+          });
+        }
+      } catch (fallbackError) {
+        console.error('Fallback also failed:', fallbackError);
+      }
+    }
+    
+    // Process the contracts to get proper director decision data
+    const processedContracts = directorDecisions.map(contract => {
+      const directorDecision = contract.comprehensive_data?.director_final_approval || {};
+      const pmReview = contract.comprehensive_data?.program_manager_review || {};
+      
+      return {
+        id: contract.id,
+        grant_name: contract.grant_name,
+        filename: contract.filename,
+        grantor: contract.grantor,
+        grantee: contract.grantee,
+        total_amount: contract.total_amount,
+        start_date: contract.start_date,
+        end_date: contract.end_date,
+        status: contract.status,
+        uploaded_at: contract.uploaded_at,
+        
+        // Program Manager review data
+        program_manager_review: pmReview,
+        program_manager_recommendation: pmReview.overall_recommendation || 'pending',
+        program_manager_reviewed_at: pmReview.reviewed_at,
+        program_manager_review_summary: pmReview.review_summary,
+        
+        // Director's decision
+        director_decision: directorDecision,
+        director_decision_status: directorDecision.final_decision,
+        director_decision_comments: directorDecision.approval_comments,
+        director_decided_at: directorDecision.approved_at,
+        director_name: directorDecision.approved_by_name,
+        
+        // Additional info
+        is_locked: directorDecision.contract_locked || false,
+        risk_accepted: directorDecision.risk_accepted || false,
+        business_sign_off: directorDecision.business_sign_off || false,
+        forwarded_by: contract.comprehensive_data?.director_approval_tracking?.forwarded_by_name,
+        forwarded_at: contract.comprehensive_data?.director_approval_tracking?.forwarded_at
+      };
     });
     
-    if (response.ok) {
-      const data = await response.json();
-      setContracts(data.contracts || []);
-      setStats(data.summary || { approved: 0, rejected: 0, total: 0 });
-    }
+    setContracts(processedContracts);
+    
+    // Calculate stats
+    const stats = {
+      approved: processedContracts.filter(c => c.status === 'approved').length,
+      rejected: processedContracts.filter(c => c.status === 'rejected').length,
+      total: processedContracts.length
+    };
+    setStats(stats);
+    
   } catch (error) {
     console.error('Failed to fetch director decisions:', error);
-    // Try the fallback endpoint for approved contracts
-    await fetchApprovedContractsFallback();
+    setContracts([]);
+    setStats({ approved: 0, rejected: 0, total: 0 });
   } finally {
     setLoading(false);
   }

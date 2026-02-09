@@ -209,46 +209,53 @@ function Review() {
         </div>
 
         {/* Controls */}
-        <div className="section-controls">
-          <div className="search-box">
-            <Search size={16} />
-            <input
-              type="text"
-              placeholder="Search contracts..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="search-input"
-            />
-          </div>
-          
-          <div className="controls-right">
-            <div className="view-toggle">
-              {['under_review', 'reviewed', 'rejected'].map(status => (
-                <button
-                  key={status}
-                  className={`view-btn ${selectedStatus === status ? 'active' : ''}`}
-                  onClick={() => setSelectedStatus(status)}
-                  style={{
-                    backgroundColor: selectedStatus === status ? getStatusColor(status) : 'white',
-                    color: selectedStatus === status ? 'white' : getStatusColor(status),
-                    border: `1px solid ${getStatusColor(status)}`
-                  }}
-                >
-                  {status.replace('_', ' ')}
-                </button>
-              ))}
-            </div>
-            
-            <button 
-              className="btn-refresh"
-              onClick={fetchContractsForReview}
-              disabled={loading}
-            >
-              <RefreshCw size={16} className={loading ? 'spinning' : ''} />
-              Refresh
-            </button>
-          </div>
-        </div>
+      {/* Controls */}
+<div className="section-controls">
+  <div className="search-box">
+    <Search size={16} />
+    <input
+      type="text"
+      placeholder="Search contracts..."
+      value={searchTerm}
+      onChange={(e) => setSearchTerm(e.target.value)}
+      className="search-input"
+    />
+  </div>
+  
+  <div className="controls-right">
+    <div className="review-controls-group">
+      <div className="review-status-toggle">
+        <button
+          className={`review-status-btn under-review ${selectedStatus === 'under_review' ? 'active' : ''}`}
+          onClick={() => setSelectedStatus('under_review')}
+        >
+          Under Review
+        </button>
+        <button
+          className={`review-status-btn reviewed ${selectedStatus === 'reviewed' ? 'active' : ''}`}
+          onClick={() => setSelectedStatus('reviewed')}
+        >
+          Reviewed
+        </button>
+        <button
+          className={`review-status-btn rejected ${selectedStatus === 'rejected' ? 'active' : ''}`}
+          onClick={() => setSelectedStatus('rejected')}
+        >
+          Rejected
+        </button>
+      </div>
+      
+      <button 
+        className="review-refresh-btn"
+        onClick={fetchContractsForReview}
+        disabled={loading}
+      >
+        <RefreshCw size={16} className={loading ? 'spinning' : ''} />
+        Refresh
+      </button>
+    </div>
+  </div>
+</div>
 
         {/* Contracts Content */}
         <div className="contracts-content">

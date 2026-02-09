@@ -50,13 +50,16 @@ import API_CONFIG from './config';
 import ProjectManagerActions from './components/workflow/ProjectManagerActions';
 import './styles/ContractDetailsPage.css';
 
+import AgreementWorkflow from './components/workflow/AgreementWorkflow';
 function ContractDetailsPage({ user = null }) {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [isDraft, setIsDraft] = useState(false);
   const [contractData, setContractData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('analysis');
   const [expandedSections, setExpandedSections] = useState({
+   
     contractDetails: true,
     financial: true,
     parties: true,
@@ -111,7 +114,16 @@ function ContractDetailsPage({ user = null }) {
       setLoadingPDF(false);
     }
   };
-
+useEffect(() => {
+  if (contractData) {
+    setIsDraft(contractData.status === 'draft');
+    
+    // If it's a draft and user is project manager, show draft workflow
+    if (contractData.status === 'draft' && user?.role === 'project_manager') {
+      console.log('This is a draft contract');
+    }
+  }
+}, [contractData, user]);
 const handleViewDeliverableFile = async (deliverableIndex) => {
   const uploadedFile = uploadedFiles[deliverableIndex];
   if (!uploadedFile?.fileId) {
@@ -1077,16 +1089,6 @@ const hasDeliverableBeenUploaded = (index) => {
           </button>
           
           <div className="header-actions-right">
-
-            
-            <button 
-              className="btn-primary"
-              onClick={() => navigate('/upload')}
-            >
-              <Upload size={16} />
-              <span>Upload New</span>
-            </button>
-            
             <div className="quick-actions-mini">
               <button className="action-btn-mini" title="Export PDF">
                 <Download size={14} />
@@ -1537,21 +1539,30 @@ const hasDeliverableBeenUploaded = (index) => {
           </div>
 
         </div>
-        
-        {/* Project Manager Actions Section */}
-        {user && user.role === "project_manager" && contractData && (
-          <div className="workflow-section">
-            <ProjectManagerActions 
-              contract={contractData}
-              user={user}
-              onActionComplete={() => {
-                fetchContractData(contractId);
-                fetchReviewComments();
-              }}
-            />
-          </div>
-        )}  
-        
+
+{/* Project Manager Actions Section - For ALL project manager contracts */}
+{user && user.role === "project_manager" && contractData && (
+  <div className="section-card">
+    <div className="section-header">
+      <h3>Project Manager Actions</h3>
+      <span className="contract-status-badge">
+        Contract Status: <strong>{contractData.status}</strong>
+      </span>
+    </div>
+    
+    <div className="workflow-section">
+      <ProjectManagerActions 
+        contract={contractData}
+        user={user}
+        onActionComplete={() => {
+          fetchContractData(contractId);
+          fetchReviewComments();
+        }}
+      />
+    </div>
+  </div>
+)}
+
         {/* Project Manager Comments Section */}
         {user && user.role === "project_manager" && contractData && (
           <div className="section-card">

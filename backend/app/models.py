@@ -51,6 +51,29 @@ class Contract(Base):
     
     review_comments = Column(Text)
 
+    assigned_pm_users = Column(JSONB, default=list)  # List of project manager IDs
+    assigned_pgm_users = Column(JSONB, default=list)  # List of program manager IDs
+    assigned_director_users = Column(JSONB, default=list)  # List of director IDs
+    
+    # Additional documents storage
+    additional_documents = Column(JSONB, default=list)  # List of document metadata
+    notes = Column(Text, nullable=True)  # General notes for the agreement
+    
+    # Agreement metadata
+    agreement_type = Column(String, nullable=True)  # Type of agreement
+    effective_date = Column(String, nullable=True)
+    renewal_date = Column(String, nullable=True)
+    termination_date = Column(String, nullable=True)
+    jurisdiction = Column(String, nullable=True)
+    governing_law = Column(String, nullable=True)
+    special_conditions = Column(JSONB, nullable=True)
+    
+    # Audit fields
+    last_edited_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    last_edited_at = Column(DateTime(timezone=True), nullable=True)
+    published_at = Column(DateTime(timezone=True), nullable=True)
+    published_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+
 class ContractVersion(Base):
     __tablename__ = "contract_versions"
     
