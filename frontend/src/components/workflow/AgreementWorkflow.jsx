@@ -801,38 +801,46 @@ const fetchUpdatedContract = async (contractId) => {
         )}
       </div>
 
-      <div className="workflow-step-actions">
-        {activeStep > 1 && (
-          <button className="btn-secondary" onClick={prevStep} disabled={loading}>
-            Previous
-          </button>
-        )}
-        
-        <div style={{ flex: 1 }}></div>
-        
-        {activeStep < 4 ? (
-          <button className="btn-primary" onClick={nextStep} disabled={loading}>
-            Next <ChevronRight size={16} />
-          </button>
-        ) : (
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button 
-              className="btn-secondary" 
-              onClick={handleUpdateDraft}
-              disabled={loading}
-            >
-              {loading ? <Loader2 size={16} className="spinner" /> : 'Save Draft'}
-            </button>
-            <button 
-              className="btn-primary publish-btn" 
-              onClick={() => handlePublishAgreement(true)}
-              disabled={loading}
-            >
-              {loading ? <Loader2 size={16} className="spinner" /> : 'Publish & Submit for Review'}
-            </button>
-          </div>
-        )}
-      </div>
+<div className="workflow-actions-container">
+  {activeStep > 1 && (
+    <button 
+      className="workflow-btn-secondary" 
+      onClick={prevStep} 
+      disabled={loading}
+    >
+      Previous
+    </button>
+  )}
+  
+  <div className="workflow-btn-spacer"></div>
+  
+  {activeStep < 4 ? (
+    <button 
+      className="workflow-btn-primary" 
+      onClick={nextStep} 
+      disabled={loading}
+    >
+      Next <ChevronRight size={16} />
+    </button>
+  ) : (
+    <div className="workflow-btn-group">
+      <button 
+        className="workflow-btn-secondary" 
+        onClick={handleUpdateDraft}
+        disabled={loading}
+      >
+        {loading ? <Loader2 size={16} className="workflow-spinner" /> : 'Save Draft'}
+      </button>
+      {/* <button 
+        className="workflow-btn-primary workflow-publish-btn" 
+        onClick={() => handlePublishAgreement(true)}
+        disabled={loading}
+      >
+        {loading ? <Loader2 size={16} className="workflow-spinner" /> : 'Publish & Review'}
+      </button> */}
+    </div>
+  )}
+</div>
     </div>
   );
 }

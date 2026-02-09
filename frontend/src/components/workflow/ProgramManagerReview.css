@@ -1567,3 +1567,108 @@ select:focus-visible {
 .modal-content::-webkit-scrollbar-thumb:hover {
   background: #a1a1a1;
 }
+
+
+/* Form Actions Summary */
+.review-summary-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+/* Clear Form Button */
+.review-clear-form-btn {
+  padding: 0.625rem 1.25rem;
+  border: 1px solid #d1d5db;
+  background: white;
+  border-radius: 6px;
+  color: #374151;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: all 0.2s;
+  min-width: 120px;
+}
+
+.review-clear-form-btn:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+
+/* Submit Review Button */
+.review-submit-btn {
+  padding: 0.625rem 1.25rem;
+  background: #3b82f6;
+  color: white;
+  border: 1px solid #3b82f6;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: all 0.2s;
+  min-width: 150px;
+}
+
+.review-submit-btn:hover {
+  background: #2563eb;
+  border-color: #2563eb;
+}
+
+.review-submit-btn:disabled {
+  background: #93c5fd;
+  border-color: #93c5fd;
+  cursor: not-allowed;
+}
+
+.review-submit-btn .spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+
+/* Modal Submit Button */
+.modal-submit-btn {
+  padding: 0.625rem 1.25rem;
+  background: #3b82f6;
+  color: white;
+  border: 1px solid #3b82f6;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: all 0.2s;
+  min-width: 140px;
+}
+
+.modal-submit-btn:hover {
+  background: #2563eb;
+  border-color: #2563eb;
+}
+
+.modal-submit-btn:disabled {
+  background: #93c5fd;
+  border-color: #93c5fd;
+  cursor: not-allowed;
+}
+
+.modal-submit-btn .spinning {
+  animation: spin 1s linear infinite;
+}
