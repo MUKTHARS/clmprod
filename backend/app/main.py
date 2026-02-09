@@ -998,7 +998,7 @@ async def change_password(
 # Public root endpoint (no auth required)
 @app.get("/")
 def read_root():
-    return {"message": "Grant Contract Analyzer API", "version": "1.0.0"}
+    return {"message": "GrantOS API", "version": "1.0.0"}
 
 
 @app.post("/upload/", response_model=schemas.ContractResponse)
