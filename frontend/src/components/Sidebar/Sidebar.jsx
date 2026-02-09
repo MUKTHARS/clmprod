@@ -262,7 +262,7 @@ const getApprovedCount = useCallback(async () => {
   const token = localStorage.getItem('token');
   
   try {
-    const baseUrl = API_CONFIG.BASE_URL.replace('https://', 'http://');
+    const baseUrl = API_CONFIG.BASE_URL;
     
     // Use the new endpoint for efficient counting
     const response = await fetch(`${baseUrl}/api/contracts/project-manager/approved-count`, {
@@ -289,7 +289,7 @@ const getPendingCounts = useCallback(async (itemId) => {
   
   try {
     // Use HTTP instead of HTTPS for local development to avoid SSL errors
-    const baseUrl = API_CONFIG.BASE_URL.replace('https://', 'http://');
+    const baseUrl = API_CONFIG.BASE_URL;
     
     if (itemId === 'review') {
       // For Program Manager review tab
@@ -398,7 +398,7 @@ useEffect(() => {
       try {
         const token = localStorage.getItem('token');
         // Use HTTP instead of HTTPS for local development
-        const baseUrl = API_CONFIG.BASE_URL.replace('https://', 'http://');
+        const baseUrl = API_CONFIG.BASE_URL;
         const response = await fetch(`${baseUrl}/api/user/permissions`, {
           headers: {
             'Authorization': `Bearer ${token}`,
