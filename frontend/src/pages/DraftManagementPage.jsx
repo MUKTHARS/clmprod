@@ -555,13 +555,13 @@ function DraftManagementPage({ user }) {
             </button>
             {activeTab === 'my-drafts' && (
               <>
-                <button 
+                {/* <button 
                   className="btn-action"
                   onClick={() => handleEditContract(draft.id)}
                   title="Edit"
                 >
                   <Edit size={16} />
-                </button>
+                </button> */}
                 <button 
                   className="btn-action workflow"
                   onClick={() => handleOpenWorkflow(draft)}
