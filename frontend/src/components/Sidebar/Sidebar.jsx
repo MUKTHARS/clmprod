@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
+  CheckCircle,
   FileText,
   Upload,
   Settings,
@@ -165,6 +166,17 @@ const Sidebar = ({ user, onLogout }) => {
         roles: ['project_manager', 'director'],
         isArchiveSection: true
       },
+
+      { 
+  id: 'approved-contracts', 
+  label: 'Approved', 
+  icon: CheckCircle, 
+  path: '/approved-contracts', 
+  permission: 'can_view_approved',
+  roles: ['project_manager'],
+  badge: true,
+  isArchiveSection: false // Add this to separate from Archive
+},
       { 
         id: 'assigned-parent', 
         label: 'Assigned Agreements', 
@@ -244,6 +256,32 @@ const Sidebar = ({ user, onLogout }) => {
   // Memoize the menu items
   const menuItems = useMemo(() => getMenuItems(), [getMenuItems]);
 
+const getApprovedCount = useCallback(async () => {
+  if (!user?.id || user.role !== 'project_manager') return null;
+  
+  const token = localStorage.getItem('token');
+  
+  try {
+    const baseUrl = API_CONFIG.BASE_URL.replace('https://', 'http://');
+    
+    // Use the new endpoint for efficient counting
+    const response = await fetch(`${baseUrl}/api/contracts/project-manager/approved-count`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      return data.approved_count || 0;
+    }
+  } catch (error) {
+    console.error('Failed to fetch approved count:', error);
+  }
+  
+  return null;
+}, [user?.id, user?.role]);
 const getPendingCounts = useCallback(async (itemId) => {
   if (!itemId) return null;
   
@@ -321,6 +359,38 @@ const getPendingCounts = useCallback(async (itemId) => {
   
   return null;
 }, []);
+// Add to your useEffect that fetches badge counts
+useEffect(() => {
+  const fetchAllBadgeCounts = async () => {
+    const counts = {};
+    
+    // Only fetch counts for items that have badges
+    const badgeItems = menuItems.allItems.filter(item => item.badge);
+    
+    for (const item of badgeItems) {
+      if (item.id === 'approved-contracts') {
+        // Special handling for approved contracts count
+        const count = await getApprovedCount();
+        if (count && count > 0) {
+          counts[item.id] = count;
+        }
+      } else {
+        const count = await getPendingCounts(item.id);
+        if (count && count > 0) {
+          counts[item.id] = count;
+        }
+      }
+    }
+    
+    setBadgeCounts(counts);
+  };
+  
+  if (user && menuItems.allItems.length > 0) {
+    fetchAllBadgeCounts();
+  }
+}, [user, menuItems.allItems, getPendingCounts, getApprovedCount]);
+
+
 
   // Fetch user permissions - FIXED: Added proper dependencies
   useEffect(() => {

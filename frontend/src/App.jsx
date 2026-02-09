@@ -28,6 +28,7 @@ import ViewDraftsPage from './components/workflow/ViewDraftsPage';
 import DraftManagementPage from './pages/DraftManagementPage';
 import AssignedAgreementsPage from './pages/AssignedAgreementsPage';
 import AssignedByMePage from './pages/AssignedByMePage';
+import ApprovedContractsPage from './pages/ApprovedContractsPage';
 // import ArchivePage from './pages/ArchivePage';
 function AppContent({ user, isAuthenticated, loading, contracts, onLogin, onLogout, onUploadComplete, fetchContracts }) {
   const location = useLocation();
@@ -152,6 +153,10 @@ function AppContent({ user, isAuthenticated, loading, contracts, onLogin, onLogo
                 </PrivateRoute>
               } 
             />
+
+
+
+
  <Route 
     path="/drafts/my" 
     element={
@@ -172,6 +177,17 @@ function AppContent({ user, isAuthenticated, loading, contracts, onLogin, onLogo
       )
     } 
   />
+
+  <Route 
+  path="/approved-contracts" 
+  element={
+    <PrivateRoute user={user} requiredRole="project_manager">
+      <ApprovedContractsPage user={user} />
+    </PrivateRoute>
+  } 
+/>
+
+  
 {/* <Route path="/archive" element={
   user ? (
     <Layout>

@@ -4467,16 +4467,14 @@ async def director_final_approval(
         elif decision == "reject":
             contract.status = "rejected"
         
-        # Update comprehensive data with director's decision
-        if not contract.comprehensive_data:
-            contract.comprehensive_data = {}
-        
-        # Store director approval data
+        # ✅ CRITICAL FIX: Store COMPLETE director information
         director_approval = {
             "final_decision": decision,
             "approval_comments": comments,
             "approved_by": current_user.id,
             "approved_by_name": current_user.full_name or current_user.username,
+            "approved_by_email": current_user.email,
+            "approved_by_role": current_user.role,
             "approved_at": datetime.utcnow().isoformat(),
             "risk_accepted": risk_accepted,
             "business_sign_off": business_sign_off,
@@ -4484,6 +4482,10 @@ async def director_final_approval(
             "lock_timestamp": datetime.utcnow().isoformat() if lock_contract else None,
             "director_assigned_to_contract": True
         }
+        
+        # ✅ FIX: Ensure comprehensive_data exists and add director approval
+        if not contract.comprehensive_data:
+            contract.comprehensive_data = {}
         
         contract.comprehensive_data["director_final_approval"] = director_approval
         
@@ -4499,6 +4501,7 @@ async def director_final_approval(
             "action": "director_final_approval",
             "by_user_id": current_user.id,
             "by_user_name": current_user.full_name or current_user.username,
+            "by_user_email": current_user.email,
             "timestamp": datetime.utcnow().isoformat(),
             "decision": decision,
             "comments": comments,
@@ -4511,6 +4514,22 @@ async def director_final_approval(
         })
         
         contract.comprehensive_data["approval_history"] = approval_history
+        
+        # ✅ Also update the contract's review_comments field for easy access
+        if contract.review_comments:
+            review_comments_text = contract.review_comments
+        else:
+            review_comments_text = ""
+        
+        review_comments_text += f"\n\nDIRECTOR APPROVAL: {decision.upper()}\n"
+        review_comments_text += f"Approved by: {current_user.full_name or current_user.username}\n"
+        review_comments_text += f"Approved at: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}\n"
+        review_comments_text += f"Comments: {comments}\n"
+        review_comments_text += f"Risk Accepted: {'Yes' if risk_accepted else 'No'}\n"
+        review_comments_text += f"Business Sign-off: {'Yes' if business_sign_off else 'No'}\n"
+        review_comments_text += f"Contract Locked: {'Yes' if lock_contract else 'No'}"
+        
+        contract.review_comments = review_comments_text
         
         # ✅ CRITICAL FIX: Send notifications ONLY to assigned Program Managers
         # Get the Program Manager(s) who reviewed this contract
@@ -4564,22 +4583,25 @@ async def director_final_approval(
                     
             print(f"✅ Sent notifications to {len(all_pgm_users)} program managers")
         
-        # Also notify the Project Manager (contract creator)
+        # ✅ CRITICAL: Also notify the Project Manager (contract creator)
         if contract.created_by:
-            pm_notification = UserNotification(
-                user_id=contract.created_by,
-                notification_type="contract_finalized",
-                title=f"Contract {decision.capitalize()}d by Director",
-                message=f"Your contract '{contract.grant_name or contract.filename}' has been {decision}d by Director {current_user.full_name or current_user.username}.",
-                contract_id=contract_id,
-                is_read=False,
-                created_at=datetime.utcnow()
-            )
-            db.add(pm_notification)
+            pm_user = db.query(User).filter(User.id == contract.created_by).first()
+            if pm_user and pm_user.is_active:
+                pm_notification = UserNotification(
+                    user_id=contract.created_by,
+                    notification_type="contract_finalized",
+                    title=f"Contract {decision.capitalize()}d by Director",
+                    message=f"Your contract '{contract.grant_name or contract.filename}' has been {decision}d by Director {current_user.full_name or current_user.username}.",
+                    contract_id=contract_id,
+                    is_read=False,
+                    created_at=datetime.utcnow()
+                )
+                db.add(pm_notification)
+                print(f"✅ Sent notification to Project Manager: {pm_user.username}")
         
         db.commit()
         
-        # Log activity
+        # ✅ Log activity
         log_activity(
             db, 
             current_user.id, 
@@ -4616,6 +4638,41 @@ async def director_final_approval(
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to process final approval: {str(e)}")
+
+
+@app.get("/api/contracts/project-manager/approved-count")
+async def get_project_manager_approved_count(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get count of approved contracts for the current Project Manager"""
+    if current_user.role != "project_manager":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only Project Managers can view their approved contracts count"
+        )
+    
+    try:
+        # Get all contracts where this user is the creator
+        approved_contracts = db.query(models.Contract).filter(
+            models.Contract.created_by == current_user.id,
+            models.Contract.status == "approved"
+        ).count()
+        
+        return {
+            "approved_count": approved_contracts,
+            "project_manager_id": current_user.id,
+            "project_manager_name": current_user.full_name or current_user.username
+        }
+        
+    except Exception as e:
+        print(f"ERROR in get_project_manager_approved_count: {str(e)}")
+        return {
+            "approved_count": 0,
+            "project_manager_id": current_user.id,
+            "error": str(e)
+        }
+
 
 
 
