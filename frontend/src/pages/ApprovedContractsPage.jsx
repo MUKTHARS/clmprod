@@ -513,8 +513,8 @@ const renderContractRow = (contract, index) => {
           <div className="publish-modal">
             <div className="modal-header">
               <h3>
-                <Send size={20} />
-                Finalize & Publish Contract
+                {/* <Send size={20} /> */}
+                Publish Contract
               </h3>
               <button 
                 className="modal-close"
@@ -557,22 +557,8 @@ const renderContractRow = (contract, index) => {
                   placeholder="Add any notes about this final publication..."
                   rows={4}
                 />
-                <p className="notes-help">
-                  These notes will be recorded in the contract history
-                </p>
               </div>
 
-              <div className="warning-section">
-                <AlertCircle size={16} />
-                <div className="warning-content">
-                  <strong>Important:</strong>
-                  <ul>
-                    <li>This will finalize the contract and mark it as published</li>
-                    <li>The contract will be locked for further changes</li>
-                    <li>This action cannot be undone</li>
-                  </ul>
-                </div>
-              </div>
             </div>
 
             <div className="modal-footer">
