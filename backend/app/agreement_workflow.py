@@ -629,7 +629,7 @@ async def publish_agreement(
     db: Session = Depends(get_db)
 ):
     """
-    Publish a draft agreement (optionally submit for review)
+    Publish a draft agreement (optionally submit for review or publish directly)
     """
     if current_user.role != "project_manager":
         raise HTTPException(
@@ -654,16 +654,100 @@ async def publish_agreement(
         if publish_data.notes:
             contract.notes = publish_data.notes
         
-        # If publishing to review, update status
-        if publish_data.publish_to_review:
+        # ✅ CRITICAL CHANGE: Handle both publishing options
+        if publish_data.publish_directly:
+            # Direct publishing - skip review and go straight to approved/published status
+            contract.status = "approved"  # Or "published" depending on your preference
+            action_type = "direct_publish"
+            message = "Agreement published and approved directly"
+            
+            # Create a version snapshot for direct publish
+            from app.models import ContractVersion
+            
+            last_version = db.query(ContractVersion).filter(
+                ContractVersion.contract_id == contract_id
+            ).order_by(ContractVersion.version_number.desc()).first()
+            
+            version_number = (last_version.version_number + 1) if last_version else 1
+            
+            version_data = {
+                "direct_publish_data": {
+                    "published_at": datetime.utcnow().isoformat(),
+                    "published_by": current_user.id,
+                    "published_by_name": current_user.full_name or current_user.username,
+                    "notes": publish_data.notes
+                },
+                "contract_data": contract.comprehensive_data or {},
+                "basic_data": {
+                    "grant_name": contract.grant_name,
+                    "contract_number": contract.contract_number,
+                    "grantor": contract.grantor,
+                    "grantee": contract.grantee,
+                    "total_amount": contract.total_amount,
+                    "start_date": contract.start_date,
+                    "end_date": contract.end_date,
+                    "purpose": contract.purpose,
+                    "status": contract.status
+                }
+            }
+            
+            version = ContractVersion(
+                contract_id=contract_id,
+                version_number=version_number,
+                created_by=current_user.id,
+                contract_data=version_data,
+                changes_description=f"Directly published: {publish_data.notes}" if publish_data.notes else "Directly published without review",
+                version_type="direct_publish"
+            )
+            
+            db.add(version)
+            
+            # Update contract version
+            contract.version = version_number
+            
+            # Add to comprehensive data history
+            if not contract.comprehensive_data:
+                contract.comprehensive_data = {}
+            
+            publish_history = contract.comprehensive_data.get("publish_history", [])
+            publish_history.append({
+                "action": "directly_published",
+                "by_user_id": current_user.id,
+                "by_user_name": current_user.full_name or current_user.username,
+                "timestamp": datetime.utcnow().isoformat(),
+                "notes": publish_data.notes,
+                "version_number": version_number,
+                "direct_publish": True,
+                "status_before": "draft",
+                "status_after": contract.status
+            })
+            
+            contract.comprehensive_data["publish_history"] = publish_history
+            
+            # Lock the contract after direct publication
+            contract.comprehensive_data["finalization"] = {
+                "finalized_at": datetime.utcnow().isoformat(),
+                "finalized_by": current_user.id,
+                "finalized_by_name": current_user.full_name or current_user.username,
+                "locked": True,
+                "direct_publish": True
+            }
+            
+            # No notifications needed for direct publish since it skips review
+            
+        elif publish_data.publish_to_review:
+            # Original logic - publish to review
             contract.status = "under_review"
+            action_type = "publish_for_review"
+            message = "Agreement published and submitted for review"
             
             from app.notification_service import NotificationService
             from app.auth_models import User as AuthUser
             
+            # ✅ FIX: Get ALL assigned Program Managers
             all_assigned_users = []
-
-            # Get assigned Program Managers from database columns
+            
+            # Get assigned Program Managers
             if contract.assigned_pgm_users:
                 if isinstance(contract.assigned_pgm_users, list):
                     all_assigned_users.extend(contract.assigned_pgm_users)
@@ -676,7 +760,7 @@ async def publish_agreement(
                     except:
                         pgm_ids = [int(id_str.strip()) for id_str in contract.assigned_pgm_users.split(',') if id_str.strip().isdigit()]
                         all_assigned_users.extend(pgm_ids)
-
+            
             # Also check comprehensive_data for assignments
             if contract.comprehensive_data:
                 if "assigned_users" in contract.comprehensive_data:
@@ -687,12 +771,12 @@ async def publish_agreement(
                     metadata = contract.comprehensive_data["agreement_metadata"]
                     if metadata and "assigned_pgm_users" in metadata:
                         all_assigned_users.extend(metadata["assigned_pgm_users"])
-
-            # Remove duplicates
+            
+            # Remove duplicates and ensure they are Program Managers
             all_assigned_users = list(set(all_assigned_users))
-
-            print(f"DEBUG: Publishing contract {contract_id} - All assigned Program Managers: {all_assigned_users}")
-
+            
+            print(f"DEBUG: Publishing contract {contract_id} - Assigned Program Managers: {all_assigned_users}")
+            
             # Filter to only include active Program Managers
             valid_program_managers = []
             for user_id in all_assigned_users:
@@ -703,18 +787,15 @@ async def publish_agreement(
                 ).first()
                 if user:
                     valid_program_managers.append(user_id)
-
-            # Send notifications to ALL assigned Program Managers
+            
             if valid_program_managers:
-                # Create individual notifications for each Program Manager
-                for pgm_user_id in valid_program_managers:
-                    NotificationService.create_publish_notification(
-                        db=db,
-                        contract_id=contract_id,
-                        contract_name=contract.grant_name or contract.filename,
-                        published_by_user=current_user,
-                        assigned_users=[pgm_user_id]  # Send to individual user
-                    )
+                NotificationService.create_publish_notification(
+                    db=db,
+                    contract_id=contract_id,
+                    contract_name=contract.grant_name or contract.filename,
+                    published_by_user=current_user,
+                    assigned_users=valid_program_managers
+                )
                 print(f"DEBUG: Notifications sent to {len(valid_program_managers)} Program Managers")
 
             # Create a version snapshot
@@ -752,8 +833,8 @@ async def publish_agreement(
                 version_number=version_number,
                 created_by=current_user.id,
                 contract_data=version_data,
-                changes_description=f"Published agreement: {publish_data.notes}" if publish_data.notes else "Published agreement",
-                version_type="publish"
+                changes_description=f"Published agreement for review: {publish_data.notes}" if publish_data.notes else "Published agreement for review",
+                version_type="publish_for_review"
             )
             
             db.add(version)
@@ -767,14 +848,38 @@ async def publish_agreement(
             
             publish_history = contract.comprehensive_data.get("publish_history", [])
             publish_history.append({
-                "action": "published",
+                "action": "published_for_review",
                 "by_user_id": current_user.id,
                 "by_user_name": current_user.full_name or current_user.username,
                 "timestamp": datetime.utcnow().isoformat(),
                 "notes": publish_data.notes,
-                "published_to_review": publish_data.publish_to_review,
+                "published_to_review": True,
                 "version_number": version_number,
                 "notified_program_managers": valid_program_managers
+            })
+            
+            contract.comprehensive_data["publish_history"] = publish_history
+            
+        else:
+            # If neither option selected, default to direct publishing
+            contract.status = "approved"
+            action_type = "direct_publish"
+            message = "Agreement published and approved directly"
+            
+            # Add to comprehensive data history
+            if not contract.comprehensive_data:
+                contract.comprehensive_data = {}
+            
+            publish_history = contract.comprehensive_data.get("publish_history", [])
+            publish_history.append({
+                "action": "published_directly",
+                "by_user_id": current_user.id,
+                "by_user_name": current_user.full_name or current_user.username,
+                "timestamp": datetime.utcnow().isoformat(),
+                "notes": publish_data.notes,
+                "direct_publish": True,
+                "status_before": "draft",
+                "status_after": contract.status
             })
             
             contract.comprehensive_data["publish_history"] = publish_history
@@ -782,7 +887,6 @@ async def publish_agreement(
         db.commit()
         
         # Log activity
-        action_type = "publish_for_review" if publish_data.publish_to_review else "publish_draft"
         log_activity(
             db,
             current_user.id,
@@ -791,19 +895,20 @@ async def publish_agreement(
             details={
                 "contract_id": contract_id,
                 "publish_to_review": publish_data.publish_to_review,
+                "publish_directly": publish_data.publish_directly,
                 "notes": publish_data.notes,
-                "notified_program_managers_count": len(valid_program_managers) if publish_data.publish_to_review else 0
+                "notified_program_managers_count": len(valid_program_managers) if publish_data.publish_to_review and 'valid_program_managers' in locals() else 0,
+                "new_status": contract.status
             }
         )
-        
-        message = "Agreement published and submitted for review" if publish_data.publish_to_review else "Agreement published"
         
         return {
             "message": message,
             "contract_id": contract_id,
             "status": contract.status,
             "published_at": contract.published_at.isoformat() if contract.published_at else None,
-            "program_managers_notified": len(valid_program_managers) if publish_data.publish_to_review else 0
+            "version_number": contract.version,
+            "direct_publish": publish_data.publish_directly or not publish_data.publish_to_review
         }
         
     except Exception as e:

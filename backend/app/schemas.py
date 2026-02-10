@@ -152,7 +152,11 @@ class UpdateDraftRequest(BaseModel):
     
 class PublishAgreementRequest(BaseModel):
     notes: Optional[str] = None
-    publish_to_review: Optional[bool] = True  # If True, publishes and submits for review
+    publish_to_review: bool = True  # Default to true for backward compatibility
+    publish_directly: bool = False  # New option for direct publishing
+    
+    class Config:
+        from_attributes = True
 
 class ContractResponseEnhanced(ContractResponse):
     # Add new fields to response
