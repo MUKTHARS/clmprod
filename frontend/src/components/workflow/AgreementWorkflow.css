@@ -584,7 +584,7 @@
 
 /* For automatic publish button */
 .workflow-direct-publish-btn::after {
-  content: " (Auto)";
+  content: "";
   font-size: 12px;
   opacity: 0.9;
 }

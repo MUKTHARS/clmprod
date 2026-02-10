@@ -813,52 +813,7 @@ const handlePublishAgreement = async (publishToReview = true) => {
       />
     </div>
 
-    {/* Add Publish Options Section */}
-    <div className="publish-options">
-      <h5>Publishing Options</h5>
-<div className="publish-option">
-  <input
-    type="radio"
-    id="publish-direct"
-    name="publishOption"
-    onChange={() => {}}
-  />
-  <label htmlFor="publish-direct">
-    <div className="option-header">
-      <span className="option-title">Publish Directly (Automatic)</span>
-      <span className="option-badge warning">Skip Review</span>
-    </div>
-    <p className="option-description">
-      <strong>Automatically publish this agreement immediately without review.</strong>
-      The agreement will be marked as "published" and locked for further changes.
-      Use this for simple agreements or when formal review is not required.
-    </p>
-    <div className="option-features">
-      <span className="feature-tag">✓ Automatic publishing</span>
-      <span className="feature-tag">✓ No review required</span>
-      <span className="feature-tag">✓ Immediate availability</span>
-    </div>
-  </label>
-</div>
-      <div className="publish-option">
-        <input
-          type="radio"
-          id="publish-direct"
-          name="publishOption"
-          onChange={() => {}}
-        />
-        <label htmlFor="publish-direct">
-          <div className="option-header">
-            <span className="option-title">Publish Directly</span>
-            <span className="option-badge warning">Skip Review</span>
-          </div>
-          <p className="option-description">
-            Publish and approve this agreement immediately without review.
-            Use this for simple agreements or when review is not required.
-          </p>
-        </label>
-      </div>
-    </div>
+
   </div>
 )}
       </div>
@@ -895,20 +850,20 @@ const handlePublishAgreement = async (publishToReview = true) => {
       </button>
       
       {/* Add both publish options */}
-      <button 
+      {/* <button 
         className="workflow-btn-primary workflow-publish-btn" 
         onClick={() => handlePublishAgreement(true)}
         disabled={loading}
       >
         {loading ? <Loader2 size={16} className="workflow-spinner" /> : 'Publish & Review'}
-      </button>
+      </button> */}
       
       <button 
         className="workflow-btn-primary workflow-direct-publish-btn" 
         onClick={() => handlePublishAgreement(false)}
         disabled={loading}
       >
-        {loading ? <Loader2 size={16} className="workflow-spinner" /> : 'Publish Directly'}
+        {loading ? <Loader2 size={16} className="workflow-spinner" /> : 'Publish'}
       </button>
     </div>
   )}
