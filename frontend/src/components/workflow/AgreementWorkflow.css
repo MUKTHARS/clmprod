@@ -553,3 +553,38 @@
   font-size: 14px;
   line-height: 1.5;
 }
+
+/* In AgreementWorkflow.css - add feature tags */
+
+.option-features {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.feature-tag {
+  background: #f3f4f6;
+  color: #4b5563;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.workflow-direct-publish-btn {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  border: 1px solid #15803d;
+  color: white;
+}
+
+.workflow-direct-publish-btn:hover {
+  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+}
+
+/* For automatic publish button */
+.workflow-direct-publish-btn::after {
+  content: " (Auto)";
+  font-size: 12px;
+  opacity: 0.9;
+}

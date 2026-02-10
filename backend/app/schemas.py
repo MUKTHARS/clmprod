@@ -152,9 +152,9 @@ class UpdateDraftRequest(BaseModel):
     
 class PublishAgreementRequest(BaseModel):
     notes: Optional[str] = None
-    publish_to_review: bool = True  # Default to true for backward compatibility
-    publish_directly: bool = False  # New option for direct publishing
-    
+    publish_to_review: bool = True
+    publish_directly: bool = False  
+    direct_publish_status: Optional[str] = "published" 
     class Config:
         from_attributes = True
 

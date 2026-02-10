@@ -402,7 +402,7 @@ const handlePublishAgreement = async (publishToReview = true) => {
   // Ask for confirmation with appropriate message
   const confirmMessage = publishToReview 
     ? "Are you sure you want to publish and submit for review?"
-    : "Are you sure you want to publish this agreement directly without review?";
+    : "Are you sure you want to publish this agreement directly WITHOUT REVIEW? This will automatically publish the agreement.";
   
   if (!confirm(confirmMessage)) {
     return;
@@ -412,16 +412,22 @@ const handlePublishAgreement = async (publishToReview = true) => {
   try {
     const token = localStorage.getItem('token');
     
+    // Use the original endpoint for review publishing
+    // Use the new endpoint for direct publishing
+    const endpoint = publishToReview 
+      ? `${API_CONFIG.BASE_URL}/api/agreements/drafts/${contract.id}/publish`
+      : `${API_CONFIG.BASE_URL}/api/agreements/drafts/${contract.id}/publish-directly`;
+    
     const publishData = {
       notes: formData.notes || '',
       publish_to_review: publishToReview,
-      publish_directly: !publishToReview  // Opposite of publish_to_review
+      publish_directly: !publishToReview
     };
 
-    console.log('Publishing with data:', publishData);
+    console.log(`Publishing ${publishToReview ? 'with review' : 'directly'} to:`, endpoint);
 
     const response = await fetch(
-      `${API_CONFIG.BASE_URL}/api/agreements/drafts/${contract.id}/publish`,
+      endpoint,
       {
         method: 'POST',
         headers: {
@@ -810,25 +816,30 @@ const handlePublishAgreement = async (publishToReview = true) => {
     {/* Add Publish Options Section */}
     <div className="publish-options">
       <h5>Publishing Options</h5>
-      <div className="publish-option">
-        <input
-          type="radio"
-          id="publish-review"
-          name="publishOption"
-          defaultChecked
-          onChange={() => {}}
-        />
-        <label htmlFor="publish-review">
-          <div className="option-header">
-            <span className="option-title">Submit for Review</span>
-            <span className="option-badge">Recommended</span>
-          </div>
-          <p className="option-description">
-            Publish this agreement and send it to assigned Program Managers for review.
-            This follows the standard workflow.
-          </p>
-        </label>
-      </div>
+<div className="publish-option">
+  <input
+    type="radio"
+    id="publish-direct"
+    name="publishOption"
+    onChange={() => {}}
+  />
+  <label htmlFor="publish-direct">
+    <div className="option-header">
+      <span className="option-title">Publish Directly (Automatic)</span>
+      <span className="option-badge warning">Skip Review</span>
+    </div>
+    <p className="option-description">
+      <strong>Automatically publish this agreement immediately without review.</strong>
+      The agreement will be marked as "published" and locked for further changes.
+      Use this for simple agreements or when formal review is not required.
+    </p>
+    <div className="option-features">
+      <span className="feature-tag">✓ Automatic publishing</span>
+      <span className="feature-tag">✓ No review required</span>
+      <span className="feature-tag">✓ Immediate availability</span>
+    </div>
+  </label>
+</div>
       <div className="publish-option">
         <input
           type="radio"
