@@ -737,14 +737,7 @@ const handleViewContract = (draftId) => {
     <div className="draft-management-page">
       <div className="draft-header">
         <div className="header-left">
-          <h1>
-            {activeTab === 'my-drafts' ? 'My Drafts' : 'Drafts Assigned to Me'}
-          </h1>
-          <p className="page-subtitle">
-            {activeTab === 'my-drafts' 
-              ? 'Manage your draft agreements before publishing' 
-              : 'Draft agreements assigned to you for review or collaboration'}
-          </p>
+         
           
           {activeTab === 'assigned-drafts' && assignmentStats && (
             <div className="assignment-stats">
@@ -782,20 +775,8 @@ const handleViewContract = (draftId) => {
           )}
         </div>
         <div className="header-actions">
-          <button 
-            className="btn-primary"
-            onClick={() => navigate('/upload')}
-          >
-            <Plus size={16} />
-            Upload New
-          </button>
-          <button 
-            className="btn-secondary"
-            onClick={fetchDrafts}
-            disabled={loading}
-          >
-            <RefreshCw size={16} className={loading ? 'spinning' : ''} />
-          </button>
+
+          
         </div>
       </div>
 

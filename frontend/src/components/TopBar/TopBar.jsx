@@ -21,7 +21,13 @@ import {
   Wallet,
   PieChart,
   BookOpen,
-  HelpCircle
+  HelpCircle,
+  Upload, 
+  FileCheck, 
+  Key, 
+  FolderOpen,
+  Archive, 
+  UserCheck 
 } from 'lucide-react';
 import './TopBar.css';
 
@@ -33,35 +39,51 @@ const TopBar = ({ user = null }) => {
   const [pageTitle, setPageTitle] = useState('Dashboard');
   const [pageIcon, setPageIcon] = useState(<Home size={20} />);
 
-  // Function to get page title based on current route
-  const getPageTitle = (pathname) => {
-    const routes = {
-      '/dashboard': { title: 'Dashboard', icon: <Home size={20} /> },
-      '/contracts': { title: 'Grants', icon: <FileText size={20} /> },
-      '/risk': { title: 'Risk Analysis', icon: <ShieldCheck size={20} /> },
-      '/compliance': { title: 'Compliance', icon: <Shield size={20} /> },
-      '/grants': { title: 'Grants', icon: <Wallet size={20} /> },
-      '/reports': { title: 'Reports', icon: <FileBarChart size={20} /> },
-      '/analytics': { title: 'Analytics', icon: <PieChart size={20} /> },
-      '/organizations': { title: 'Organizations', icon: <Building size={20} /> },
-      '/users': { title: 'Users', icon: <Users size={20} /> },
-      '/knowledge': { title: 'Knowledge Base', icon: <BookOpen size={20} /> },
-      '/help': { title: 'Help & Support', icon: <HelpCircle size={20} /> },
-      '/settings': { title: 'Settings', icon: <Settings size={20} /> },
-      '/upload': { title: 'Upload', icon: <FileText size={20} /> },
-      '/copilot': { title: 'AI Copilot', icon: <Sparkles size={20} /> },
-    };
 
-    // Find the matching route
-    for (const [route, info] of Object.entries(routes)) {
-      if (pathname === route || pathname.startsWith(`${route}/`)) {
-        return info;
-      }
-    }
-
-    // Default fallback
-    return { title: 'Dashboard', icon: <Home size={20} /> };
+const getPageTitle = (pathname) => {
+  const routes = {
+    '/dashboard': { title: 'Dashboard', icon: <Home size={20} /> },
+    '/contracts': { title: 'Grants', icon: <FileText size={20} /> },
+    '/upload': { title: 'Upload', icon: <Upload size={20} /> }, // Make sure to import Upload icon
+    '/review': { title: 'Review', icon: <FileCheck size={20} /> }, // Import FileCheck
+    '/program-manager/director-decisions': { title: 'Director Decisions', icon: <Shield size={20} /> },
+    '/approvals': { title: 'Approvals', icon: <Shield size={20} /> },
+    '/users': { title: 'Users', icon: <Users size={20} /> },
+    '/admin': { title: 'Admin Portal', icon: <Key size={20} /> }, // Import Key
+    '/drafts/my': { title: 'My Drafts', icon: <FolderOpen size={20} /> },
+    '/drafts/assigned': { title: 'Assigned to Me', icon: <FolderOpen size={20} /> },
+    '/archive': { title: 'Archive', icon: <Archive size={20} /> }, // Import Archive
+    '/approved-contracts': { title: 'Approved', icon: <CheckCircle size={20} /> },
+    '/agreements/assigned': { title: 'Assigned to Me', icon: <UserCheck size={20} /> }, // Import UserCheck
+    '/agreements/assigned-by-me': { title: 'Assigned by Me', icon: <UserCheck size={20} /> },
+    '/copilot': { title: 'AI Copilot', icon: <Sparkles size={20} /> },
+    '/settings': { title: 'Settings', icon: <Settings size={20} /> },
   };
+
+  // Find the matching route (checking for exact matches or startsWith)
+  for (const [route, info] of Object.entries(routes)) {
+    if (pathname === route || pathname.startsWith(`${route}/`)) {
+      return info;
+    }
+  }
+
+  // Default fallback - extract from pathname if possible
+  const pathSegments = pathname.split('/').filter(seg => seg);
+  if (pathSegments.length > 0) {
+    // Format: "My Drafts" instead of "my-drafts"
+    const formattedTitle = pathSegments[pathSegments.length - 1]
+      .split('-')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+    
+    return { 
+      title: formattedTitle, 
+      icon: <FileText size={20} /> // Default icon
+    };
+  }
+
+  return { title: 'Dashboard', icon: <Home size={20} /> };
+};
 
   // Update page title when route changes
   useEffect(() => {

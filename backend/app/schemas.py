@@ -178,3 +178,20 @@ class ContractResponseEnhanced(ContractResponse):
     
     class Config:
         from_attributes = True
+
+class ArchiveRequest(BaseModel):
+    reason: str
+    notes: Optional[str] = None
+    
+    class Config:
+        from_attributes = True
+
+class ArchiveResponse(BaseModel):
+    message: str
+    contract_id: int
+    status: str
+    archived_at: Optional[str] = None
+    version_number: Optional[int] = None
+    
+    class Config:
+        from_attributes = True

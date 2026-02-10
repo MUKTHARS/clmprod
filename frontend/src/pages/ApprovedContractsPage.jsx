@@ -408,20 +408,10 @@ const renderContractRow = (contract, index) => {
     <div className="approved-contracts-page">
       <div className="contracts-header">
         <div className="header-left">
-          <h1>
-            {/* <CheckCircle size={24} /> */}
-            Approved Contracts
-          </h1>
           
         </div>
         <div className="header-actions">
-          <button 
-            className="btn-secondary"
-            onClick={fetchApprovedContracts}
-            disabled={loading}
-          >
-            <RefreshCw size={16} className={loading ? 'spinning' : ''} />
-          </button>
+
         </div>
       </div>
 
