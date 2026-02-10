@@ -409,12 +409,10 @@ const renderContractRow = (contract, index) => {
       <div className="contracts-header">
         <div className="header-left">
           <h1>
-            <CheckCircle size={24} />
+            {/* <CheckCircle size={24} /> */}
             Approved Contracts
           </h1>
-          <p className="page-subtitle">
-            Contracts approved by Director - Ready for final publishing
-          </p>
+          
         </div>
         <div className="header-actions">
           <button 

@@ -882,3 +882,130 @@
 .director-mt-3 { margin-top: 0.75rem; }
 .director-mt-4 { margin-top: 1rem; }
 .director-mt-6 { margin-top: 1.5rem; }
+
+
+
+/* Tabs */
+.director-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 0.5rem;
+}
+
+.director-tab {
+  padding: 0.75rem 1.5rem;
+  background: none;
+  border: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #6b7280;
+  cursor: pointer;
+  border-radius: 6px 6px 0 0;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.director-tab:hover {
+  background: #f9fafb;
+  color: #374151;
+}
+
+.director-tab.active {
+  color: #3b82f6;
+  font-weight: 600;
+}
+
+.director-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: -0.5rem;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #3b82f6;
+  border-radius: 1px;
+}
+
+/* Approved Badge */
+.director-approved-badge {
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: white;
+  text-transform: uppercase;
+}
+
+/* Approved Button */
+.director-approved-btn {
+  padding: 0.5rem 1rem;
+  background: #16a34a;
+  border: 1px solid #16a34a;
+  border-radius: 6px;
+  color: white;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: default;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Adjust contract card for approved state */
+.director-contract-card.director-approved {
+  opacity: 0.9;
+}
+
+.director-contract-card.director-approved:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+/* Tab-specific empty states */
+.director-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  text-align: center;
+}
+
+.director-empty-state svg {
+  color: #9ca3af;
+  margin-bottom: 1rem;
+}
+
+.director-empty-state h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 0.5rem;
+}
+
+.director-empty-state p {
+  color: #6b7280;
+  font-size: 0.875rem;
+  max-width: 300px;
+  margin: 0;
+}
+
+/* Responsive adjustments for tabs */
+@media (max-width: 640px) {
+  .director-tabs {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  
+  .director-tab {
+    width: 100%;
+    text-align: center;
+    padding: 0.5rem;
+  }
+  
+  .director-tab.active::after {
+    display: none;
+  }
+}

@@ -203,10 +203,10 @@ function Review() {
 
       {/* Contracts Section - Same as Dashboard */}
       <div className="recent-contracts">
-        <div className="section-header">
+        {/* <div className="section-header">
           <h2>Contracts for Review</h2>
           <p className="section-subtitle">Review and provide feedback on submitted contracts</p>
-        </div>
+        </div> */}
 
         {/* Controls */}
       {/* Controls */}

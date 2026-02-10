@@ -37,7 +37,7 @@ const TopBar = ({ user = null }) => {
   const getPageTitle = (pathname) => {
     const routes = {
       '/dashboard': { title: 'Dashboard', icon: <Home size={20} /> },
-      '/contracts': { title: 'Contracts', icon: <FileText size={20} /> },
+      '/contracts': { title: 'Grants', icon: <FileText size={20} /> },
       '/risk': { title: 'Risk Analysis', icon: <ShieldCheck size={20} /> },
       '/compliance': { title: 'Compliance', icon: <Shield size={20} /> },
       '/grants': { title: 'Grants', icon: <Wallet size={20} /> },

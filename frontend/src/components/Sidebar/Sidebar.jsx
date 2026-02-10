@@ -36,7 +36,7 @@ const Sidebar = ({ user, onLogout }) => {
   const [badgeCounts, setBadgeCounts] = useState({});
   const [isDraftSubmenuActive, setIsDraftSubmenuActive] = useState(false);
   const [isAssignedSubmenuActive, setIsAssignedSubmenuActive] = useState(false);
-
+  
   // Memoize the getMenuItems function to prevent recreation on every render
   const getMenuItems = useCallback(() => {
     const userRole = user?.role || '';
@@ -282,17 +282,18 @@ const getApprovedCount = useCallback(async () => {
   
   return null;
 }, [user?.id, user?.role]);
+
+
 const getPendingCounts = useCallback(async (itemId) => {
   if (!itemId) return null;
   
   const token = localStorage.getItem('token');
   
   try {
-    // Use HTTP instead of HTTPS for local development to avoid SSL errors
     const baseUrl = API_CONFIG.BASE_URL;
     
     if (itemId === 'review') {
-      // For Program Manager review tab
+      // For Program Manager review tab - only count UNDER_REVIEW contracts
       const response = await fetch(`${baseUrl}/api/contracts/status/under_review`, {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -300,12 +301,15 @@ const getPendingCounts = useCallback(async (itemId) => {
       });
       if (response.ok) {
         const data = await response.json();
-        return data.length;
+        // Filter out any contracts that might be in approved status
+        const pendingOnly = data.filter(contract => contract.status === "under_review");
+        return pendingOnly.length;
       }
     }
     
     if (itemId === 'director-decisions') {
-      // For Program Manager to see Director decisions
+      // For Program Manager to see Director decisions - show both approved and rejected
+      // This is correct as it shows final decisions
       const response = await fetch(`${baseUrl}/api/contracts/program-manager/reviewed-by-director?limit=1`, {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -318,7 +322,7 @@ const getPendingCounts = useCallback(async (itemId) => {
       }
     }
     
-    // ✅ FIX: For Director approvals tab - only count assigned contracts
+    // ✅ FIX: For Director approvals tab - only count assigned contracts IN REVIEWED STATUS
     if (itemId === 'approvals') {
       // Get the user role
       const userStr = localStorage.getItem('user');
@@ -327,8 +331,8 @@ const getPendingCounts = useCallback(async (itemId) => {
       const user = JSON.parse(userStr);
       
       if (user.role === 'director') {
-        // Use the new endpoint for Directors
-        const response = await fetch(`${baseUrl}/api/contracts/director/assigned-approvals-count`, {
+        // Get all assigned contracts
+        const response = await fetch(`${baseUrl}/api/contracts/director/dashboard`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -337,18 +341,9 @@ const getPendingCounts = useCallback(async (itemId) => {
         
         if (response.ok) {
           const data = await response.json();
-          return data.assigned_approvals_count || 0;
-        }
-      } else {
-        // For other roles (if needed), use the old endpoint
-        const response = await fetch(`${baseUrl}/api/contracts/status/reviewed`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        if (response.ok) {
-          const data = await response.json();
-          return data.length;
+          // Count only contracts in 'reviewed' status (pending approval)
+          const pendingApprovals = data.filter(contract => contract.status === "reviewed");
+          return pendingApprovals.length;
         }
       }
     }
@@ -359,6 +354,7 @@ const getPendingCounts = useCallback(async (itemId) => {
   
   return null;
 }, []);
+
 // Add to your useEffect that fetches badge counts
 useEffect(() => {
   const fetchAllBadgeCounts = async () => {

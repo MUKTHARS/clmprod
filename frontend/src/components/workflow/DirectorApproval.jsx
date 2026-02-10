@@ -26,13 +26,16 @@ import {
   Flag,
   ChevronDown,
   ShieldCheck,
-  X
+  X,
+  Archive,
+  CheckSquare
 } from 'lucide-react';
 import API_CONFIG from '../../config';
 import './DirectorApproval.css';
 
 function DirectorApproval() {
   const [contracts, setContracts] = useState([]);
+  const [approvedContracts, setApprovedContracts] = useState([]);
   const [selectedContract, setSelectedContract] = useState(null);
   const [completeInfo, setCompleteInfo] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -42,7 +45,7 @@ function DirectorApproval() {
   const [lockContract, setLockContract] = useState(false);
   const [riskAccepted, setRiskAccepted] = useState(false);
   const [businessSignOff, setBusinessSignOff] = useState(false);
-  const [activeTab, setActiveTab] = useState('review');
+  const [activeTab, setActiveTab] = useState('pending'); // 'pending' or 'approved'
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState('all');
   const [showFilters, setShowFilters] = useState(false);
@@ -50,10 +53,10 @@ function DirectorApproval() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetchContractsForApproval();
+    fetchAllContracts();
   }, []);
 
-  const fetchContractsForApproval = async () => {
+  const fetchAllContracts = async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
@@ -66,13 +69,21 @@ function DirectorApproval() {
       
       if (response.ok) {
         const data = await response.json();
-        const contractsForApproval = data.filter(contract => 
-          contract.status === "reviewed" || contract.status === "approved"
+        
+        // Separate contracts by status
+        const pendingContracts = data.filter(contract => 
+          contract.status === "reviewed"
         );
-        setContracts(contractsForApproval);
+        
+        const approvedContractsList = data.filter(contract => 
+          contract.status === "approved"
+        );
+        
+        setContracts(pendingContracts);
+        setApprovedContracts(approvedContractsList);
       }
     } catch (error) {
-      console.error('Failed to fetch contracts for approval:', error);
+      console.error('Failed to fetch contracts:', error);
     } finally {
       setLoading(false);
     }
@@ -116,6 +127,9 @@ function DirectorApproval() {
   };
 
   const handleContractSelect = async (contract) => {
+    // Only allow review of pending contracts
+    if (contract.status !== "reviewed") return;
+    
     setSelectedContract(contract);
     setDecision('');
     setComments('');
@@ -123,7 +137,6 @@ function DirectorApproval() {
     setRiskAccepted(false);
     setBusinessSignOff(false);
     setCompleteInfo(null);
-    setActiveTab('review');
     
     await fetchCompleteContractInfo(contract.id);
     setShowApprovalModal(true);
@@ -167,7 +180,10 @@ function DirectorApproval() {
       if (response.ok) {
         const result = await response.json();
         alert(result.message);
-        fetchContractsForApproval();
+        
+        // Refresh all contracts
+        await fetchAllContracts();
+        
         closeApprovalModal();
       } else {
         const error = await response.json();
@@ -232,37 +248,166 @@ function DirectorApproval() {
     }
   };
 
-  const filteredContracts = contracts.filter(contract => {
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'approved': return '#16a34a';
+      case 'reviewed': return '#3b82f6';
+      case 'rejected': return '#dc2626';
+      default: return '#6b7280';
+    }
+  };
+
+  // Filter contracts based on active tab
+  const getFilteredContracts = () => {
+    let contractsToFilter = activeTab === 'pending' ? contracts : approvedContracts;
+    
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();
-      const matchesSearch = 
-        (contract.grant_name && contract.grant_name.toLowerCase().includes(searchLower)) ||
-        (contract.grantor && contract.grantor.toLowerCase().includes(searchLower)) ||
-        (contract.contract_number && contract.contract_number.toLowerCase().includes(searchLower)) ||
-        (contract.forwarded_by && contract.forwarded_by.toLowerCase().includes(searchLower));
-      if (!matchesSearch) return false;
+      contractsToFilter = contractsToFilter.filter(contract => {
+        return (
+          (contract.grant_name && contract.grant_name.toLowerCase().includes(searchLower)) ||
+          (contract.grantor && contract.grantor.toLowerCase().includes(searchLower)) ||
+          (contract.contract_number && contract.contract_number.toLowerCase().includes(searchLower)) ||
+          (contract.forwarded_by && contract.forwarded_by.toLowerCase().includes(searchLower))
+        );
+      });
     }
 
-    if (filter === 'high_priority') {
-      return getPriorityLevel(contract) === 'high';
-    } else if (filter === 'new') {
-      const daysSince = calculateDaysSince(contract.forwarded_at);
-      return daysSince && daysSince <= 1;
+    if (filter === 'high_priority' && activeTab === 'pending') {
+      return contractsToFilter.filter(contract => getPriorityLevel(contract) === 'high');
+    } else if (filter === 'new' && activeTab === 'pending') {
+      return contractsToFilter.filter(contract => {
+        const daysSince = calculateDaysSince(contract.forwarded_at);
+        return daysSince && daysSince <= 1;
+      });
     } else if (filter === 'large_amount') {
-      return (contract.total_amount || 0) > 500000;
+      return contractsToFilter.filter(contract => (contract.total_amount || 0) > 500000);
     }
 
-    return true;
-  });
+    return contractsToFilter;
+  };
+
+  const filteredContracts = getFilteredContracts();
 
   const stats = {
-    total: contracts.length,
+    pending: contracts.length,
+    approved: approvedContracts.length,
     highPriority: contracts.filter(c => getPriorityLevel(c) === 'high').length,
     newToday: contracts.filter(c => {
       const daysSince = calculateDaysSince(c.forwarded_at);
       return daysSince && daysSince <= 1;
     }).length,
-    totalValue: contracts.reduce((sum, c) => sum + (c.total_amount || 0), 0)
+    totalValue: contracts.reduce((sum, c) => sum + (c.total_amount || 0), 0) +
+                approvedContracts.reduce((sum, c) => sum + (c.total_amount || 0), 0)
+  };
+
+  const renderContractCard = (contract, isApproved = false) => {
+    const priority = getPriorityLevel(contract);
+    const daysSince = calculateDaysSince(contract.forwarded_at);
+    const priorityColor = getPriorityColor(priority);
+    
+    return (
+      <div 
+        key={contract.id} 
+        className={`director-contract-card ${selectedContract?.id === contract.id ? 'director-selected' : ''}`}
+        onClick={() => !isApproved ? handleContractSelect(contract) : null}
+        style={{ cursor: isApproved ? 'default' : 'pointer' }}
+      >
+        <div className="director-card-header">
+          <div className="director-contract-status">
+            <div className="director-status-indicator" style={{ 
+              backgroundColor: isApproved ? '#16a34a' : getRecommendationColor(contract.review_recommendation) 
+            }} />
+            <span className="director-status-text">
+              {isApproved ? 'approved' : (contract.review_recommendation || 'pending')}
+            </span>
+          </div>
+          {!isApproved && (
+            <div className="director-priority-badge" style={{ backgroundColor: priorityColor }}>
+              {priority.toUpperCase()}
+            </div>
+          )}
+          {isApproved && (
+            <div className="director-approved-badge" style={{ backgroundColor: '#16a34a', color: 'white' }}>
+              APPROVED
+            </div>
+          )}
+        </div>
+
+        <div className="director-card-content">
+          <div className="director-contract-icon">
+            {isApproved ? <CheckSquare size={20} color="#16a34a" /> : <FileText size={20} />}
+          </div>
+          <h3 className="director-contract-name">
+            {contract.grant_name || contract.filename || 'Unnamed Contract'}
+          </h3>
+          
+          <div className="director-contract-meta">
+            <div className="director-meta-item">
+              <Building size={12} />
+              <span>{contract.grantor || 'No grantor'}</span>
+            </div>
+            <div className="director-meta-item">
+              <User size={12} />
+              <span>Forwarded by: {contract.forwarded_by || 'Unknown'}</span>
+            </div>
+            {daysSince && !isApproved && (
+              <div className="director-meta-item">
+                <Clock size={12} />
+                <span>Waiting: {daysSince} day(s)</span>
+              </div>
+            )}
+            {isApproved && contract.director_decision_comments && (
+              <div className="director-meta-item">
+                <MessageSquare size={12} />
+                <span>Approval notes</span>
+              </div>
+            )}
+          </div>
+
+          <div className="director-financial-info">
+            <div className="director-amount-display">
+              <DollarSign size={14} />
+              <span>{formatCurrency(contract.total_amount)}</span>
+            </div>
+          </div>
+
+          <div className="director-review-summary">
+            {contract.program_manager_review?.review_summary ? (
+              <p className="director-summary-text">
+                {contract.program_manager_review.review_summary.substring(0, 100)}...
+              </p>
+            ) : (
+              <p className="director-no-summary">No review summary provided</p>
+            )}
+          </div>
+        </div>
+
+        <div className="director-card-footer">
+          <button 
+            className="director-view-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`/contracts/${contract.id}`);
+            }}
+          >
+            <Eye size={14} />
+            View Details
+          </button>
+          {!isApproved && (
+            <button className="director-review-btn">
+              Review
+            </button>
+          )}
+          {isApproved && (
+            <button className="director-approved-btn" style={{ backgroundColor: '#16a34a' }}>
+              <CheckCircle size={14} />
+              Approved
+            </button>
+          )}
+        </div>
+      </div>
+    );
   };
 
   if (loading && !selectedContract) {
@@ -270,8 +415,8 @@ function DirectorApproval() {
       <div className="director-loading">
         <div className="director-loading-content">
           <Loader2 size={48} className="director-spinning" />
-          <h3>Loading Contracts for Approval</h3>
-          <p>Fetching contracts that require final approval...</p>
+          <h3>Loading Contracts</h3>
+          <p>Fetching your assigned contracts...</p>
         </div>
       </div>
     );
@@ -282,15 +427,15 @@ function DirectorApproval() {
       {/* Header */}
       <div className="director-header">
         <div className="director-header-left">
-          <h1>Director Approval Dashboard</h1>
+          <h1>Director Dashboard</h1>
           <p className="director-subtitle">
-            Review and provide final approval for contracts forwarded by Program Managers
+            Manage contracts assigned to you for review and approval
           </p>
         </div>
         <div className="director-header-actions">
           <button 
             className="director-btn-secondary"
-            onClick={fetchContractsForApproval}
+            onClick={fetchAllContracts}
             disabled={loading}
           >
             <RefreshCw size={16} className={loading ? 'director-spinning' : ''} />
@@ -307,8 +452,14 @@ function DirectorApproval() {
       <div className="director-stats">
         <div className="director-stat-card">
           <div className="director-stat-content">
-            <span className="director-stat-value">{stats.total}</span>
+            <span className="director-stat-value">{stats.pending}</span>
             <span className="director-stat-label">Pending Approval</span>
+          </div>
+        </div>
+        <div className="director-stat-card">
+          <div className="director-stat-content">
+            <span className="director-stat-value">{stats.approved}</span>
+            <span className="director-stat-label">Approved</span>
           </div>
         </div>
         <div className="director-stat-card">
@@ -319,47 +470,59 @@ function DirectorApproval() {
         </div>
         <div className="director-stat-card">
           <div className="director-stat-content">
-            <span className="director-stat-value">{stats.newToday}</span>
-            <span className="director-stat-label">New Today</span>
-          </div>
-        </div>
-        <div className="director-stat-card">
-          <div className="director-stat-content">
             <span className="director-stat-value">{formatCurrency(stats.totalValue)}</span>
             <span className="director-stat-label">Total Value</span>
           </div>
         </div>
       </div>
 
+      {/* Tabs for Pending vs Approved */}
+      <div className="director-tabs">
+        <button 
+          className={`director-tab ${activeTab === 'pending' ? 'active' : ''}`}
+          onClick={() => setActiveTab('pending')}
+        >
+          Pending Approval ({contracts.length})
+        </button>
+        <button 
+          className={`director-tab ${activeTab === 'approved' ? 'active' : ''}`}
+          onClick={() => setActiveTab('approved')}
+        >
+          Approved ({approvedContracts.length})
+        </button>
+      </div>
+
       {/* Search and Filters */}
       <div className="director-search-filters">
         <div className="director-section-controls">
-          {/* <div className="director-search-container">
+          <div className="director-search-container">
             <Search className="director-search-icon" />
             <input
               type="text"
-              placeholder="Search contracts by name, grantor, or forwarded by..."
+              placeholder={`Search ${activeTab} contracts...`}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="director-search-input"
             />
-          </div> */}
+          </div>
 
           <div className="director-controls">
-            {/* <button 
-              className="director-filter-btn"
-              onClick={() => setShowFilters(!showFilters)}
-            >
-              <Filter size={16} />
-              <span>Filters</span>
-              <ChevronDown size={14} className={showFilters ? 'director-rotate' : ''} />
-            </button> */}
+            {activeTab === 'pending' && (
+              <button 
+                className="director-filter-btn"
+                onClick={() => setShowFilters(!showFilters)}
+              >
+                <Filter size={16} />
+                <span>Filters</span>
+                <ChevronDown size={14} className={showFilters ? 'director-rotate' : ''} />
+              </button>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Advanced Filters */}
-      {showFilters && (
+      {/* Advanced Filters (only for pending) */}
+      {showFilters && activeTab === 'pending' && (
         <div className="director-advanced-filters">
           <div className="director-filter-group">
             <label className="director-filter-label">
@@ -389,7 +552,7 @@ function DirectorApproval() {
                 className={`director-filter-option ${filter === 'large_amount' ? 'director-active' : ''}`}
                 onClick={() => setFilter('large_amount')}
               >
-                Large Amount ('$500K')
+                Large Amount ('$500K)
               </button>
             </div>
           </div>
@@ -399,105 +562,33 @@ function DirectorApproval() {
       {/* Contracts List */}
       <div className="director-contracts-section">
         <div className="director-section-header">
-          <h2>Contracts Pending Final Approval ({filteredContracts.length})</h2>
-          {/* <div className="director-section-actions">
-            <span className="director-sort-label">Sorted by: Forwarded Date</span>
-          </div> */}
+          <h2>
+            {activeTab === 'pending' ? 'Contracts Pending Final Approval' : 'Approved Contracts'} 
+            ({filteredContracts.length})
+          </h2>
         </div>
 
         {filteredContracts.length === 0 ? (
           <div className="director-empty-state">
-            <CheckCircle size={48} />
-            <h3>No contracts pending approval</h3>
-            <p>{searchTerm || filter !== 'all' 
-              ? 'Try adjusting your search or filters' 
-              : 'All contracts have been processed or are awaiting Program Manager review'}
-            </p>
+            {activeTab === 'pending' ? (
+              <>
+                <CheckCircle size={48} />
+                <h3>No contracts pending approval</h3>
+                <p>All assigned contracts have been processed</p>
+              </>
+            ) : (
+              <>
+                <Archive size={48} />
+                <h3>No approved contracts yet</h3>
+                <p>Approved contracts will appear here</p>
+              </>
+            )}
           </div>
         ) : (
           <div className="director-contracts-grid">
-            {filteredContracts.map(contract => {
-              const priority = getPriorityLevel(contract);
-              const daysSince = calculateDaysSince(contract.forwarded_at);
-              const priorityColor = getPriorityColor(priority);
-              
-              return (
-                <div 
-                  key={contract.id} 
-                  className={`director-contract-card ${selectedContract?.id === contract.id ? 'director-selected' : ''}`}
-                  onClick={() => handleContractSelect(contract)}
-                >
-                  <div className="director-card-header">
-                    <div className="director-contract-status">
-                      <div className="director-status-indicator" style={{ backgroundColor: getRecommendationColor(contract.review_recommendation) }} />
-                      <span className="director-status-text">{contract.review_recommendation || 'pending'}</span>
-                    </div>
-                    <div className="director-priority-badge" style={{ backgroundColor: priorityColor }}>
-                      {priority.toUpperCase()}
-                    </div>
-                  </div>
-
-                  <div className="director-card-content">
-                    <div className="director-contract-icon">
-                      <FileText size={20} />
-                    </div>
-                    <h3 className="director-contract-name">
-                      {contract.grant_name || contract.filename || 'Unnamed Contract'}
-                    </h3>
-                    
-                    <div className="director-contract-meta">
-                      <div className="director-meta-item">
-                        <Building size={12} />
-                        <span>{contract.grantor || 'No grantor'}</span>
-                      </div>
-                      <div className="director-meta-item">
-                        <User size={12} />
-                        <span>Forwarded by: {contract.forwarded_by || 'Unknown'}</span>
-                      </div>
-                      {daysSince && (
-                        <div className="director-meta-item">
-                          <Clock size={12} />
-                          <span>Waiting: {daysSince} day(s)</span>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="director-financial-info">
-                      <div className="director-amount-display">
-                        <DollarSign size={14} />
-                        <span>{formatCurrency(contract.total_amount)}</span>
-                      </div>
-                    </div>
-
-                    <div className="director-review-summary">
-                      {contract.program_manager_review?.review_summary ? (
-                        <p className="director-summary-text">
-                          {contract.program_manager_review.review_summary.substring(0, 100)}...
-                        </p>
-                      ) : (
-                        <p className="director-no-summary">No review summary provided</p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="director-card-footer">
-                    <button 
-                      className="director-view-btn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/contracts/${contract.id}`);
-                      }}
-                    >
-                      <Eye size={14} />
-                      View Details
-                    </button>
-                    <button className="director-review-btn">
-                      Review
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
+            {filteredContracts.map(contract => 
+              renderContractCard(contract, activeTab === 'approved')
+            )}
           </div>
         )}
       </div>
@@ -511,10 +602,10 @@ function DirectorApproval() {
               <div className="director-modal-header">
                 <div className="director-modal-title-section">
                   <h2>Final Approval</h2>
-                  {/* <div className="director-contract-title">
+                  <div className="director-contract-title">
                     <FileText size={18} />
                     <span>{selectedContract.grant_name || selectedContract.filename}</span>
-                  </div> */}
+                  </div>
                 </div>
                 <button 
                   className="director-modal-close"
@@ -530,6 +621,10 @@ function DirectorApproval() {
                   <div className="director-review-decision">
                     {/* Decision Options */}
                     <div className="director-decision-section">
+                      <h3 className="director-decision-title">
+                        <ShieldCheck size={20} />
+                        Final Decision
+                      </h3>
                       
                       <div className="director-decision-options">
                         <div className="director-options-grid">
@@ -578,13 +673,13 @@ function DirectorApproval() {
                       {/* Comments Section */}
                       <div className="director-comments-section">
                         <label className="director-comments-label">
-                          {/* <MessageSquare size={16} /> */}
+                          <MessageSquare size={16} />
                           Comments 
                         </label>
                         <textarea
                           value={comments}
                           onChange={(e) => setComments(e.target.value)}
-                          // placeholder="Provide detailed comments for your decision. This will be visible to the Program Manager and Project Manager."
+                          placeholder="Provide detailed comments for your decision. This will be visible to the Program Manager and Project Manager."
                           rows={5}
                           className="director-decision-comments"
                         />

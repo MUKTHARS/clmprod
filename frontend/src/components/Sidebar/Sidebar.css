@@ -935,3 +935,4 @@
 .nav-item.draft-parent.active:has(+ .submenu .nav-item.submenu-item.active) .nav-indicator {
   display: none;
 }
+
