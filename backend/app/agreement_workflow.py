@@ -33,6 +33,7 @@ async def get_draft_agreements(
 ):
     """
     Get all draft agreements created by the current Project Manager
+    Show drafts until they're approved (draft, under_review, reviewed, rejected)
     """
     if current_user.role != "project_manager":
         raise HTTPException(
@@ -43,17 +44,13 @@ async def get_draft_agreements(
     try:
         print(f"DEBUG: Fetching drafts for user {current_user.id}")
         
-        # Get drafts created by this user
+        # ✅ FIX: Show drafts until approved (exclude "approved" and "published")
         drafts = db.query(Contract).filter(
             Contract.created_by == current_user.id,
-            Contract.status == "draft"
+            Contract.status.in_(["draft", "under_review", "reviewed", "rejected"])  # ✅ Changed this line
         ).order_by(Contract.uploaded_at.desc()).offset(skip).limit(limit).all()
         
         print(f"DEBUG: Found {len(drafts)} drafts for user")
-        
-        # Add debug info for each draft
-        for draft in drafts:
-            print(f"  Draft {draft.id}: PM Users = {draft.assigned_pm_users}, Type = {type(draft.assigned_pm_users)}")
         
         return drafts
         

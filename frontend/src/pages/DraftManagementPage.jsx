@@ -533,19 +533,21 @@ const handleViewContract = (draftId) => {
             <span>{formatDate(draft.end_date)}</span>
           </div>
         </td>
-        <td>
-          <div className="status-cell">
-            <span className={`status-text draft`}>Draft</span>
-            {activeTab === 'assigned-drafts' && (
-              <div className="assignment-role">
-                <UserPlus size={12} />
-                <span className="role-text">
-                  {draft.assignment_role?.replace('_', ' ') || 'Assigned'}
-                </span>
-              </div>
-            )}
-          </div>
-        </td>
+     <td>
+  <div className="status-cell">
+    <span className={`status-text ${draft.status?.replace('_', '-') || 'draft'}`}>
+      {draft.status ? draft.status.replace('_', ' ').toUpperCase() : 'DRAFT'}
+    </span>
+    {activeTab === 'assigned-drafts' && (
+      <div className="assignment-role">
+        <UserPlus size={12} />
+        <span className="role-text">
+          {draft.assignment_role?.replace('_', ' ') || 'Assigned'}
+        </span>
+      </div>
+    )}
+  </div>
+</td>
         <td>
           <div className="action-buttons">
             <button 
@@ -588,12 +590,14 @@ const handleViewContract = (draftId) => {
     return (
       <div key={draft.id || index} className="draft-card">
         <div className="card-header">
-          <div className="draft-status">
-            <span className="status-badge draft">Draft</span>
-            {activeTab === 'assigned-drafts' && draft.created_by !== user?.id && (
-              <span className="status-badge assigned">Assigned</span>
-            )}
-          </div>
+         <div className="draft-status">
+  <span className={`status-badge ${draft.status?.replace('_', '-') || 'draft'}`}>
+    {draft.status ? draft.status.replace('_', ' ').toUpperCase() : 'DRAFT'}
+  </span>
+  {activeTab === 'assigned-drafts' && draft.created_by !== user?.id && (
+    <span className="status-badge assigned">Assigned</span>
+  )}
+</div>
           <div className="card-actions">
             <button 
               className="btn-action"

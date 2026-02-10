@@ -5528,7 +5528,7 @@ async def get_assigned_drafts(
         # ✅ FIX: Get contracts based on user role
         if current_user.role == "project_manager":
             # Project Managers see only draft and under_review contracts
-            status_filter = ["draft", "under_review"]
+            status_filter = ["draft", "under_review", "reviewed", "rejected"]
         elif current_user.role == "program_manager":
             # Program Managers see draft, under_review, and reviewed contracts
             status_filter = ["draft", "under_review", "reviewed"]
