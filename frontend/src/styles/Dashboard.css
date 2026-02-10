@@ -1226,3 +1226,11 @@
 .btn-action-small:hover {
   background: #f3f4f6;
 }
+
+
+.metric-card-tall.archive-metric:hover {
+  border-color: #6366f1;
+  background: #f0f9ff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.1);
+}

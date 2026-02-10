@@ -183,9 +183,9 @@ const getStatusBadge = (status) => {
         <AlertCircle size={48} />
         <h2>Access Denied</h2>
         <p>Only Project Managers can access draft agreements.</p>
-        <button onClick={() => navigate('/contracts')} className="btn-primary">
+        {/* <button onClick={() => navigate('/contracts')} className="btn-primary">
           Back to Contracts
-        </button>
+        </button> */}
       </div>
     );
   }

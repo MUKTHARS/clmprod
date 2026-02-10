@@ -152,7 +152,11 @@ class UpdateDraftRequest(BaseModel):
     
 class PublishAgreementRequest(BaseModel):
     notes: Optional[str] = None
-    publish_to_review: Optional[bool] = True  # If True, publishes and submits for review
+    publish_to_review: bool = True
+    publish_directly: bool = False  
+    direct_publish_status: Optional[str] = "published" 
+    class Config:
+        from_attributes = True
 
 class ContractResponseEnhanced(ContractResponse):
     # Add new fields to response
@@ -171,6 +175,23 @@ class ContractResponseEnhanced(ContractResponse):
     last_edited_at: Optional[datetime] = None
     published_at: Optional[datetime] = None
     published_by: Optional[int] = None
+    
+    class Config:
+        from_attributes = True
+
+class ArchiveRequest(BaseModel):
+    reason: str
+    notes: Optional[str] = None
+    
+    class Config:
+        from_attributes = True
+
+class ArchiveResponse(BaseModel):
+    message: str
+    contract_id: int
+    status: str
+    archived_at: Optional[str] = None
+    version_number: Optional[int] = None
     
     class Config:
         from_attributes = True

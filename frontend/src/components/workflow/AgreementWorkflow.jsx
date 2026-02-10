@@ -396,57 +396,72 @@ const fetchUpdatedContract = async (contractId) => {
 };
 
 
-  const handlePublishAgreement = async (publishToReview = true) => {
-    if (!contract?.id) return;
+const handlePublishAgreement = async (publishToReview = true) => {
+  if (!contract?.id) return;
+  
+  // Ask for confirmation with appropriate message
+  const confirmMessage = publishToReview 
+    ? "Are you sure you want to publish and submit for review?"
+    : "Are you sure you want to publish this agreement directly WITHOUT REVIEW? This will automatically publish the agreement.";
+  
+  if (!confirm(confirmMessage)) {
+    return;
+  }
+  
+  setLoading(true);
+  try {
+    const token = localStorage.getItem('token');
     
-    if (!confirm(`Are you sure you want to ${publishToReview ? 'publish and submit for review' : 'publish'} this agreement?`)) {
-      return;
-    }
+    // Use the original endpoint for review publishing
+    // Use the new endpoint for direct publishing
+    const endpoint = publishToReview 
+      ? `${API_CONFIG.BASE_URL}/api/agreements/drafts/${contract.id}/publish`
+      : `${API_CONFIG.BASE_URL}/api/agreements/drafts/${contract.id}/publish-directly`;
     
-    setLoading(true);
-    try {
-      const token = localStorage.getItem('token');
-      
-      const publishData = {
-        notes: formData.notes || '',
-        publish_to_review: publishToReview
-      };
+    const publishData = {
+      notes: formData.notes || '',
+      publish_to_review: publishToReview,
+      publish_directly: !publishToReview
+    };
 
-      const response = await fetch(
-        `${API_CONFIG.BASE_URL}/api/agreements/drafts/${contract.id}/publish`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(publishData)
-        }
-      );
+    console.log(`Publishing ${publishToReview ? 'with review' : 'directly'} to:`, endpoint);
 
-      if (response.ok) {
-        const result = await response.json();
-        alert(result.message);
-        // Close the modal when publishing is done
-        if (setShowWorkflow) {
-          setShowWorkflow(false);
-        }
-        
-        // Call onWorkflowComplete ONLY if it exists
-        if (onWorkflowComplete && typeof onWorkflowComplete === 'function') {
-          onWorkflowComplete();
-        }
-      } else {
-        const error = await response.json();
-        alert(`Failed to publish agreement: ${error.detail}`);
+    const response = await fetch(
+      endpoint,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(publishData)
       }
-    } catch (error) {
-      console.error('Error publishing agreement:', error);
-      alert('Failed to publish agreement');
-    } finally {
-      setLoading(false);
+    );
+
+    if (response.ok) {
+      const result = await response.json();
+      alert(result.message);
+      
+      // Close the modal when publishing is done
+      if (setShowWorkflow) {
+        setShowWorkflow(false);
+      }
+      
+      // Call onWorkflowComplete ONLY if it exists
+      if (onWorkflowComplete && typeof onWorkflowComplete === 'function') {
+        onWorkflowComplete();
+      }
+    } else {
+      const error = await response.json();
+      alert(`Failed to publish agreement: ${error.detail}`);
     }
-  };
+  } catch (error) {
+    console.error('Error publishing agreement:', error);
+    alert('Failed to publish agreement');
+  } finally {
+    setLoading(false);
+  }
+};
 
   const nextStep = () => {
     if (activeStep < 4) {
@@ -746,59 +761,61 @@ const fetchUpdatedContract = async (contractId) => {
         )}
 
         {/* Step 4: Publish */}
-        {activeStep === 4 && (
-          <div className="workflow-step-content">
-            <h4>Publish Agreement</h4>
-            
-            <div className="publish-summary">
-              <h5>Agreement Summary</h5>
-              <div className="summary-item">
-                <span>Grant Name:</span>
-                <strong>{formData.grant_name || 'Not specified'}</strong>
-              </div>
-              <div className="summary-item">
-                <span>Contract Number:</span>
-                <span>{formData.contract_number || 'Not specified'}</span>
-              </div>
-              <div className="summary-item">
-                <span>Agreement Type:</span>
-                <span>{formData.agreement_type || 'Not specified'}</span>
-              </div>
-              <div className="summary-item">
-                <span>Total Amount:</span>
-                <strong>${parseFloat(formData.total_amount || 0).toLocaleString()}</strong>
-              </div>
-              <div className="summary-item">
-                <span>Assigned PM Users:</span>
-                <span>{selectedUsers.pm_users.length} user(s)</span>
-              </div>
-              <div className="summary-item">
-                <span>Assigned PGM Users:</span>
-                <span>{selectedUsers.pgm_users.length} user(s)</span>
-              </div>
-              <div className="summary-item">
-                <span>Assigned Directors:</span>
-                <span>{selectedUsers.director_users.length} user(s)</span>
-              </div>
-              <div className="summary-item">
-                <span>Additional Documents:</span>
-                <span>{additionalDocuments.length} document(s)</span>
-              </div>
-            </div>
+{activeStep === 4 && (
+  <div className="workflow-step-content">
+    <h4>Publish Agreement</h4>
+    
+    <div className="publish-summary">
+      <h5>Agreement Summary</h5>
+      <div className="summary-item">
+        <span>Grant Name:</span>
+        <strong>{formData.grant_name || 'Not specified'}</strong>
+      </div>
+      <div className="summary-item">
+        <span>Contract Number:</span>
+        <span>{formData.contract_number || 'Not specified'}</span>
+      </div>
+      <div className="summary-item">
+        <span>Agreement Type:</span>
+        <span>{formData.agreement_type || 'Not specified'}</span>
+      </div>
+      <div className="summary-item">
+        <span>Total Amount:</span>
+        <strong>${parseFloat(formData.total_amount || 0).toLocaleString()}</strong>
+      </div>
+      <div className="summary-item">
+        <span>Assigned PM Users:</span>
+        <span>{selectedUsers.pm_users.length} user(s)</span>
+      </div>
+      <div className="summary-item">
+        <span>Assigned PGM Users:</span>
+        <span>{selectedUsers.pgm_users.length} user(s)</span>
+      </div>
+      <div className="summary-item">
+        <span>Assigned Directors:</span>
+        <span>{selectedUsers.director_users.length} user(s)</span>
+      </div>
+      <div className="summary-item">
+        <span>Additional Documents:</span>
+        <span>{additionalDocuments.length} document(s)</span>
+      </div>
+    </div>
 
-            <div className="form-group">
-              <label htmlFor="publish-notes">Publish Notes (Optional)</label>
-              <textarea
-                id="publish-notes"
-                name="notes"
-                value={formData.notes}
-                onChange={handleFormChange}
-                rows="3"
-                placeholder="Add any notes about this publication..."
-              />
-            </div>
-          </div>
-        )}
+    <div className="form-group">
+      <label htmlFor="publish-notes">Publish Notes (Optional)</label>
+      <textarea
+        id="publish-notes"
+        name="notes"
+        value={formData.notes}
+        onChange={handleFormChange}
+        rows="3"
+        placeholder="Add any notes about this publication..."
+      />
+    </div>
+
+
+  </div>
+)}
       </div>
 
 <div className="workflow-actions-container">
@@ -831,6 +848,8 @@ const fetchUpdatedContract = async (contractId) => {
       >
         {loading ? <Loader2 size={16} className="workflow-spinner" /> : 'Save Draft'}
       </button>
+      
+      {/* Add both publish options */}
       {/* <button 
         className="workflow-btn-primary workflow-publish-btn" 
         onClick={() => handlePublishAgreement(true)}
@@ -838,6 +857,14 @@ const fetchUpdatedContract = async (contractId) => {
       >
         {loading ? <Loader2 size={16} className="workflow-spinner" /> : 'Publish & Review'}
       </button> */}
+      
+      <button 
+        className="workflow-btn-primary workflow-direct-publish-btn" 
+        onClick={() => handlePublishAgreement(false)}
+        disabled={loading}
+      >
+        {loading ? <Loader2 size={16} className="workflow-spinner" /> : 'Publish'}
+      </button>
     </div>
   )}
 </div>

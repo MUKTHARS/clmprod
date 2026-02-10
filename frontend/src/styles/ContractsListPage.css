@@ -71,50 +71,26 @@
   overflow: visible;
 }
 
-/* Section Controls - Same as Dashboard */
+/* Section Controls - Modified: Removed search, aligned right */
 .section-controls {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end; /* Changed from space-between to flex-end */
   padding: 16px 20px;
   border-bottom: 1px solid #e5e7eb;
   background: #f8fafc;
   position: relative;
   z-index: 100;
+  gap: 16px; /* Add gap for better spacing */
 }
 
+/* Removed search-box styles */
 .search-box {
-  flex: 1;
-  min-width: 280px;
-  max-width: 360px;
-  position: relative;
-}
-
-.search-box svg {
-  position: absolute;
-  left: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #94a3b8;
-  font-size: 14px;
+  display: none !important;
 }
 
 .search-input {
-  width: 100%;
-  padding: 8px 10px 8px 32px;
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
-  font-size: 13px;
-  color: #1e293b;
-  transition: all 0.2s ease;
-}
-
-.search-input:focus {
-  outline: none;
-  border-color: #94a3b8;
-  background: white;
-  box-shadow: 0 0 0 2px rgba(148, 163, 184, 0.1);
+  display: none !important;
 }
 
 .controls-right {
@@ -122,6 +98,7 @@
   align-items: center;
   gap: 10px;
   position: relative;
+  margin-left: auto; /* Ensure it stays on the right */
 }
 
 .view-toggle {
@@ -495,7 +472,7 @@
   height: 12px;
 }
 
-.status-icon.processed {
+.status-icon.approved {
   color: #22c55e;
 }
 
@@ -520,7 +497,7 @@
   background: #f8fafc;
 }
 
-.status-text.processed {
+.status-text.approved {
   color: #059669;
   background: #f0fdf4;
 }
@@ -856,11 +833,6 @@
     padding: 12px 16px;
   }
   
-  .search-box {
-    min-width: 100%;
-    max-width: 100%;
-  }
-  
   .controls-right {
     width: 100%;
     justify-content: space-between;
@@ -925,4 +897,55 @@
   .contracts-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* Add to your ContractsListPage.css */
+.status-text.approved {
+  color: #059669;
+  background-color: rgba(5, 150, 105, 0.1);
+}
+
+.status-text.draft {
+  color: #7c3aed;
+  background-color: rgba(124, 58, 237, 0.1);
+}
+
+.status-text.under_review {
+  color: #d97706;
+  background-color: rgba(217, 119, 6, 0.1);
+}
+
+.status-text.reviewed {
+  color: #2563eb;
+  background-color: rgba(37, 99, 235, 0.1);
+}
+
+.status-text.rejected {
+  color: #dc2626;
+  background-color: rgba(220, 38, 38, 0.1);
+}
+
+.status-text.published {
+  color: #059669;
+  background-color: rgba(5, 150, 105, 0.1);
+}
+
+.status-text.processed {
+  color: #059669;
+  background-color: rgba(5, 150, 105, 0.1);
+}
+
+.status-text.processing {
+  color: #d97706;
+  background-color: rgba(217, 119, 6, 0.1);
+}
+
+.status-text.error {
+  color: #dc2626;
+  background-color: rgba(220, 38, 38, 0.1);
+}
+
+.status-text.default {
+  color: #6b7280;
+  background-color: rgba(107, 114, 128, 0.1);
 }

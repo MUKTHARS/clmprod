@@ -465,3 +465,126 @@
     min-width: auto;
   }
 }
+
+
+
+/* In AgreementWorkflow.css - add these styles */
+
+.workflow-direct-publish-btn {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  border: 1px solid #15803d;
+}
+
+.workflow-direct-publish-btn:hover {
+  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+}
+
+.publish-options {
+  margin: 20px 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 20px;
+  background: #f9fafb;
+}
+
+.publish-options h5 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: #374151;
+  font-weight: 600;
+}
+
+.publish-option {
+  margin-bottom: 15px;
+  padding: 15px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: white;
+  transition: all 0.2s;
+}
+
+.publish-option:hover {
+  border-color: #3b82f6;
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.1);
+}
+
+.publish-option input[type="radio"] {
+  margin-right: 10px;
+}
+
+.publish-option label {
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+}
+
+.option-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.option-title {
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.option-badge {
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.option-badge:not(.warning) {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.option-badge.warning {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.option-description {
+  margin: 0;
+  color: #6b7280;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* In AgreementWorkflow.css - add feature tags */
+
+.option-features {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.feature-tag {
+  background: #f3f4f6;
+  color: #4b5563;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.workflow-direct-publish-btn {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  border: 1px solid #15803d;
+  color: white;
+}
+
+.workflow-direct-publish-btn:hover {
+  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+}
+
+/* For automatic publish button */
+.workflow-direct-publish-btn::after {
+  content: "";
+  font-size: 12px;
+  opacity: 0.9;
+}

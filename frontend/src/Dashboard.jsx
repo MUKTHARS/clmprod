@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   FileText,
+  FileArchive,
   DollarSign,
   TrendingUp,
   CheckCircle,
@@ -26,7 +27,7 @@ import {
   Search
 } from 'lucide-react';
 import './styles/Dashboard.css';
-
+import { Link } from 'react-router-dom';
 function Dashboard({ contracts, loading, refreshContracts, user }) {
   const navigate = useNavigate();
   const [stats, setStats] = useState({
@@ -550,12 +551,37 @@ function Dashboard({ contracts, loading, refreshContracts, user }) {
             </div>
           </div>
         </div>
+  <div 
+    className="metric-card-tall archive-metric"
+    onClick={() => navigate('/archive')}
+    style={{ cursor: 'pointer' }}
+  >
+    <div className="metric-content">
+      <FileArchive size={24} style={{ color: '#6366f1', marginBottom: '8px' }} />
+      <div className="metric-info">
+        <div className="metric-value">
+          {normalizedContracts.filter(contract => {
+            if (!contract.end_date) return false;
+            try {
+              const endDate = new Date(contract.end_date);
+              const now = new Date();
+              return endDate < now;
+            } catch {
+              return false;
+            }
+          }).length}
+        </div>
+        <div className="metric-label">Due for Archive</div>
+      </div>
+    </div>
+  </div>
+        
       </div>
 
       {/* Recent Grants Section */}
       <div className="recent-contracts">
         <div className="section-controls">
-          <div className="search-box">
+          {/* <div className="search-box">
             <Search size={16} />
             <input
               type="text"
@@ -564,7 +590,7 @@ function Dashboard({ contracts, loading, refreshContracts, user }) {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="search-input"
             />
-          </div>
+          </div> */}
           
           <div className="controls-right">
             <div className="view-toggle">

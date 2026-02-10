@@ -82,7 +82,7 @@ app.include_router(agreement_router)
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "https://localhost:4000", "https://grantapi.saple.ai","https://demo.saple.ai"],
+    allow_origins=["http://localhost:5173", "http://localhost:4000", "http://localhost:4001","http://localhost:4000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -178,21 +178,21 @@ def check_permission(user: User, contract_id: int, required_permission: str, db:
         else:
             return False
     
-    # Project Manager permissions
     if user.role == "project_manager":
-        # ✅ CRITICAL FIX: Check if user is assigned to this contract
+        # Project managers can see contracts they created OR are assigned to
+        is_creator = contract.created_by == user.id
         is_assigned = False
         
-        # Check all assignment lists
+        # Check if user is in ANY of the assignment lists
         if contract.assigned_pm_users and isinstance(contract.assigned_pm_users, list):
             is_assigned = user.id in contract.assigned_pm_users
         
-        # Check if this user created the contract
-        is_creator = contract.created_by == user.id
+        # ✅ FIX: Also check assigned_pgm_users and assigned_director_users if needed
+        if not is_assigned and contract.assigned_pgm_users and isinstance(contract.assigned_pgm_users, list):
+            is_assigned = user.id in contract.assigned_pgm_users
         
-        # ✅ FIX: If user is assigned, grant view permission
-        if is_assigned and required_permission == "view":
-            return True
+        if not is_assigned and contract.assigned_director_users and isinstance(contract.assigned_director_users, list):
+            is_assigned = user.id in contract.assigned_director_users
         
         if not is_creator and not is_assigned:
             # Non-creator and non-assigned Project Managers can only view if explicitly granted
@@ -365,6 +365,35 @@ def check_permission(user: User, contract_id: int, required_permission: str, db:
 #     ).first()
     
 #     return permission is not None
+
+def get_user_ids_from_field(user_field):
+    """Safely extract user IDs from a field that could be list, string, or other format"""
+    if not user_field:
+        return []
+    
+    if isinstance(user_field, list):
+        return user_field
+    
+    if isinstance(user_field, str):
+        try:
+            # Try to parse as JSON
+            import json
+            parsed = json.loads(user_field)
+            if isinstance(parsed, list):
+                return parsed
+        except:
+            # Try comma-separated
+            try:
+                ids = [int(id_str.strip()) for id_str in user_field.split(',') if id_str.strip().isdigit()]
+                return ids
+            except:
+                return []
+    
+    # If it's a single integer
+    try:
+        return [int(user_field)]
+    except:
+        return []
 
 def get_user_permissions_dict(user: User) -> Dict[str, bool]:
     """Get all permissions for a user based on their role"""
@@ -998,7 +1027,7 @@ async def change_password(
 # Public root endpoint (no auth required)
 @app.get("/")
 def read_root():
-    return {"message": "Grant Contract Analyzer API", "version": "1.0.0"}
+    return {"message": "GrantOS API", "version": "1.0.0"}
 
 
 @app.post("/upload/", response_model=schemas.ContractResponse)
@@ -1621,9 +1650,11 @@ async def submit_contract_for_review(
         from app.notification_service import NotificationService
         from app.auth_models import User as AuthUser
         
-        # Get assigned Program Manager users from the contract
+
+        # ✅ CRITICAL FIX: Send notifications to ALL assigned Program Managers
+        # Get ALL assigned Program Managers from the contract
         assigned_program_managers = []
-        
+
         # Check both database columns and comprehensive_data for assigned users
         if contract.assigned_pgm_users:
             if isinstance(contract.assigned_pgm_users, list):
@@ -1635,7 +1666,7 @@ async def submit_contract_for_review(
                 except:
                     # Try comma-separated
                     assigned_program_managers = [int(id_str.strip()) for id_str in contract.assigned_pgm_users.split(',') if id_str.strip().isdigit()]
-        
+
         # Also check comprehensive_data for assignments
         if not assigned_program_managers and contract.comprehensive_data:
             if "assigned_users" in contract.comprehensive_data:
@@ -1646,13 +1677,13 @@ async def submit_contract_for_review(
                 metadata = contract.comprehensive_data["agreement_metadata"]
                 if metadata and "assigned_pgm_users" in metadata:
                     assigned_program_managers = metadata["assigned_pgm_users"]
-        
+
         # Remove duplicates
         assigned_program_managers = list(set(assigned_program_managers)) if assigned_program_managers else []
-        
+
         print(f"DEBUG: Contract {contract_id} has {len(assigned_program_managers)} assigned Program Managers: {assigned_program_managers}")
-        
-        # Send notifications ONLY to assigned Program Managers
+
+        # Send notifications to ALL assigned Program Managers
         if assigned_program_managers:
             for pgm_user_id in assigned_program_managers:
                 pgm_user = db.query(AuthUser).filter(
@@ -2641,10 +2672,35 @@ async def final_approval(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only Directors can give final approval"
         )
-    
+
+    # Get the contract
     contract = db.query(models.Contract).filter(models.Contract.id == contract_id).first()
     if not contract:
         raise HTTPException(status_code=404, detail="Contract not found")
+
+    # ✅ FIX: Check if this director is assigned to the contract
+    is_assigned = False
+    if contract.assigned_director_users:
+        try:
+            if isinstance(contract.assigned_director_users, list):
+                is_assigned = current_user.id in contract.assigned_director_users
+            elif isinstance(contract.assigned_director_users, str):
+                import json
+                try:
+                    dir_list = json.loads(contract.assigned_director_users)
+                    if isinstance(dir_list, list):
+                        is_assigned = current_user.id in dir_list
+                except:
+                    dir_ids = [int(id_str.strip()) for id_str in contract.assigned_director_users.split(',') if id_str.strip().isdigit()]
+                    is_assigned = current_user.id in dir_ids
+        except Exception as e:
+            print(f"Error checking director assignment: {e}")
+
+    if not is_assigned:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not assigned to this contract and cannot approve it"
+        )
     
     if contract.status != "reviewed":
         raise HTTPException(
@@ -5528,7 +5584,7 @@ async def get_assigned_drafts(
         # ✅ FIX: Get contracts based on user role
         if current_user.role == "project_manager":
             # Project Managers see only draft and under_review contracts
-            status_filter = ["draft", "under_review"]
+            status_filter = ["draft", "under_review", "reviewed", "rejected"]
         elif current_user.role == "program_manager":
             # Program Managers see draft, under_review, and reviewed contracts
             status_filter = ["draft", "under_review", "reviewed"]

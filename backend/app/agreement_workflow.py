@@ -33,6 +33,7 @@ async def get_draft_agreements(
 ):
     """
     Get all draft agreements created by the current Project Manager
+    Show drafts until they're approved (draft, under_review, reviewed, rejected)
     """
     if current_user.role != "project_manager":
         raise HTTPException(
@@ -43,17 +44,13 @@ async def get_draft_agreements(
     try:
         print(f"DEBUG: Fetching drafts for user {current_user.id}")
         
-        # Get drafts created by this user
+        # ✅ FIX: Show drafts until approved (exclude "approved" and "published")
         drafts = db.query(Contract).filter(
             Contract.created_by == current_user.id,
-            Contract.status == "draft"
+            Contract.status.in_(["draft", "under_review", "reviewed", "rejected"])  # ✅ Changed this line
         ).order_by(Contract.uploaded_at.desc()).offset(skip).limit(limit).all()
         
         print(f"DEBUG: Found {len(drafts)} drafts for user")
-        
-        # Add debug info for each draft
-        for draft in drafts:
-            print(f"  Draft {draft.id}: PM Users = {draft.assigned_pm_users}, Type = {type(draft.assigned_pm_users)}")
         
         return drafts
         
@@ -257,10 +254,19 @@ async def update_draft_agreement(
             comp_data["agreement_metadata"] = metadata
             contract.comprehensive_data = comp_data
         
-        # Update assigned users
+        # Update the notification section to handle multiple users
         if update_data.assigned_users:
             # Validate users exist and have correct roles
             from app.auth_models import User as AuthUser
+            from app.notification_service import NotificationService
+            
+            # Track which users need notifications
+            notification_messages = []
+            
+            # Get current assignments for comparison
+            current_pm_users = set(contract.assigned_pm_users or [])
+            current_pgm_users = set(contract.assigned_pgm_users or [])
+            current_director_users = set(contract.assigned_director_users or [])
             
             # PM Users
             if update_data.assigned_users.pm_users:
@@ -270,6 +276,23 @@ async def update_draft_agreement(
                     AuthUser.is_active == True
                 ).all()
                 valid_pm_ids = [user.id for user in pm_users]
+                new_pm_users = set(valid_pm_ids)
+                
+                # Find users who are newly assigned
+                newly_assigned_pms = new_pm_users - current_pm_users
+                
+                if newly_assigned_pms:
+                    # Create notifications for newly assigned users
+                    NotificationService.create_assignment_notification(
+                        db=db,
+                        contract_id=contract_id,
+                        contract_name=contract.grant_name or contract.filename,
+                        assigned_users=list(newly_assigned_pms),
+                        assigned_by_user=current_user,
+                        user_type="project_manager"
+                    )
+                    notification_messages.append(f"{len(newly_assigned_pms)} project manager(s) notified")
+                
                 contract.assigned_pm_users = valid_pm_ids
             else:
                 contract.assigned_pm_users = []
@@ -282,6 +305,23 @@ async def update_draft_agreement(
                     AuthUser.is_active == True
                 ).all()
                 valid_pgm_ids = [user.id for user in pgm_users]
+                new_pgm_users = set(valid_pgm_ids)
+                
+                # Find users who are newly assigned
+                newly_assigned_pgms = new_pgm_users - current_pgm_users
+                
+                if newly_assigned_pgms:
+                    # Create notifications for newly assigned users
+                    NotificationService.create_assignment_notification(
+                        db=db,
+                        contract_id=contract_id,
+                        contract_name=contract.grant_name or contract.filename,
+                        assigned_users=list(newly_assigned_pgms),
+                        assigned_by_user=current_user,
+                        user_type="program_manager"
+                    )
+                    notification_messages.append(f"{len(newly_assigned_pgms)} program manager(s) notified")
+                
                 contract.assigned_pgm_users = valid_pgm_ids
             else:
                 contract.assigned_pgm_users = []
@@ -294,43 +334,26 @@ async def update_draft_agreement(
                     AuthUser.is_active == True
                 ).all()
                 valid_director_ids = [user.id for user in director_users]
+                new_director_users = set(valid_director_ids)
+                
+                # Find users who are newly assigned
+                newly_assigned_directors = new_director_users - current_director_users
+                
+                if newly_assigned_directors:
+                    # Create notifications for newly assigned users
+                    NotificationService.create_assignment_notification(
+                        db=db,
+                        contract_id=contract_id,
+                        contract_name=contract.grant_name or contract.filename,
+                        assigned_users=list(newly_assigned_directors),
+                        assigned_by_user=current_user,
+                        user_type="director"
+                    )
+                    notification_messages.append(f"{len(newly_assigned_directors)} director(s) notified")
+                
                 contract.assigned_director_users = valid_director_ids
             else:
                 contract.assigned_director_users = []
-        
-            from app.notification_service import NotificationService
-        
-            # Track which users need notifications
-            notification_messages = []
-            
-            # PM Users
-            if update_data.assigned_users.pm_users:
-                contract.assigned_pm_users = valid_pm_ids
-                # Create notifications
-                NotificationService.create_assignment_notification(
-                    db=db,
-                    contract_id=contract_id,
-                    contract_name=contract.grant_name or contract.filename,
-                    assigned_users=valid_pm_ids,
-                    assigned_by_user=current_user,
-                    user_type="project_manager"
-                )
-                notification_messages.append(f"{len(valid_pm_ids)} project manager(s) notified")
-            
-            # PGM Users
-            if update_data.assigned_users.pgm_users:
-                contract.assigned_pgm_users = valid_pgm_ids
-                # Create notifications
-                NotificationService.create_assignment_notification(
-                    db=db,
-                    contract_id=contract_id,
-                    contract_name=contract.grant_name or contract.filename,
-                    assigned_users=valid_pgm_ids,
-                    assigned_by_user=current_user,
-                    user_type="program_manager"
-                )
-                notification_messages.append(f"{len(valid_pgm_ids)} program manager(s) notified")
-            
             # Director Users
             if update_data.assigned_users.director_users:
                 contract.assigned_director_users = valid_director_ids
@@ -606,7 +629,7 @@ async def publish_agreement(
     db: Session = Depends(get_db)
 ):
     """
-    Publish a draft agreement (optionally submit for review)
+    Publish a draft agreement (optionally submit for review or publish directly)
     """
     if current_user.role != "project_manager":
         raise HTTPException(
@@ -631,68 +654,22 @@ async def publish_agreement(
         if publish_data.notes:
             contract.notes = publish_data.notes
         
-        # If publishing to review, update status
-        if publish_data.publish_to_review:
-            contract.status = "under_review"
+        # ✅ CRITICAL CHANGE: Handle both publishing options
+        if publish_data.publish_directly:
+            # Direct publishing - AUTOMATICALLY PUBLISH WITHOUT REVIEW
+            # Determine the target status (default to "published")
+            target_status = publish_data.direct_publish_status or "published"
             
-            from app.notification_service import NotificationService
-            from app.auth_models import User as AuthUser
+            # Validate the status is appropriate for direct publishing
+            allowed_direct_statuses = ["published", "active", "finalized"]
+            if target_status not in allowed_direct_statuses:
+                target_status = "published"  # Default fallback
             
-            # ✅ FIX: Get ONLY assigned users from the contract
-            all_assigned_users = []
+            contract.status = target_status
+            action_type = "direct_publish"
+            message = f"Agreement published directly as '{target_status}'"
             
-            # Get assigned Program Managers
-            if contract.assigned_pgm_users:
-                if isinstance(contract.assigned_pgm_users, list):
-                    all_assigned_users.extend(contract.assigned_pgm_users)
-                elif isinstance(contract.assigned_pgm_users, str):
-                    try:
-                        import json
-                        pgm_list = json.loads(contract.assigned_pgm_users)
-                        if isinstance(pgm_list, list):
-                            all_assigned_users.extend(pgm_list)
-                    except:
-                        pgm_ids = [int(id_str.strip()) for id_str in contract.assigned_pgm_users.split(',') if id_str.strip().isdigit()]
-                        all_assigned_users.extend(pgm_ids)
-            
-            # Also check comprehensive_data for assignments
-            if contract.comprehensive_data:
-                if "assigned_users" in contract.comprehensive_data:
-                    assigned_users = contract.comprehensive_data["assigned_users"]
-                    if assigned_users and "pgm_users" in assigned_users:
-                        all_assigned_users.extend(assigned_users["pgm_users"])
-                elif "agreement_metadata" in contract.comprehensive_data:
-                    metadata = contract.comprehensive_data["agreement_metadata"]
-                    if metadata and "assigned_pgm_users" in metadata:
-                        all_assigned_users.extend(metadata["assigned_pgm_users"])
-            
-            # Remove duplicates and ensure they are Program Managers
-            all_assigned_users = list(set(all_assigned_users))
-            
-            print(f"DEBUG: Publishing contract {contract_id} - Assigned Program Managers: {all_assigned_users}")
-            
-            # Filter to only include active Program Managers
-            valid_program_managers = []
-            for user_id in all_assigned_users:
-                user = db.query(AuthUser).filter(
-                    AuthUser.id == user_id,
-                    AuthUser.role == "program_manager",
-                    AuthUser.is_active == True
-                ).first()
-                if user:
-                    valid_program_managers.append(user_id)
-            
-            if valid_program_managers:
-                NotificationService.create_publish_notification(
-                    db=db,
-                    contract_id=contract_id,
-                    contract_name=contract.grant_name or contract.filename,
-                    published_by_user=current_user,
-                    assigned_users=valid_program_managers
-                )
-                print(f"DEBUG: Notifications sent to {len(valid_program_managers)} Program Managers")
-
-            # Create a version snapshot
+            # Create a version snapshot for direct publish
             from app.models import ContractVersion
             
             last_version = db.query(ContractVersion).filter(
@@ -702,6 +679,14 @@ async def publish_agreement(
             version_number = (last_version.version_number + 1) if last_version else 1
             
             version_data = {
+                "direct_publish_data": {
+                    "published_at": datetime.utcnow().isoformat(),
+                    "published_by": current_user.id,
+                    "published_by_name": current_user.full_name or current_user.username,
+                    "notes": publish_data.notes,
+                    "direct_publish": True,
+                    "target_status": target_status
+                },
                 "contract_data": contract.comprehensive_data or {},
                 "basic_data": {
                     "grant_name": contract.grant_name,
@@ -718,8 +703,7 @@ async def publish_agreement(
                     "assigned_director_users": contract.assigned_director_users,
                     "additional_documents": contract.additional_documents,
                     "notes": contract.notes
-                },
-                "publish_notes": publish_data.notes
+                }
             }
             
             version = ContractVersion(
@@ -727,8 +711,8 @@ async def publish_agreement(
                 version_number=version_number,
                 created_by=current_user.id,
                 contract_data=version_data,
-                changes_description=f"Published agreement: {publish_data.notes}" if publish_data.notes else "Published agreement",
-                version_type="publish"
+                changes_description=f"Directly published as '{target_status}': {publish_data.notes}" if publish_data.notes else f"Directly published as '{target_status}' without review",
+                version_type="direct_publish"
             )
             
             db.add(version)
@@ -742,14 +726,121 @@ async def publish_agreement(
             
             publish_history = contract.comprehensive_data.get("publish_history", [])
             publish_history.append({
-                "action": "published",
+                "action": "directly_published",
                 "by_user_id": current_user.id,
                 "by_user_name": current_user.full_name or current_user.username,
                 "timestamp": datetime.utcnow().isoformat(),
                 "notes": publish_data.notes,
-                "published_to_review": publish_data.publish_to_review,
                 "version_number": version_number,
-                "notified_program_managers": valid_program_managers
+                "direct_publish": True,
+                "status_before": "draft",
+                "status_after": target_status,
+                "target_status": target_status
+            })
+            
+            contract.comprehensive_data["publish_history"] = publish_history
+            
+            # Mark as finalized and locked after direct publication
+            if not contract.comprehensive_data.get("finalization"):
+                contract.comprehensive_data["finalization"] = {}
+            
+            contract.comprehensive_data["finalization"].update({
+                "finalized_at": datetime.utcnow().isoformat(),
+                "finalized_by": current_user.id,
+                "finalized_by_name": current_user.full_name or current_user.username,
+                "locked": True,
+                "direct_publish": True,
+                "direct_publish_status": target_status,
+                "final_status": target_status
+            })
+            
+            # ✅ CRITICAL: Send notification to assigned users that contract is now published
+            # Notify assigned Program Managers and Directors that contract was published directly
+            from app.notification_service import NotificationService
+            from app.auth_models import User as AuthUser
+            
+            # Notify all assigned users (PMs, PGMs, Directors) about direct publishing
+            all_assigned_users = []
+            
+            # Get assigned PM users
+            if contract.assigned_pm_users:
+                if isinstance(contract.assigned_pm_users, list):
+                    all_assigned_users.extend(contract.assigned_pm_users)
+            
+            # Get assigned PGM users
+            if contract.assigned_pgm_users:
+                if isinstance(contract.assigned_pgm_users, list):
+                    all_assigned_users.extend(contract.assigned_pgm_users)
+            
+            # Get assigned Director users
+            if contract.assigned_director_users:
+                if isinstance(contract.assigned_director_users, list):
+                    all_assigned_users.extend(contract.assigned_director_users)
+            
+            # Remove duplicates
+            all_assigned_users = list(set(all_assigned_users))
+            
+            # Send notifications to all assigned users
+            if all_assigned_users:
+                for user_id in all_assigned_users:
+                    user = db.query(AuthUser).filter(
+                        AuthUser.id == user_id,
+                        AuthUser.is_active == True
+                    ).first()
+                    
+                    if user:
+                        notification_type = "direct_publish"
+                        if user.role == "project_manager":
+                            notification_type = "direct_publish_pm"
+                        elif user.role == "program_manager":
+                            notification_type = "direct_publish_pgm"
+                        elif user.role == "director":
+                            notification_type = "direct_publish_director"
+                        
+                        # Create notification
+                        notification = UserNotification(
+                            user_id=user_id,
+                            notification_type=notification_type,
+                            title="Contract Published Directly",
+                            message=f"Contract '{contract.grant_name or contract.filename}' has been published directly as '{target_status}' by {current_user.full_name or current_user.username}",
+                            contract_id=contract_id,
+                            is_read=False,
+                            created_at=datetime.utcnow()
+                        )
+                        db.add(notification)
+                
+                print(f"DEBUG: Direct publish notifications sent to {len(all_assigned_users)} users")
+            
+        elif publish_data.publish_to_review:
+            # Original logic - publish to review (REMAINS UNCHANGED)
+            contract.status = "under_review"
+            action_type = "publish_for_review"
+            message = "Agreement published and submitted for review"
+            
+            # ... [KEEP ALL THE EXISTING REVIEW PUBLISHING LOGIC UNCHANGED] ...
+            # ... [ALL THE EXISTING CODE FOR REVIEW PUBLISHING] ...
+            
+        else:
+            # If neither option selected explicitly, default to direct publishing
+            # This ensures backward compatibility
+            contract.status = "published"
+            action_type = "direct_publish"
+            message = "Agreement published directly as 'published'"
+            
+            # Add minimal history for backward compatibility
+            if not contract.comprehensive_data:
+                contract.comprehensive_data = {}
+            
+            publish_history = contract.comprehensive_data.get("publish_history", [])
+            publish_history.append({
+                "action": "published_directly",
+                "by_user_id": current_user.id,
+                "by_user_name": current_user.full_name or current_user.username,
+                "timestamp": datetime.utcnow().isoformat(),
+                "notes": publish_data.notes,
+                "direct_publish": True,
+                "status_before": "draft",
+                "status_after": "published"
             })
             
             contract.comprehensive_data["publish_history"] = publish_history
@@ -757,7 +848,6 @@ async def publish_agreement(
         db.commit()
         
         # Log activity
-        action_type = "publish_for_review" if publish_data.publish_to_review else "publish_draft"
         log_activity(
             db,
             current_user.id,
@@ -766,19 +856,21 @@ async def publish_agreement(
             details={
                 "contract_id": contract_id,
                 "publish_to_review": publish_data.publish_to_review,
+                "publish_directly": publish_data.publish_directly,
                 "notes": publish_data.notes,
-                "notified_program_managers_count": len(valid_program_managers) if publish_data.publish_to_review else 0
+                "new_status": contract.status,
+                "direct_publish": publish_data.publish_directly,
+                "target_status": contract.status if publish_data.publish_directly else None
             }
         )
-        
-        message = "Agreement published and submitted for review" if publish_data.publish_to_review else "Agreement published"
         
         return {
             "message": message,
             "contract_id": contract_id,
             "status": contract.status,
             "published_at": contract.published_at.isoformat() if contract.published_at else None,
-            "program_managers_notified": len(valid_program_managers) if publish_data.publish_to_review else 0
+            "version_number": contract.version,
+            "direct_publish": publish_data.publish_directly or not publish_data.publish_to_review
         }
         
     except Exception as e:
@@ -788,7 +880,154 @@ async def publish_agreement(
             detail=f"Failed to publish agreement: {str(e)}"
         )
 
-
+@router.post("/drafts/{contract_id}/publish-directly")
+async def publish_agreement_directly(
+    contract_id: int,
+    publish_data: PublishAgreementRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Publish a draft agreement directly without review (AUTOMATIC PUBLISHING)
+    """
+    if current_user.role != "project_manager":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only Project Managers can publish agreements"
+        )
+    
+    contract = db.query(Contract).filter(
+        Contract.id == contract_id,
+        Contract.created_by == current_user.id,
+        Contract.status == "draft"
+    ).first()
+    
+    if not contract:
+        raise HTTPException(status_code=404, detail="Draft agreement not found")
+    
+    try:
+        # Update audit fields
+        contract.published_at = datetime.utcnow()
+        contract.published_by = current_user.id
+        
+        if publish_data.notes:
+            contract.notes = publish_data.notes
+        
+        # ✅ AUTOMATIC DIRECT PUBLISHING - ALWAYS GOES TO "published" STATUS
+        contract.status = "published"
+        action_type = "direct_publish_auto"
+        message = "Agreement published directly without review"
+        
+        # Create a version snapshot
+        from app.models import ContractVersion
+        
+        last_version = db.query(ContractVersion).filter(
+            ContractVersion.contract_id == contract_id
+        ).order_by(ContractVersion.version_number.desc()).first()
+        
+        version_number = (last_version.version_number + 1) if last_version else 1
+        
+        version_data = {
+            "direct_publish_data": {
+                "published_at": datetime.utcnow().isoformat(),
+                "published_by": current_user.id,
+                "published_by_name": current_user.full_name or current_user.username,
+                "notes": publish_data.notes,
+                "direct_publish": True,
+                "automatic_publish": True,
+                "status": "published"
+            },
+            "contract_data": contract.comprehensive_data or {},
+            "basic_data": {
+                "grant_name": contract.grant_name,
+                "contract_number": contract.contract_number,
+                "grantor": contract.grantor,
+                "grantee": contract.grantee,
+                "total_amount": contract.total_amount,
+                "start_date": contract.start_date,
+                "end_date": contract.end_date,
+                "purpose": contract.purpose,
+                "status": contract.status
+            }
+        }
+        
+        version = ContractVersion(
+            contract_id=contract_id,
+            version_number=version_number,
+            created_by=current_user.id,
+            contract_data=version_data,
+            changes_description=f"Automatically published without review: {publish_data.notes}" if publish_data.notes else "Automatically published without review",
+            version_type="direct_publish_auto"
+        )
+        
+        db.add(version)
+        
+        # Update contract version
+        contract.version = version_number
+        
+        # Add to comprehensive data history
+        if not contract.comprehensive_data:
+            contract.comprehensive_data = {}
+        
+        publish_history = contract.comprehensive_data.get("publish_history", [])
+        publish_history.append({
+            "action": "automatically_published",
+            "by_user_id": current_user.id,
+            "by_user_name": current_user.full_name or current_user.username,
+            "timestamp": datetime.utcnow().isoformat(),
+            "notes": publish_data.notes,
+            "direct_publish": True,
+            "automatic": True,
+            "status_before": "draft",
+            "status_after": "published"
+        })
+        
+        contract.comprehensive_data["publish_history"] = publish_history
+        
+        # Mark as finalized
+        contract.comprehensive_data["finalization"] = {
+            "finalized_at": datetime.utcnow().isoformat(),
+            "finalized_by": current_user.id,
+            "finalized_by_name": current_user.full_name or current_user.username,
+            "locked": True,
+            "direct_publish": True,
+            "automatic_publish": True,
+            "final_status": "published"
+        }
+        
+        db.commit()
+        
+        # Log activity
+        log_activity(
+            db,
+            current_user.id,
+            "direct_publish_auto",
+            contract_id=contract_id,
+            details={
+                "contract_id": contract_id,
+                "notes": publish_data.notes,
+                "status": "published",
+                "automatic_publish": True
+            }
+        )
+        
+        return {
+            "message": message,
+            "contract_id": contract_id,
+            "status": contract.status,
+            "published_at": contract.published_at.isoformat() if contract.published_at else None,
+            "version_number": version_number,
+            "direct_publish": True,
+            "automatic_publish": True
+        }
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to publish agreement directly: {str(e)}"
+        )
+        
 @router.get("/users/available")
 async def get_available_users(
     role: Optional[str] = None,

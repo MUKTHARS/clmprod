@@ -49,7 +49,7 @@ import ComprehensiveView from './ComprehensiveView';
 import API_CONFIG from './config';
 import ProjectManagerActions from './components/workflow/ProjectManagerActions';
 import './styles/ContractDetailsPage.css';
-
+import { useLocation } from 'react-router-dom';
 import AgreementWorkflow from './components/workflow/AgreementWorkflow';
 function ContractDetailsPage({ user = null }) {
   const { id } = useParams();
@@ -58,8 +58,10 @@ function ContractDetailsPage({ user = null }) {
   const [contractData, setContractData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('analysis');
+  const location = useLocation();
+  const [isFromDrafts, setIsFromDrafts] = useState(false);
   const [expandedSections, setExpandedSections] = useState({
-   
+  
     contractDetails: true,
     financial: true,
     parties: true,
@@ -75,7 +77,31 @@ function ContractDetailsPage({ user = null }) {
   // State for comments section
   const [pmComments, setPmComments] = useState([]);
   const [pmCommentsLoading, setPmCommentsLoading] = useState(false);
+    useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    if (searchParams.get('from') === 'drafts') {
+      setIsFromDrafts(true);
+    }
+  }, [location.search]);
+
+const handleBack = () => {
+  const searchParams = new URLSearchParams(location.search);
+  const fromDrafts = searchParams.get('from') === 'drafts';
+  const source = searchParams.get('source');
   
+  if (fromDrafts) {
+    // Go back to the specific drafts page
+    if (source === 'mydrafts') {
+      navigate('/drafts/my');
+    } else if (source === 'assigned') {
+      navigate('/drafts/assigned');
+    } else {
+      navigate('/drafts/my'); // Default fallback
+    }
+  } else {
+    navigate('/contracts');
+  }
+};
   // State for deliverables upload
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [selectedDeliverable, setSelectedDeliverable] = useState(null);
@@ -999,10 +1025,10 @@ const hasDeliverableBeenUploaded = (index) => {
           <AlertCircle className="error-icon" size={48} />
           <h2>Contract ID Missing</h2>
           <p>No contract ID was provided in the URL.</p>
-          <button className="btn-primary" onClick={() => navigate('/contracts')}>
+          {/* <button className="btn-primary" onClick={() => navigate('/contracts')}>
             <ArrowLeft size={16} />
             Back to Contracts
-          </button>
+          </button> */}
         </div>
       </div>
     );
@@ -1016,10 +1042,10 @@ const hasDeliverableBeenUploaded = (index) => {
           <AlertCircle className="error-icon" size={48} />
           <h2>Invalid Contract ID</h2>
           <p>The contract ID "{id}" is not valid.</p>
-          <button className="btn-primary" onClick={() => navigate('/contracts')}>
+          {/* <button className="btn-primary" onClick={() => navigate('/contracts')}>
             <ArrowLeft size={16} />
             Back to Contracts
-          </button>
+          </button> */}
         </div>
       </div>
     );
@@ -1033,10 +1059,10 @@ const hasDeliverableBeenUploaded = (index) => {
           <h2>Contract Not Found</h2>
           <p>The contract with ID {contractId} could not be found.</p>
           <div className="error-actions">
-            <button className="btn-primary" onClick={() => navigate('/contracts')}>
+            {/* <button className="btn-primary" onClick={() => navigate('/contracts')}>
               <ArrowLeft size={16} />
               Back to Contracts
-            </button>
+            </button> */}
             <button className="btn-secondary" onClick={() => fetchContractData(contractId)}>
               <RefreshCw size={16} />
               Try Again
@@ -1083,13 +1109,13 @@ const hasDeliverableBeenUploaded = (index) => {
       {/* Header Section */}
       <div className="contract-header">
         <div className="header-top">
-          <button className="btn-back" onClick={() => navigate('/contracts')}>
+          {/* <button className="btn-back" onClick={() => navigate('/contracts')}>
             <ArrowLeft size={20} />
             <span>Back to Contracts</span>
-          </button>
+          </button> */}
           
           <div className="header-actions-right">
-            <div className="quick-actions-mini">
+            {/* <div className="quick-actions-mini">
               <button className="action-btn-mini" title="Export PDF">
                 <Download size={14} />
               </button>
@@ -1105,7 +1131,7 @@ const hasDeliverableBeenUploaded = (index) => {
               <button className="action-btn-mini" title="Reminder">
                 <Bell size={14} />
               </button>
-            </div>
+            </div> */}
           </div>
         </div>
 
@@ -1542,16 +1568,7 @@ const hasDeliverableBeenUploaded = (index) => {
 
 {/* Project Manager Actions Section - For ALL project manager contracts */}
 {user && user.role === "project_manager" && contractData && (
-  <div className="section-card">
-    <div className="section-header">
-      <h3>Project Manager Actions</h3>
-      <span className="contract-status-badge">
-        Contract Status: <strong>{contractData.status}</strong>
-      </span>
-    </div>
-    
-    <div className="workflow-section">
-      <ProjectManagerActions 
+ <ProjectManagerActions 
         contract={contractData}
         user={user}
         onActionComplete={() => {
@@ -1559,12 +1576,10 @@ const hasDeliverableBeenUploaded = (index) => {
           fetchReviewComments();
         }}
       />
-    </div>
-  </div>
 )}
 
         {/* Project Manager Comments Section */}
-        {user && user.role === "project_manager" && contractData && (
+        {/* {user && user.role === "project_manager" && contractData && (
           <div className="section-card">
             <div className="section-header">
               <h3>Comments({pmComments.length})</h3>
@@ -1644,7 +1659,7 @@ const hasDeliverableBeenUploaded = (index) => {
               </div>
             </div>
           </div>
-        )}
+        )} */}
       </div>
 
       {/* Upload Modal */}

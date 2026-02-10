@@ -906,3 +906,33 @@
   width: 20px;
   height: 20px;
 }
+
+
+
+/* Add to your Sidebar.css */
+.nav-item.active {
+  background-color: rgba(59, 130, 246, 0.1);
+  position: relative;
+}
+
+.nav-item.active .nav-indicator {
+  display: block;
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 20px;
+  background-color: #3b82f6;
+  border-radius: 0 2px 2px 0;
+}
+
+/* Ensure parent doesn't show active when child is active */
+.nav-item.draft-parent.active:has(+ .submenu .nav-item.submenu-item.active) {
+  background-color: transparent;
+}
+
+.nav-item.draft-parent.active:has(+ .submenu .nav-item.submenu-item.active) .nav-indicator {
+  display: none;
+}
+

@@ -1091,3 +1091,46 @@
   transform: rotate(180deg);
   transition: transform 0.2s ease;
 }
+
+
+/* Add these to DraftManagementPage.css */
+.status-text.draft {
+  background: #e3f2fd;
+  color: #1565c0;
+}
+
+.status-text.under-review {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.status-text.reviewed {
+  background: #d1ecf1;
+  color: #0c5460;
+}
+
+.status-text.rejected {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.status-text.approved {
+  background: #d4edda;
+  color: #155724;
+}
+
+/* Update card view badges too */
+.status-badge.under-review {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.status-badge.reviewed {
+  background: #d1ecf1;
+  color: #0c5460;
+}
+
+.status-badge.rejected {
+  background: #f8d7da;
+  color: #721c24;
+}

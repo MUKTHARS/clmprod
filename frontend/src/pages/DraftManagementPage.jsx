@@ -33,7 +33,8 @@ import {
   UserCog,
   ChevronsRight,
   UserX,
-  MoreHorizontal
+  MoreHorizontal,
+  Settings
 } from 'lucide-react';
 import API_CONFIG from '../config';
 import './DraftManagementPage.css';
@@ -440,9 +441,10 @@ function DraftManagementPage({ user }) {
     }
   };
 
-  const handleViewContract = (draftId) => {
-    navigate(`/contracts/${draftId}`);
-  };
+const handleViewContract = (draftId) => {
+  // Navigate to contract details with from=drafts parameter
+  navigate(`/contracts/${draftId}?from=drafts&source=mydrafts`);
+};
 
   const handleEditContract = (draftId) => {
     navigate(`/contracts/${draftId}?edit=true`);
@@ -531,19 +533,21 @@ function DraftManagementPage({ user }) {
             <span>{formatDate(draft.end_date)}</span>
           </div>
         </td>
-        <td>
-          <div className="status-cell">
-            <span className={`status-text draft`}>Draft</span>
-            {activeTab === 'assigned-drafts' && (
-              <div className="assignment-role">
-                <UserPlus size={12} />
-                <span className="role-text">
-                  {draft.assignment_role?.replace('_', ' ') || 'Assigned'}
-                </span>
-              </div>
-            )}
-          </div>
-        </td>
+     <td>
+  <div className="status-cell">
+    <span className={`status-text ${draft.status?.replace('_', '-') || 'draft'}`}>
+      {draft.status ? draft.status.replace('_', ' ').toUpperCase() : 'DRAFT'}
+    </span>
+    {activeTab === 'assigned-drafts' && (
+      <div className="assignment-role">
+        <UserPlus size={12} />
+        <span className="role-text">
+          {draft.assignment_role?.replace('_', ' ') || 'Assigned'}
+        </span>
+      </div>
+    )}
+  </div>
+</td>
         <td>
           <div className="action-buttons">
             <button 
@@ -567,7 +571,7 @@ function DraftManagementPage({ user }) {
                   onClick={() => handleOpenWorkflow(draft)}
                   title="Manage Agreement Workflow"
                 >
-                  <FileText size={16} />
+                  <Settings size={16} />
                 </button>
               </>
             )}
@@ -586,12 +590,14 @@ function DraftManagementPage({ user }) {
     return (
       <div key={draft.id || index} className="draft-card">
         <div className="card-header">
-          <div className="draft-status">
-            <span className="status-badge draft">Draft</span>
-            {activeTab === 'assigned-drafts' && draft.created_by !== user?.id && (
-              <span className="status-badge assigned">Assigned</span>
-            )}
-          </div>
+         <div className="draft-status">
+  <span className={`status-badge ${draft.status?.replace('_', '-') || 'draft'}`}>
+    {draft.status ? draft.status.replace('_', ' ').toUpperCase() : 'DRAFT'}
+  </span>
+  {activeTab === 'assigned-drafts' && draft.created_by !== user?.id && (
+    <span className="status-badge assigned">Assigned</span>
+  )}
+</div>
           <div className="card-actions">
             <button 
               className="btn-action"
@@ -731,14 +737,7 @@ function DraftManagementPage({ user }) {
     <div className="draft-management-page">
       <div className="draft-header">
         <div className="header-left">
-          <h1>
-            {activeTab === 'my-drafts' ? 'My Drafts' : 'Drafts Assigned to Me'}
-          </h1>
-          <p className="page-subtitle">
-            {activeTab === 'my-drafts' 
-              ? 'Manage your draft agreements before publishing' 
-              : 'Draft agreements assigned to you for review or collaboration'}
-          </p>
+         
           
           {activeTab === 'assigned-drafts' && assignmentStats && (
             <div className="assignment-stats">
@@ -776,20 +775,8 @@ function DraftManagementPage({ user }) {
           )}
         </div>
         <div className="header-actions">
-          <button 
-            className="btn-primary"
-            onClick={() => navigate('/upload')}
-          >
-            <Plus size={16} />
-            Upload New
-          </button>
-          <button 
-            className="btn-secondary"
-            onClick={fetchDrafts}
-            disabled={loading}
-          >
-            <RefreshCw size={16} className={loading ? 'spinning' : ''} />
-          </button>
+
+          
         </div>
       </div>
 

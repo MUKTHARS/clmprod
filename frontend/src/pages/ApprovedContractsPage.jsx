@@ -408,22 +408,10 @@ const renderContractRow = (contract, index) => {
     <div className="approved-contracts-page">
       <div className="contracts-header">
         <div className="header-left">
-          <h1>
-            <CheckCircle size={24} />
-            Approved Contracts
-          </h1>
-          <p className="page-subtitle">
-            Contracts approved by Director - Ready for final publishing
-          </p>
+          
         </div>
         <div className="header-actions">
-          <button 
-            className="btn-secondary"
-            onClick={fetchApprovedContracts}
-            disabled={loading}
-          >
-            <RefreshCw size={16} className={loading ? 'spinning' : ''} />
-          </button>
+
         </div>
       </div>
 
@@ -515,8 +503,8 @@ const renderContractRow = (contract, index) => {
           <div className="publish-modal">
             <div className="modal-header">
               <h3>
-                <Send size={20} />
-                Finalize & Publish Contract
+                {/* <Send size={20} /> */}
+                Publish Contract
               </h3>
               <button 
                 className="modal-close"
@@ -559,22 +547,8 @@ const renderContractRow = (contract, index) => {
                   placeholder="Add any notes about this final publication..."
                   rows={4}
                 />
-                <p className="notes-help">
-                  These notes will be recorded in the contract history
-                </p>
               </div>
 
-              <div className="warning-section">
-                <AlertCircle size={16} />
-                <div className="warning-content">
-                  <strong>Important:</strong>
-                  <ul>
-                    <li>This will finalize the contract and mark it as published</li>
-                    <li>The contract will be locked for further changes</li>
-                    <li>This action cannot be undone</li>
-                  </ul>
-                </div>
-              </div>
             </div>
 
             <div className="modal-footer">
