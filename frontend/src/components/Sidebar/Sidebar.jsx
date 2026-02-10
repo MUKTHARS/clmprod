@@ -454,25 +454,24 @@ useEffect(() => {
   }, [user, menuItems.allItems, getPendingCounts]); // Added dependencies
 
   // Check if draft submenu is active - FIXED: Moved inside useEffect
-  useEffect(() => {
-    const checkDraftSubmenuActive = () => {
-      const isActive = menuItems.draftSubmenuItems?.some(item => 
-        location.pathname === item.path || location.pathname.startsWith(item.path)
-      );
-      setIsDraftSubmenuActive(isActive);
-      
-      // Auto-expand draft menu if a submenu is active
-      if (isActive && menuItems.draftParent) {
-        setExpandedMenus(prev => ({
-          ...prev,
-          draft: true
-        }));
-      }
-    };
+useEffect(() => {
+  const checkDraftSubmenuActive = () => {
+    const isActive = menuItems.draftSubmenuItems?.some(item => 
+      location.pathname === item.path || location.pathname.startsWith(item.path)
+    );
+    setIsDraftSubmenuActive(isActive);
     
-    checkDraftSubmenuActive();
-  }, [location.pathname, menuItems.draftSubmenuItems, menuItems.draftParent]);
-
+    // Auto-expand draft menu if a submenu is active
+    if (isActive && menuItems.draftParent) {
+      setExpandedMenus(prev => ({
+        ...prev,
+        draft: true
+      }));
+    }
+  };
+  
+  checkDraftSubmenuActive();
+}, [location.pathname, menuItems.draftSubmenuItems, menuItems.draftParent]);
   // Check if assigned submenu is active
   useEffect(() => {
     const checkAssignedSubmenuActive = () => {
@@ -544,83 +543,100 @@ useEffect(() => {
 
       <nav className="sidebar-nav">
         <ul className="nav-menu">
-          {/* Regular Items */}
-          {menuItems.regularItems.map((item) => {
-            const isActive = location.pathname === item.path || 
-                            (item.path !== '/dashboard' && location.pathname.startsWith(item.path));
-            const badgeCount = badgeCounts[item.id];
+
+{menuItems.regularItems.map((item) => {
+  // Special handling for Grants menu item
+  let isActive = false;
+  
+  if (item.id === 'grants') {
+    // For Grants tab, only active when:
+    // 1. We're on /contracts (exact match)
+    // 2. We're on /contracts/{id} but NOT from drafts
+    const searchParams = new URLSearchParams(location.search);
+    const isFromDrafts = searchParams.get('from') === 'drafts';
+    
+    isActive = (location.pathname === '/contracts' || 
+                location.pathname.startsWith('/contracts/')) && 
+               !isFromDrafts;
+  } else {
+    // For other items, use normal logic
+    isActive = location.pathname === item.path || 
+              (item.path !== '/dashboard' && location.pathname.startsWith(item.path));
+  }
+  
+  const badgeCount = badgeCounts[item.id];
+  
+  return (
+    <li key={item.id}>
+      <button
+        className={`nav-item ${isActive ? 'active' : ''}`}
+        onClick={() => handleNavigation(item.path)}
+        title={item.label}
+      >
+        <span className="nav-icon">
+          {renderIcon(item)}
+        </span>
+        <span className="nav-label">{item.label}</span>
+        {badgeCount && (
+          <span className="nav-badge">{badgeCount}</span>
+        )}
+        {isActive && <span className="nav-indicator" />}
+      </button>
+    </li>
+  );
+})}
+
+          {/* Draft Parent Menu with Dropdown */}
+{menuItems.draftParent && (
+  <>
+    <div className="nav-section-divider">
+      <div className="nav-section-label">DRAFT MANAGEMENT</div>
+    </div>
+    
+    <li key={menuItems.draftParent.id}>
+      <button
+        className={`nav-item draft-parent ${(expandedMenus.draft || isDraftSubmenuActive) && !location.pathname.includes('/drafts/my') && !location.pathname.includes('/drafts/assigned') ? 'active' : ''}`} // FIX: Only active when NOT on submenu pages
+        onClick={() => toggleMenu('draft')}
+        title={menuItems.draftParent.label}
+      >
+        <span className="nav-icon">
+          {renderIcon(menuItems.draftParent)}
+        </span>
+        <span className="nav-label">{menuItems.draftParent.label}</span>
+        <span className="menu-arrow">
+          {expandedMenus.draft ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+        </span>
+        {(expandedMenus.draft || isDraftSubmenuActive) && !location.pathname.includes('/drafts/my') && !location.pathname.includes('/drafts/assigned') && <span className="nav-indicator" />}
+      </button>
+      
+      {/* Draft Submenu */}
+      {expandedMenus.draft && menuItems.draftSubmenuItems?.length > 0 && (
+        <ul className="submenu">
+          {menuItems.draftSubmenuItems.map((subItem) => {
+            const isSubActive = location.pathname === subItem.path || 
+                               location.pathname.startsWith(subItem.path);
             
             return (
-              <li key={item.id}>
+              <li key={subItem.id}>
                 <button
-                  className={`nav-item ${isActive ? 'active' : ''}`}
-                  onClick={() => handleNavigation(item.path)}
-                  title={item.label}
+                  className={`nav-item submenu-item ${isSubActive ? 'active' : ''}`}
+                  onClick={() => handleNavigation(subItem.path)}
+                  title={subItem.label}
                 >
                   <span className="nav-icon">
-                    {renderIcon(item)}
+                    {renderIcon(subItem)}
                   </span>
-                  <span className="nav-label">{item.label}</span>
-                  {badgeCount && (
-                    <span className="nav-badge">{badgeCount}</span>
-                  )}
-                  {isActive && <span className="nav-indicator" />}
+                  <span className="nav-label">{subItem.label}</span>
+                  {isSubActive && <span className="nav-indicator" />}
                 </button>
               </li>
             );
           })}
-
-          {/* Draft Parent Menu with Dropdown */}
-          {menuItems.draftParent && (
-            <>
-              <div className="nav-section-divider">
-                <div className="nav-section-label">DRAFT MANAGEMENT</div>
-              </div>
-              
-              <li key={menuItems.draftParent.id}>
-                <button
-                  className={`nav-item draft-parent ${expandedMenus.draft || isDraftSubmenuActive ? 'active' : ''}`}
-                  onClick={() => toggleMenu('draft')}
-                  title={menuItems.draftParent.label}
-                >
-                  <span className="nav-icon">
-                    {renderIcon(menuItems.draftParent)}
-                  </span>
-                  <span className="nav-label">{menuItems.draftParent.label}</span>
-                  <span className="menu-arrow">
-                    {expandedMenus.draft ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                  </span>
-                  {(expandedMenus.draft || isDraftSubmenuActive) && <span className="nav-indicator" />}
-                </button>
-                
-                {/* Draft Submenu */}
-                {expandedMenus.draft && menuItems.draftSubmenuItems?.length > 0 && (
-                  <ul className="submenu">
-                    {menuItems.draftSubmenuItems.map((subItem) => {
-                      const isSubActive = location.pathname === subItem.path || 
-                                         location.pathname.startsWith(subItem.path);
-                      
-                      return (
-                        <li key={subItem.id}>
-                          <button
-                            className={`nav-item submenu-item ${isSubActive ? 'active' : ''}`}
-                            onClick={() => handleNavigation(subItem.path)}
-                            title={subItem.label}
-                          >
-                            <span className="nav-icon">
-                              {renderIcon(subItem)}
-                            </span>
-                            <span className="nav-label">{subItem.label}</span>
-                            {isSubActive && <span className="nav-indicator" />}
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-              </li>
-            </>
-          )}
+        </ul>
+      )}
+    </li>
+  </>
+)}
 
           {/* Assigned Agreements for Program Managers and Directors */}
           {menuItems.assignedParent && (

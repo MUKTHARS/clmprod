@@ -49,7 +49,7 @@ import ComprehensiveView from './ComprehensiveView';
 import API_CONFIG from './config';
 import ProjectManagerActions from './components/workflow/ProjectManagerActions';
 import './styles/ContractDetailsPage.css';
-
+import { useLocation } from 'react-router-dom';
 import AgreementWorkflow from './components/workflow/AgreementWorkflow';
 function ContractDetailsPage({ user = null }) {
   const { id } = useParams();
@@ -58,8 +58,10 @@ function ContractDetailsPage({ user = null }) {
   const [contractData, setContractData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('analysis');
+  const location = useLocation();
+  const [isFromDrafts, setIsFromDrafts] = useState(false);
   const [expandedSections, setExpandedSections] = useState({
-   
+  
     contractDetails: true,
     financial: true,
     parties: true,
@@ -75,7 +77,31 @@ function ContractDetailsPage({ user = null }) {
   // State for comments section
   const [pmComments, setPmComments] = useState([]);
   const [pmCommentsLoading, setPmCommentsLoading] = useState(false);
+    useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    if (searchParams.get('from') === 'drafts') {
+      setIsFromDrafts(true);
+    }
+  }, [location.search]);
+
+const handleBack = () => {
+  const searchParams = new URLSearchParams(location.search);
+  const fromDrafts = searchParams.get('from') === 'drafts';
+  const source = searchParams.get('source');
   
+  if (fromDrafts) {
+    // Go back to the specific drafts page
+    if (source === 'mydrafts') {
+      navigate('/drafts/my');
+    } else if (source === 'assigned') {
+      navigate('/drafts/assigned');
+    } else {
+      navigate('/drafts/my'); // Default fallback
+    }
+  } else {
+    navigate('/contracts');
+  }
+};
   // State for deliverables upload
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [selectedDeliverable, setSelectedDeliverable] = useState(null);

@@ -898,3 +898,54 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Add to your ContractsListPage.css */
+.status-text.approved {
+  color: #059669;
+  background-color: rgba(5, 150, 105, 0.1);
+}
+
+.status-text.draft {
+  color: #7c3aed;
+  background-color: rgba(124, 58, 237, 0.1);
+}
+
+.status-text.under_review {
+  color: #d97706;
+  background-color: rgba(217, 119, 6, 0.1);
+}
+
+.status-text.reviewed {
+  color: #2563eb;
+  background-color: rgba(37, 99, 235, 0.1);
+}
+
+.status-text.rejected {
+  color: #dc2626;
+  background-color: rgba(220, 38, 38, 0.1);
+}
+
+.status-text.published {
+  color: #059669;
+  background-color: rgba(5, 150, 105, 0.1);
+}
+
+.status-text.processed {
+  color: #059669;
+  background-color: rgba(5, 150, 105, 0.1);
+}
+
+.status-text.processing {
+  color: #d97706;
+  background-color: rgba(217, 119, 6, 0.1);
+}
+
+.status-text.error {
+  color: #dc2626;
+  background-color: rgba(220, 38, 38, 0.1);
+}
+
+.status-text.default {
+  color: #6b7280;
+  background-color: rgba(107, 114, 128, 0.1);
+}

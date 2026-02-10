@@ -441,9 +441,10 @@ function DraftManagementPage({ user }) {
     }
   };
 
-  const handleViewContract = (draftId) => {
-    navigate(`/contracts/${draftId}`);
-  };
+const handleViewContract = (draftId) => {
+  // Navigate to contract details with from=drafts parameter
+  navigate(`/contracts/${draftId}?from=drafts&source=mydrafts`);
+};
 
   const handleEditContract = (draftId) => {
     navigate(`/contracts/${draftId}?edit=true`);
