@@ -71,24 +71,49 @@ function AssignedAgreementsPage({ user }) {
         const data = await response.json();
         console.log('Assigned agreements response:', data);
         
-        // Filter agreements based on user role
-        const filteredAgreements = data.drafts?.filter(draft => {
-          if (!draft) return false;
-          
-          // For program managers, check if they're in assigned_pgm_users
-          if (user.role === 'program_manager') {
-            return draft.assigned_pgm_users && Array.isArray(draft.assigned_pgm_users) && 
-                   draft.assigned_pgm_users.includes(user.id);
-          }
-          
-          // For directors, check if they're in assigned_director_users
-          if (user.role === 'director') {
-            return draft.assigned_director_users && Array.isArray(draft.assigned_director_users) && 
-                   draft.assigned_director_users.includes(user.id);
-          }
-          
-          return false;
-        }) || [];
+// In AssignedAgreementsPage.jsx - update the filtering logic:
+
+const filteredAgreements = data.drafts?.filter(draft => {
+  if (!draft) return false;
+  
+  // For program managers, check if they're in assigned_pgm_users array
+  if (user.role === 'program_manager') {
+    // Handle both array and string formats
+    let pgmUsers = draft.assigned_pgm_users;
+    
+    // If it's a string, try to parse it
+    if (typeof pgmUsers === 'string') {
+      try {
+        pgmUsers = JSON.parse(pgmUsers);
+      } catch (e) {
+        // If not valid JSON, try comma-separated
+        pgmUsers = pgmUsers.split(',').map(id => id.trim()).filter(id => id);
+      }
+    }
+    
+    return Array.isArray(pgmUsers) && pgmUsers.includes(user.id);
+  }
+  
+  // For directors, check if they're in assigned_director_users array
+  if (user.role === 'director') {
+    // Handle both array and string formats
+    let directorUsers = draft.assigned_director_users;
+    
+    // If it's a string, try to parse it
+    if (typeof directorUsers === 'string') {
+      try {
+        directorUsers = JSON.parse(directorUsers);
+      } catch (e) {
+        // If not valid JSON, try comma-separated
+        directorUsers = directorUsers.split(',').map(id => id.trim()).filter(id => id);
+      }
+    }
+    
+    return Array.isArray(directorUsers) && directorUsers.includes(user.id);
+  }
+  
+  return false;
+}) || [];
         
         setAgreements(filteredAgreements);
       } else {

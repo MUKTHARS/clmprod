@@ -2,39 +2,29 @@
 from datetime import datetime
 from sqlalchemy.orm import Session
 from app.auth_models import UserNotification, User
-
+from typing import Dict, Any, List
 class NotificationService:
     @staticmethod
-    def create_assignment_notification(
-        db: Session,
-        contract_id: int,
-        contract_name: str,
-        assigned_users: list,
-        assigned_by_user: User,
-        user_type: str  # 'project_manager', 'program_manager', 'director'
-    ):
-        """Create notifications for assigned users"""
-        notifications = []
+    def create_assignment_notification(db: Session, contract_id: int, contract_name: str, 
+                                    assigned_users: List[int], assigned_by_user: User, 
+                                    user_type: str):
+        """Create notifications for multiple assigned users"""
+        from app.auth_models import UserNotification
         
+        notifications = []
         for user_id in assigned_users:
-            user = db.query(User).filter(User.id == user_id).first()
-            if not user:
-                continue
-                
             notification = UserNotification(
                 user_id=user_id,
-                notification_type="agreement_assigned",
-                title="New Agreement Assignment",
-                message=f"You have been assigned to '{contract_name}' as a {user_type.replace('_', ' ').title()} by {assigned_by_user.full_name or assigned_by_user.username}",
+                notification_type=f"{user_type}_assigned",
+                title="New Assignment",
+                message=f"You have been assigned to contract '{contract_name}' by {assigned_by_user.full_name or assigned_by_user.username}",
                 contract_id=contract_id,
                 is_read=False,
                 created_at=datetime.utcnow()
             )
-            
-            notifications.append(notification)
             db.add(notification)
+            notifications.append(notification)
         
-        db.commit()
         return notifications
     
     @staticmethod

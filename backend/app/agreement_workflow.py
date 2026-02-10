@@ -254,10 +254,19 @@ async def update_draft_agreement(
             comp_data["agreement_metadata"] = metadata
             contract.comprehensive_data = comp_data
         
-        # Update assigned users
+        # Update the notification section to handle multiple users
         if update_data.assigned_users:
             # Validate users exist and have correct roles
             from app.auth_models import User as AuthUser
+            from app.notification_service import NotificationService
+            
+            # Track which users need notifications
+            notification_messages = []
+            
+            # Get current assignments for comparison
+            current_pm_users = set(contract.assigned_pm_users or [])
+            current_pgm_users = set(contract.assigned_pgm_users or [])
+            current_director_users = set(contract.assigned_director_users or [])
             
             # PM Users
             if update_data.assigned_users.pm_users:
@@ -267,6 +276,23 @@ async def update_draft_agreement(
                     AuthUser.is_active == True
                 ).all()
                 valid_pm_ids = [user.id for user in pm_users]
+                new_pm_users = set(valid_pm_ids)
+                
+                # Find users who are newly assigned
+                newly_assigned_pms = new_pm_users - current_pm_users
+                
+                if newly_assigned_pms:
+                    # Create notifications for newly assigned users
+                    NotificationService.create_assignment_notification(
+                        db=db,
+                        contract_id=contract_id,
+                        contract_name=contract.grant_name or contract.filename,
+                        assigned_users=list(newly_assigned_pms),
+                        assigned_by_user=current_user,
+                        user_type="project_manager"
+                    )
+                    notification_messages.append(f"{len(newly_assigned_pms)} project manager(s) notified")
+                
                 contract.assigned_pm_users = valid_pm_ids
             else:
                 contract.assigned_pm_users = []
@@ -279,6 +305,23 @@ async def update_draft_agreement(
                     AuthUser.is_active == True
                 ).all()
                 valid_pgm_ids = [user.id for user in pgm_users]
+                new_pgm_users = set(valid_pgm_ids)
+                
+                # Find users who are newly assigned
+                newly_assigned_pgms = new_pgm_users - current_pgm_users
+                
+                if newly_assigned_pgms:
+                    # Create notifications for newly assigned users
+                    NotificationService.create_assignment_notification(
+                        db=db,
+                        contract_id=contract_id,
+                        contract_name=contract.grant_name or contract.filename,
+                        assigned_users=list(newly_assigned_pgms),
+                        assigned_by_user=current_user,
+                        user_type="program_manager"
+                    )
+                    notification_messages.append(f"{len(newly_assigned_pgms)} program manager(s) notified")
+                
                 contract.assigned_pgm_users = valid_pgm_ids
             else:
                 contract.assigned_pgm_users = []
@@ -291,43 +334,26 @@ async def update_draft_agreement(
                     AuthUser.is_active == True
                 ).all()
                 valid_director_ids = [user.id for user in director_users]
+                new_director_users = set(valid_director_ids)
+                
+                # Find users who are newly assigned
+                newly_assigned_directors = new_director_users - current_director_users
+                
+                if newly_assigned_directors:
+                    # Create notifications for newly assigned users
+                    NotificationService.create_assignment_notification(
+                        db=db,
+                        contract_id=contract_id,
+                        contract_name=contract.grant_name or contract.filename,
+                        assigned_users=list(newly_assigned_directors),
+                        assigned_by_user=current_user,
+                        user_type="director"
+                    )
+                    notification_messages.append(f"{len(newly_assigned_directors)} director(s) notified")
+                
                 contract.assigned_director_users = valid_director_ids
             else:
                 contract.assigned_director_users = []
-        
-            from app.notification_service import NotificationService
-        
-            # Track which users need notifications
-            notification_messages = []
-            
-            # PM Users
-            if update_data.assigned_users.pm_users:
-                contract.assigned_pm_users = valid_pm_ids
-                # Create notifications
-                NotificationService.create_assignment_notification(
-                    db=db,
-                    contract_id=contract_id,
-                    contract_name=contract.grant_name or contract.filename,
-                    assigned_users=valid_pm_ids,
-                    assigned_by_user=current_user,
-                    user_type="project_manager"
-                )
-                notification_messages.append(f"{len(valid_pm_ids)} project manager(s) notified")
-            
-            # PGM Users
-            if update_data.assigned_users.pgm_users:
-                contract.assigned_pgm_users = valid_pgm_ids
-                # Create notifications
-                NotificationService.create_assignment_notification(
-                    db=db,
-                    contract_id=contract_id,
-                    contract_name=contract.grant_name or contract.filename,
-                    assigned_users=valid_pgm_ids,
-                    assigned_by_user=current_user,
-                    user_type="program_manager"
-                )
-                notification_messages.append(f"{len(valid_pgm_ids)} program manager(s) notified")
-            
             # Director Users
             if update_data.assigned_users.director_users:
                 contract.assigned_director_users = valid_director_ids
@@ -635,10 +661,9 @@ async def publish_agreement(
             from app.notification_service import NotificationService
             from app.auth_models import User as AuthUser
             
-            # ✅ FIX: Get ONLY assigned users from the contract
             all_assigned_users = []
-            
-            # Get assigned Program Managers
+
+            # Get assigned Program Managers from database columns
             if contract.assigned_pgm_users:
                 if isinstance(contract.assigned_pgm_users, list):
                     all_assigned_users.extend(contract.assigned_pgm_users)
@@ -651,7 +676,7 @@ async def publish_agreement(
                     except:
                         pgm_ids = [int(id_str.strip()) for id_str in contract.assigned_pgm_users.split(',') if id_str.strip().isdigit()]
                         all_assigned_users.extend(pgm_ids)
-            
+
             # Also check comprehensive_data for assignments
             if contract.comprehensive_data:
                 if "assigned_users" in contract.comprehensive_data:
@@ -662,12 +687,12 @@ async def publish_agreement(
                     metadata = contract.comprehensive_data["agreement_metadata"]
                     if metadata and "assigned_pgm_users" in metadata:
                         all_assigned_users.extend(metadata["assigned_pgm_users"])
-            
-            # Remove duplicates and ensure they are Program Managers
+
+            # Remove duplicates
             all_assigned_users = list(set(all_assigned_users))
-            
-            print(f"DEBUG: Publishing contract {contract_id} - Assigned Program Managers: {all_assigned_users}")
-            
+
+            print(f"DEBUG: Publishing contract {contract_id} - All assigned Program Managers: {all_assigned_users}")
+
             # Filter to only include active Program Managers
             valid_program_managers = []
             for user_id in all_assigned_users:
@@ -678,15 +703,18 @@ async def publish_agreement(
                 ).first()
                 if user:
                     valid_program_managers.append(user_id)
-            
+
+            # Send notifications to ALL assigned Program Managers
             if valid_program_managers:
-                NotificationService.create_publish_notification(
-                    db=db,
-                    contract_id=contract_id,
-                    contract_name=contract.grant_name or contract.filename,
-                    published_by_user=current_user,
-                    assigned_users=valid_program_managers
-                )
+                # Create individual notifications for each Program Manager
+                for pgm_user_id in valid_program_managers:
+                    NotificationService.create_publish_notification(
+                        db=db,
+                        contract_id=contract_id,
+                        contract_name=contract.grant_name or contract.filename,
+                        published_by_user=current_user,
+                        assigned_users=[pgm_user_id]  # Send to individual user
+                    )
                 print(f"DEBUG: Notifications sent to {len(valid_program_managers)} Program Managers")
 
             # Create a version snapshot
