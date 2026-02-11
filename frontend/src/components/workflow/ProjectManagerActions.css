@@ -751,3 +751,170 @@
 .project-no-padding {
   padding: 0 !important;
 }
+
+
+
+
+
+/* Popup Styles - Add these at the end of your ProjectManagerActions.css file */
+.project-popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  backdrop-filter: blur(4px);
+  animation: projectPopupFadeIn 0.2s ease;
+}
+
+.project-popup {
+  background: white;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 450px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  animation: projectPopupSlideIn 0.3s ease;
+}
+
+.project-popup-header {
+  padding: 20px;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+}
+
+.project-popup-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #111827;
+  flex: 1;
+}
+
+.project-popup-close {
+  background: none;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.project-popup-close:hover {
+  background: #f3f4f6;
+  color: #111827;
+}
+
+.project-popup-content {
+  padding: 20px;
+  color: #4b5563;
+  line-height: 1.6;
+}
+
+.project-popup-content p {
+  margin: 0;
+}
+
+.project-popup-actions {
+  padding: 20px;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.project-popup-btn {
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  font-size: 0.875rem;
+  transition: all 0.2s;
+  min-width: 100px;
+}
+
+.project-popup-btn-ok {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.project-popup-btn-ok:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.project-popup-btn-confirm {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  color: white;
+}
+
+.project-popup-btn-confirm:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4);
+}
+
+.project-popup-btn-cancel {
+  background: #ffffff;
+  color: #4b5563;
+  border: 1px solid #d1d5db;
+}
+
+.project-popup-btn-cancel:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+  transform: translateY(-1px);
+}
+
+.popup-icon-success {
+  color: #10b981;
+}
+
+.popup-icon-error {
+  color: #ef4444;
+}
+
+.popup-icon-warning {
+  color: #f59e0b;
+}
+
+.popup-icon-confirm {
+  color: #f59e0b;
+}
+
+.popup-icon-info {
+  color: #3b82f6;
+}
+
+@keyframes projectPopupFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes projectPopupSlideIn {
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}

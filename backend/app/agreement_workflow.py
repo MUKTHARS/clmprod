@@ -816,10 +816,7 @@ async def publish_agreement(
             contract.status = "under_review"
             action_type = "publish_for_review"
             message = "Agreement published and submitted for review"
-            
-            # ... [KEEP ALL THE EXISTING REVIEW PUBLISHING LOGIC UNCHANGED] ...
-            # ... [ALL THE EXISTING CODE FOR REVIEW PUBLISHING] ...
-            
+           
         else:
             # If neither option selected explicitly, default to direct publishing
             # This ensures backward compatibility

@@ -17,24 +17,6 @@
   flex: 1;
 }
 
-.btn-back {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: none;
-  border: none;
-  color: #666;
-  font-size: 14px;
-  cursor: pointer;
-  padding: 8px 0;
-  margin-bottom: 12px;
-  transition: color 0.2s;
-}
-
-.btn-back:hover {
-  color: #0066cc;
-}
-
 .draft-header h1 {
   font-size: 28px;
   font-weight: 700;
@@ -49,26 +31,28 @@
 }
 
 .assignment-stats {
-  display: flex;
-  gap: 16px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
   margin-top: 10px;
-  flex-wrap: wrap;
 }
 
 .stat-item {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  background: #f0f0f0;
+  gap: 8px;
+  padding: 6px 10px;
+  background: #f8f9fa;
   border-radius: 6px;
   font-size: 12px;
   color: #555;
+  border: 1px solid #e9ecef;
 }
 
 .stat-item.warning {
   background: #fff3cd;
   color: #856404;
+  border-color: #ffeaa7;
 }
 
 .header-actions {
@@ -537,6 +521,31 @@
   color: #1565c0;
 }
 
+.status-text.under-review {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.status-text.reviewed {
+  background: #d1ecf1;
+  color: #0c5460;
+}
+
+.status-text.rejected {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.status-text.approved {
+  background: #d4edda;
+  color: #155724;
+}
+
+.status-text.in-progress {
+  background: #fff3cd;
+  color: #856404;
+}
+
 .assignment-role {
   display: flex;
   align-items: center;
@@ -631,6 +640,31 @@
 }
 
 .status-badge.assigned {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.status-badge.under-review {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.status-badge.reviewed {
+  background: #d1ecf1;
+  color: #0c5460;
+}
+
+.status-badge.rejected {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.status-badge.approved {
+  background: #d4edda;
+  color: #155724;
+}
+
+.status-badge.in-progress {
   background: #fff3cd;
   color: #856404;
 }
@@ -890,10 +924,7 @@
   padding: 0;
 }
 
-
-
-
-/* NEW: Assigned Users List Styles */
+/* Assigned Users List Styles */
 .assigned-users-list {
   margin-top: 6px;
   padding: 6px;
@@ -1060,77 +1091,17 @@
   border: 1px dashed #dee2e6;
 }
 
-/* Update statistics styles */
-.assignment-stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 10px;
-  margin-top: 10px;
-}
-
-.stat-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 10px;
-  background: #f8f9fa;
-  border-radius: 6px;
-  font-size: 12px;
-  color: #555;
-  border: 1px solid #e9ecef;
-}
-
-.stat-item.warning {
-  background: #fff3cd;
-  color: #856404;
-  border-color: #ffeaa7;
-}
-
 /* Chevron animation */
 .toggle-assignments .expanded {
   transform: rotate(180deg);
   transition: transform 0.2s ease;
 }
 
-
-/* Add these to DraftManagementPage.css */
-.status-text.draft {
-  background: #e3f2fd;
-  color: #1565c0;
-}
-
-.status-text.under-review {
-  background: #fff3cd;
-  color: #856404;
-}
-
-.status-text.reviewed {
-  background: #d1ecf1;
-  color: #0c5460;
-}
-
-.status-text.rejected {
-  background: #f8d7da;
-  color: #721c24;
-}
-
-.status-text.approved {
-  background: #d4edda;
-  color: #155724;
-}
-
-/* Update card view badges too */
-.status-badge.under-review {
-  background: #fff3cd;
-  color: #856404;
-}
-
-.status-badge.reviewed {
-  background: #d1ecf1;
-  color: #0c5460;
-}
-
-.status-badge.rejected {
-  background: #f8d7da;
-  color: #721c24;
+/* Ensure consistent spacing */
+.draft-name-list, 
+.grantor-cell span, 
+.amount-cell span, 
+.date-cell span {
+  font-size: 13px;
+  line-height: 1.4;
 }

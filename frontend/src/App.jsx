@@ -25,6 +25,7 @@ import ProgramManagerDirectorDecisions from './components/workflow/ProgramManage
 import CopilotPage from './components/copilot/CopilotPage';
 import SuperAdminDashboard from './components/admin/SuperAdminDashboard';
 import ViewDraftsPage from './components/workflow/ViewDraftsPage';
+import Reports from './Reports';
 import DraftManagementPage from './pages/DraftManagementPage';
 import AssignedAgreementsPage from './pages/AssignedAgreementsPage';
 import AssignedByMePage from './pages/AssignedByMePage';
@@ -295,6 +296,8 @@ function AppContent({ user, isAuthenticated, loading, contracts, onLogin, onLogo
     </PrivateRoute>
   } 
 />
+
+<Route path="/reports" element={<Reports />} />
           </Routes>
 
           
