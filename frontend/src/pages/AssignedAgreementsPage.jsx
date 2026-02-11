@@ -341,13 +341,6 @@ const filteredAgreements = data.drafts?.filter(draft => {
     <div className="assigned-agreements-page">
       <div className="agreements-header">
         <div className="header-left">
-
-          <h1>
-            Agreements Assigned to Me
-          </h1>
-          <p className="page-subtitle">
-            Agreements assigned to you for review or collaboration
-          </p>
         </div>
         <div className="header-actions">
           <button 

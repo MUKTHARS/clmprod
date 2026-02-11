@@ -1234,3 +1234,12 @@
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(99, 102, 241, 0.1);
 }
+
+/* =========================
+   TOTAL GRANTS – HIGHLIGHT
+   ========================= */
+
+.metric-card-tall.metric-card-total-grants {
+  background: #c0e5fa;
+  border-color: #c0e5fa;
+}
