@@ -308,7 +308,7 @@ const fetchApprovedContractsFallback = async () => {
       {/* Header */}
       <div className="decisions-header">
         <div className="header-left">
-          <h1>Director Decisions</h1>
+          {/* <h1>Director Decisions</h1> */}
           {/* <p className="page-subtitle">
             View final decisions on contracts you reviewed
           </p> */}

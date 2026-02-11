@@ -109,14 +109,14 @@ const Sidebar = ({ user, onLogout }) => {
         roles: ['director'],
         badge: true
       },
-      { 
-        id: 'users', 
-        label: 'Users', 
-        icon: Users, 
-        path: '/users', 
-        permission: 'can_manage_users',
-        roles: ['director']
-      },
+      // { 
+      //   id: 'users', 
+      //   label: 'Users', 
+      //   icon: Users, 
+      //   path: '/users', 
+      //   permission: 'can_manage_users',
+      //   roles: ['director']
+      // },
       
       // SUPER ADMIN SPECIFIC ITEMS
       { 

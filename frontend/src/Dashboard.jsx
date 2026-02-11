@@ -45,6 +45,38 @@ function Dashboard({ contracts, loading, refreshContracts, user }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [normalizedContracts, setNormalizedContracts] = useState([]);
 
+
+  // Add this useEffect right after your other useEffect hooks
+useEffect(() => {
+  // Check if we need to trigger a refresh
+  const shouldRefresh = () => {
+    // If no contracts and not currently loading
+    if ((!contracts || contracts.length === 0) && !loading) {
+      return true;
+    }
+    
+    // If contracts exist but normalized contracts is empty (data might be malformed)
+    if (contracts && contracts.length > 0 && normalizedContracts.length === 0) {
+      return true;
+    }
+    
+    return false;
+  };
+
+  if (shouldRefresh() && refreshContracts) {
+    console.log('Detected missing data, triggering refresh...');
+    
+    // Small delay to avoid rapid refreshes
+    const timer = setTimeout(() => {
+      refreshContracts();
+    }, 1000);
+    
+    return () => clearTimeout(timer);
+  }
+}, [contracts, normalizedContracts, loading, refreshContracts]);
+
+
+
   useEffect(() => {
     if (contracts && Array.isArray(contracts)) {
       const normalized = contracts
@@ -557,7 +589,7 @@ function Dashboard({ contracts, loading, refreshContracts, user }) {
     style={{ cursor: 'pointer' }}
   >
     <div className="metric-content">
-      <FileArchive size={24} style={{ color: '#6366f1', marginBottom: '8px' }} />
+      {/* <FileArchive size={24} style={{ color: '#6366f1', marginBottom: '8px' }} /> */}
       <div className="metric-info">
         <div className="metric-value">
           {normalizedContracts.filter(contract => {
@@ -571,7 +603,7 @@ function Dashboard({ contracts, loading, refreshContracts, user }) {
             }
           }).length}
         </div>
-        <div className="metric-label">Due for Archive</div>
+        <div className="metric-label">Archived</div>
       </div>
     </div>
   </div>

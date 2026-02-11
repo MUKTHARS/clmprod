@@ -427,10 +427,10 @@ function DirectorApproval() {
       {/* Header */}
       <div className="director-header">
         <div className="director-header-left">
-          <h1>Director Dashboard</h1>
+          {/* <h1>Director Dashboard</h1>
           <p className="director-subtitle">
             Manage contracts assigned to you for review and approval
-          </p>
+          </p> */}
         </div>
         <div className="director-header-actions">
           <button 
