@@ -394,13 +394,6 @@ function AssignedByMePage({ user }) {
     <div className="assigned-by-me-page">
       <div className="agreements-header">
         <div className="header-left">
-          <h1>
-            Agreements Assigned by Me
-          </h1>
-          <p className="page-subtitle">
-            Agreements you have assigned to others for review or collaboration
-          </p>
-          
           {assignmentStats && (
             <div className="assignment-stats">
               <div className="stat-item">
@@ -473,7 +466,6 @@ function AssignedByMePage({ user }) {
           </div>
         ) : filteredAgreements.length === 0 ? (
           <div className="empty-state">
-            <UserCheckIcon size={48} />
             <h3>No agreements assigned by you yet</h3>
             <p>
               You will see agreements here when you assign them to other users via the workflow
@@ -482,7 +474,6 @@ function AssignedByMePage({ user }) {
               className="btn-primary"
               onClick={() => navigate('/contracts')}
             >
-              <Eye size={16} />
               View All Agreements
             </button>
           </div>

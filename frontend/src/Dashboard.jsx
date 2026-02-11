@@ -516,7 +516,7 @@ function Dashboard({ contracts, loading, refreshContracts, user }) {
   return (
     <div className="dashboard">
       <div className="metrics-container">
-        <div className="metric-card-tall">
+        <div className="metric-card-tall metric-card-total-grants">
           <div className="metric-content">
             <div className="metric-info">
               <div className="metric-value">{stats.totalGrants}</div>
