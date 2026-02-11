@@ -433,18 +433,7 @@ function DirectorApproval() {
           </p> */}
         </div>
         <div className="director-header-actions">
-          <button 
-            className="director-btn-secondary"
-            onClick={fetchAllContracts}
-            disabled={loading}
-          >
-            <RefreshCw size={16} className={loading ? 'director-spinning' : ''} />
-            Refresh
-          </button>
-          <button className="director-btn-primary">
-            <Download size={16} />
-            Export Report
-          </button>
+         
         </div>
       </div>
 

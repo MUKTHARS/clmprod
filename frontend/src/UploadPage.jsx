@@ -171,9 +171,9 @@ function UploadPage({ setLoading, onUploadComplete }) {
         localStorage.setItem('user_drafts', JSON.stringify(userDrafts));
         
         // Show success message
-        setTimeout(() => {
-          alert(`✅ Grant saved to drafts successfully!\Grant ID: ${response.data.id}`);
-        }, 500);
+        // setTimeout(() => {
+        //   alert(`✅ Grant saved to drafts successfully!\Grant ID: ${response.data.id}`);
+        // }, 500);
       }
       
       if (onUploadComplete) {

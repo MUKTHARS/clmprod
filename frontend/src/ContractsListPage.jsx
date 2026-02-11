@@ -773,16 +773,7 @@ function ContractsListPage({ contracts: propContracts = [], user, refreshContrac
                     Upload First Contract
                   </button>
                 )}
-                <button 
-                  className="btn-refresh-empty"
-                  onClick={() => {
-                    console.log('Manual refresh from empty state');
-                    if (refreshContracts) refreshContracts();
-                  }}
-                >
-                  <RefreshCw size={16} />
-                  Refresh Data
-                </button>
+             
               </div>
             </div>
           )}

@@ -7,10 +7,11 @@ import {
   Upload,
   Settings,
   User,
+  BarChart3,
   LogOut,
   Shield,
-  Users,
   FileCheck,
+  Users,
   Archive,
   FolderOpen,
   UserCheck,
@@ -78,8 +79,8 @@ const Sidebar = ({ user, onLogout }) => {
         permission: 'can_upload',
         roles: ['project_manager', 'director', 'super_admin']  // Added super_admin
       },
-      
-      // PROGRAM MANAGER SPECIFIC ITEMS
+ 
+
       { 
         id: 'review', 
         label: 'Review', 
@@ -109,14 +110,7 @@ const Sidebar = ({ user, onLogout }) => {
         roles: ['director'],
         badge: true
       },
-      // { 
-      //   id: 'users', 
-      //   label: 'Users', 
-      //   icon: Users, 
-      //   path: '/users', 
-      //   permission: 'can_manage_users',
-      //   roles: ['director']
-      // },
+     
       
       // SUPER ADMIN SPECIFIC ITEMS
       { 
@@ -205,7 +199,8 @@ const Sidebar = ({ user, onLogout }) => {
         roles: ['program_manager', 'director'],
         isAssignedSubmenu: true,
         parentId: 'assigned-parent',
-        showIcon: false // Added flag to indicate no icon
+        showIcon: false,
+        badge: true 
       },
       { 
         id: 'assigned-by-me', 
@@ -216,8 +211,18 @@ const Sidebar = ({ user, onLogout }) => {
         roles: ['program_manager', 'director'],
         isAssignedSubmenu: true,
         parentId: 'assigned-parent',
+        badge: true ,
         showIcon: false // Added flag to indicate no icon
       },
+           
+  // { 
+  //   id: 'reports', 
+  //   label: 'Reports', 
+  //   icon: BarChart3,  // Make sure BarChart3 is imported at the top
+  //   path: '/reports', 
+  //   permission: 'can_view_reports',
+  //   roles: ['project_manager', 'program_manager', 'director', 'super_admin']
+  // }
     ];
     
     // Filter items based on user role
@@ -365,76 +370,123 @@ const Sidebar = ({ user, onLogout }) => {
     return null;
   }, [user?.id, user?.role]);
 
-  const getPendingCounts = useCallback(async (itemId) => {
-    if (!itemId) return null;
+const getPendingCounts = useCallback(async (itemId) => {
+  if (!itemId) return null;
+  
+  const token = localStorage.getItem('token');
+  
+  try {
+    const baseUrl = API_CONFIG.BASE_URL;
     
-    const token = localStorage.getItem('token');
-    
-    try {
-      const baseUrl = API_CONFIG.BASE_URL;
-      
-      if (itemId === 'review') {
-        // For Program Manager review tab - only count UNDER_REVIEW contracts
-        const response = await fetch(`${baseUrl}/api/contracts/status/under_review`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        if (response.ok) {
-          const data = await response.json();
-          // Filter out any contracts that might be in approved status
-          const pendingOnly = data.filter(contract => contract.status === "under_review");
-          return pendingOnly.length;
+    // Handle assigned-drafts for ALL roles
+    if (itemId === 'assigned-drafts') {
+      // For assigned drafts - fetch and count for current user
+      const response = await fetch(`${baseUrl}/api/agreements/assigned-drafts?limit=1`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
-      }
+      });
       
-      if (itemId === 'director-decisions') {
-        // For Program Manager to see Director decisions - show both approved and rejected
-        // This is correct as it shows final decisions
-        const response = await fetch(`${baseUrl}/api/contracts/program-manager/reviewed-by-director?limit=1`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          return data.total || data.summary?.total || 0;
-        }
+      if (response.ok) {
+        const data = await response.json();
+        return data.total || data.drafts?.length || 0; // ✅ FIX: Check both total and drafts length
       }
-      
-      // ✅ FIX: For Director approvals tab - only count assigned contracts IN REVIEWED STATUS
-      if (itemId === 'approvals') {
-        // Get the user role
-        const userStr = localStorage.getItem('user');
-        if (!userStr) return null;
-        
-        const user = JSON.parse(userStr);
-        
-        if (user.role === 'director') {
-          // Get all assigned contracts
-          const response = await fetch(`${baseUrl}/api/contracts/director/dashboard`, {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
-          });
-          
-          if (response.ok) {
-            const data = await response.json();
-            // Count only contracts in 'reviewed' status (pending approval)
-            const pendingApprovals = data.filter(contract => contract.status === "reviewed");
-            return pendingApprovals.length;
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Failed to fetch count:', error);
-      return null;
+      return 0;
     }
     
+    // Handle assigned-to-me for Program Managers and Directors
+    if (itemId === 'assigned-to-me') {
+      // This is for the "Assigned to Me" submenu item
+      const response = await fetch(`${baseUrl}/api/agreements/assigned-drafts?limit=1`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        return data.total || data.drafts?.length || 0; // ✅ FIX: Check both total and drafts length
+      }
+      return 0;
+    }
+    
+    // Handle assigned-by-me for Program Managers and Directors
+    if (itemId === 'assigned-by-me') {
+      // For "Assigned by Me" submenu item
+      const response = await fetch(`${baseUrl}/api/agreements/assigned-by-me?limit=1`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        return data.total || data.drafts?.length || 0; // ✅ FIX: Check both total and drafts length
+      }
+      return 0;
+    }
+    
+    // Rest of the existing logic for other items...
+    if (itemId === 'review') {
+      // For Program Manager review tab - only count UNDER_REVIEW contracts
+      const response = await fetch(`${baseUrl}/api/contracts/status/under_review`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        const pendingOnly = data.filter(contract => contract.status === "under_review");
+        return pendingOnly.length;
+      }
+    }
+    
+    if (itemId === 'director-decisions') {
+      // For Program Manager to see Director decisions
+      const response = await fetch(`${baseUrl}/api/contracts/program-manager/reviewed-by-director?limit=1`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        return data.total || data.summary?.total || 0;
+      }
+    }
+    
+    if (itemId === 'approvals') {
+      // For Director approvals tab
+      const userStr = localStorage.getItem('user');
+      if (!userStr) return null;
+      
+      const user = JSON.parse(userStr);
+      
+      if (user.role === 'director') {
+        // Get assigned contracts for approval
+        const response = await fetch(`${baseUrl}/api/contracts/director/assigned-approvals-count`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          return data.assigned_approvals_count || 0;
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Failed to fetch count:', error);
     return null;
-  }, []);
+  }
+  
+  return null;
+}, []);
 
   // Fetch all badge counts including drafts
   useEffect(() => {
@@ -442,28 +494,28 @@ const Sidebar = ({ user, onLogout }) => {
       const newBadgeCounts = {...badgeCounts};
       
       // Fetch counts for all badge items
-      const badgeItems = menuItems.allItems.filter(item => item.badge);
-      
-      for (const item of badgeItems) {
-        let count = 0;
-        
-        if (item.id === 'approved-contracts') {
-          // Special handling for approved contracts count
-          count = await getApprovedCount();
-        } else if (item.id === 'my-drafts' || item.id === 'assigned-drafts') {
-          // Fetch draft counts for project managers
-          count = await getDraftCounts(item.id);
-        } else {
-          // Other badge items
-          count = await getPendingCounts(item.id);
-        }
-        
-        if (count && count > 0) {
-          newBadgeCounts[item.id] = count;
-        } else {
-          newBadgeCounts[item.id] = 0;
-        }
-      }
+    const badgeItems = menuItems.allItems.filter(item => item.badge);
+
+for (const item of badgeItems) {
+  let count = 0;
+  
+  if (item.id === 'approved-contracts') {
+    // Special handling for approved contracts count
+    count = await getApprovedCount();
+  } else if (item.id === 'my-drafts' || item.id === 'assigned-drafts') {
+    // Fetch draft counts for project managers
+    count = await getDraftCounts(item.id);
+  } else {
+    // Other badge items - this now includes assigned-to-me and assigned-by-me
+    count = await getPendingCounts(item.id);
+  }
+  
+  if (count && count > 0) {
+    newBadgeCounts[item.id] = count;
+  } else {
+    newBadgeCounts[item.id] = 0;
+  }
+}
       
       setBadgeCounts(newBadgeCounts);
     };
