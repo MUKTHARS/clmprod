@@ -154,20 +154,29 @@ def get_current_user(
     
     return user
 
-# In main.py, update the check_permission function:
 def check_permission(user: User, contract_id: int, required_permission: str, db: Session) -> bool:
-    """Check if user has required permission for a contract"""
+    """Check if user has required permission for a contract - ONLY if assigned or creator"""
     # Get the contract first
     contract = db.query(models.Contract).filter(models.Contract.id == contract_id).first()
     if not contract:
         return False
     
-    # Admin/Director has all permissions for all contracts
-    if user.role == "director":
+    # Check if user is the creator
+    is_creator = contract.created_by == user.id
+    
+    # Check if user is assigned
+    is_assigned = is_user_assigned_to_contract(user.id, contract, db)
+    
+    # User must be either creator OR assigned to have ANY permissions
+    if not is_creator and not is_assigned:
+        return False
+    
+    # Admin/Director has all permissions ONLY for assigned contracts
+    if user.role == "director" and is_assigned:
         return True
     
-    # Program Manager permissions
-    if user.role == "program_manager":
+    # Program Manager permissions - ONLY if assigned
+    if user.role == "program_manager" and is_assigned:
         # Program Managers can:
         # 1. View contracts under review, reviewed, approved, or draft
         if required_permission == "view":
@@ -180,30 +189,7 @@ def check_permission(user: User, contract_id: int, required_permission: str, db:
     
     if user.role == "project_manager":
         # Project managers can see contracts they created OR are assigned to
-        is_creator = contract.created_by == user.id
-        is_assigned = False
-        
-        # Check if user is in ANY of the assignment lists
-        if contract.assigned_pm_users and isinstance(contract.assigned_pm_users, list):
-            is_assigned = user.id in contract.assigned_pm_users
-        
-        # ✅ FIX: Also check assigned_pgm_users and assigned_director_users if needed
-        if not is_assigned and contract.assigned_pgm_users and isinstance(contract.assigned_pgm_users, list):
-            is_assigned = user.id in contract.assigned_pgm_users
-        
-        if not is_assigned and contract.assigned_director_users and isinstance(contract.assigned_director_users, list):
-            is_assigned = user.id in contract.assigned_director_users
-        
-        if not is_creator and not is_assigned:
-            # Non-creator and non-assigned Project Managers can only view if explicitly granted
-            if required_permission == "view":
-                permission = db.query(ContractPermission).filter(
-                    ContractPermission.contract_id == contract_id,
-                    ContractPermission.user_id == user.id,
-                    ContractPermission.permission_type == "view"
-                ).first()
-                return permission is not None
-            return False
+        # This is already checked above with is_creator/is_assigned
         
         # Project Manager (Creator/Assigned) permissions based on status
         
@@ -1390,7 +1376,7 @@ async def get_comprehensive_data(
     db: Session = Depends(get_db),
     request: Request = None
 ):
-    """Get comprehensive data for a specific contract"""
+    """Get comprehensive data for a specific contract - ONLY if assigned or created"""
     print(f"=== get_comprehensive_data called for ID: {contract_id} ===")
     
     contract = db.query(models.Contract).filter(models.Contract.id == contract_id).first()
@@ -1401,32 +1387,18 @@ async def get_comprehensive_data(
     print(f"Found contract: {contract.id}, created_by: {contract.created_by}, status: {contract.status}")
     print(f"Current user: {current_user.id}, role: {current_user.role}")
     
-    # Check permission based on role
-    if current_user.role == "project_manager":
-        # Project managers can see contracts they created OR are assigned to
-        is_creator = contract.created_by == current_user.id
-        is_assigned = False
-        
-        # Check if user is assigned
-        if contract.assigned_pm_users and isinstance(contract.assigned_pm_users, list):
-            is_assigned = current_user.id in contract.assigned_pm_users
-        
-        if not is_creator and not is_assigned:
-            print(f"Permission denied: Contract created by {contract.created_by}, user is {current_user.id}, assigned: {is_assigned}")
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="You don't have permission to view this contract"
-            )
-    elif current_user.role == "program_manager":
-        # Program managers can only see contracts in review/approved status
-        if contract.status not in ["under_review", "reviewed", "approved", "draft"]:
-            print(f"Permission denied: Contract status is {contract.status}")
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="You don't have permission to view this contract"
-            )
-    # Directors can see all contracts
+    # STRICT: Check if user is assigned OR created this contract
+    is_creator = contract.created_by == current_user.id
+    is_assigned = is_user_assigned_to_contract(current_user.id, contract, db)
     
+    if not is_creator and not is_assigned:
+        print(f"Permission denied: Contract created by {contract.created_by}, user is {current_user.id}, assigned: {is_assigned}")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have permission to view this contract"
+        )
+    
+    # Rest of the function remains the same...
     # Helper function to safely format dates
     def format_date(date_value):
         if date_value and hasattr(date_value, 'isoformat'):
@@ -2177,42 +2149,37 @@ async def get_all_contracts(
     print(f"Current user: {current_user.username}, Role: {current_user.role}, ID: {current_user.id}")
     
     try:
-        # STRICT role-based filtering - FIXED VERSION
+        # STRICT assignment-based filtering - FIXED VERSION
         query = db.query(models.Contract)
         
-        if current_user.role == "director":
-            print("Director: Fetching all contracts")
-            # Director can see all contracts
-            pass
-        elif current_user.role == "program_manager":
-            print("Program Manager: Fetching contracts for review")
-            # Program Manager can see contracts that are:
-            # - Under review
-            # - Reviewed 
-            # - Rejected (to see their own reviews)
-            # - Draft (if they need to see anything submitted for review)
-            query = query.filter(
-                (models.Contract.status == "under_review") | 
-                (models.Contract.status == "reviewed") |
-                (models.Contract.status == "rejected") |
-                (models.Contract.status == "draft")
-            )
-        else:  # project_manager
-            print(f"Project Manager: Fetching ONLY contracts created by user ID {current_user.id}")
-            # Project Manager can only see contracts they created
-            query = query.filter(
-                (models.Contract.created_by == current_user.id) |
-                (models.Contract.assigned_pm_users.contains([current_user.id])) |
-                (models.Contract.assigned_pgm_users.contains([current_user.id])) |
-                (models.Contract.assigned_director_users.contains([current_user.id]))
-            )
+        # For ALL roles, ONLY show contracts they are assigned to OR created
+        assigned_contract_ids = []
+        
+        # Get all contracts
+        all_contracts = db.query(models.Contract).all()
+        
+        for contract in all_contracts:
+            # Check if user is assigned to this contract
+            is_assigned = is_user_assigned_to_contract(current_user.id, contract, db)
+            is_creator = contract.created_by == current_user.id
+            
+            if is_assigned or is_creator:
+                assigned_contract_ids.append(contract.id)
+        
+        # Now filter query to ONLY show assigned/created contracts
+        if assigned_contract_ids:
+            query = query.filter(models.Contract.id.in_(assigned_contract_ids))
+        else:
+            # If no contracts assigned/created, return empty array
+            print(f"User {current_user.id} has no assigned/created contracts")
+            return []
         
         # Get contracts
         contracts = query.order_by(models.Contract.uploaded_at.desc()).offset(skip).limit(limit).all()
         
-        print(f"Found {len(contracts)} contracts for user {current_user.role}")
+        print(f"Found {len(contracts)} contracts for user {current_user.role} (assigned/created only)")
         
-        # Convert SQLAlchemy models to dictionaries with all fields
+        # Rest of the function remains the same...
         contracts_dict = []
         for contract in contracts:
             # Helper function to safely format dates
@@ -2245,7 +2212,6 @@ async def get_all_contracts(
                 "chroma_id": contract.chroma_id,
                 "created_by": contract.created_by,
                 "version": contract.version or 1,
-                # Include basic_data for compatibility
                 "basic_data": {
                     "id": contract.id,
                     "contract_number": contract.contract_number,
@@ -2434,7 +2400,7 @@ async def get_contract(
     db: Session = Depends(get_db),
     request: Request = None
 ):
-    """Get a single contract by ID"""
+    """Get a single contract by ID - ONLY if assigned or created"""
     print(f"=== get_contract called for ID: {contract_id} ===")
     
     # First, check if contract exists
@@ -2446,32 +2412,18 @@ async def get_contract(
     print(f"Found contract: {contract.id}, created_by: {contract.created_by}, status: {contract.status}")
     print(f"Current user: {current_user.id}, role: {current_user.role}")
     
-    # Check permission based on role
-    if current_user.role == "project_manager":
-        # Project managers can see contracts they created OR are assigned to
-        is_creator = contract.created_by == current_user.id
-        is_assigned = False
-        
-        # Check if user is assigned
-        if contract.assigned_pm_users and isinstance(contract.assigned_pm_users, list):
-            is_assigned = current_user.id in contract.assigned_pm_users
-        
-        if not is_creator and not is_assigned:
-            print(f"Permission denied: Contract created by {contract.created_by}, user is {current_user.id}, assigned: {is_assigned}")
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="You don't have permission to view this contract"
-            )
-    elif current_user.role == "program_manager":
-        # Program managers can only see contracts in review/approved status
-        if contract.status not in ["under_review", "reviewed", "approved", "draft"]:
-            print(f"Permission denied: Contract status is {contract.status}")
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="You don't have permission to view this contract"
-            )
-    # Directors can see all contracts
+    # STRICT: Check if user is assigned OR created this contract
+    is_creator = contract.created_by == current_user.id
+    is_assigned = is_user_assigned_to_contract(current_user.id, contract, db)
     
+    if not is_creator and not is_assigned:
+        print(f"Permission denied: User {current_user.id} not assigned or creator")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have permission to view this contract"
+        )
+    
+    # Rest of the function remains the same...
     # Helper function to safely format dates
     def format_date(date_value):
         if date_value and hasattr(date_value, 'isoformat'):
@@ -4950,7 +4902,7 @@ async def get_director_dashboard_contracts(
     try:
         print(f"DEBUG: Getting dashboard contracts for Director {current_user.id}")
         
-        # ✅ FIX: Get ALL contracts assigned to this director
+        # STRICT: Get ONLY contracts assigned to this director
         all_contracts = db.query(models.Contract).all()
         
         assigned_contracts = []
@@ -4980,6 +4932,7 @@ async def get_director_dashboard_contracts(
                 except Exception as e:
                     print(f"Error checking Director assignment for contract {contract.id}: {e}")
             
+            # Directors can ONLY see assigned contracts, NOT all contracts
             if is_assigned:
                 # Helper function to safely format dates
                 def format_date(date_value):
