@@ -45,38 +45,6 @@ function Dashboard({ contracts, loading, refreshContracts, user }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [normalizedContracts, setNormalizedContracts] = useState([]);
 
-
-  // Add this useEffect right after your other useEffect hooks
-useEffect(() => {
-  // Check if we need to trigger a refresh
-  const shouldRefresh = () => {
-    // If no contracts and not currently loading
-    if ((!contracts || contracts.length === 0) && !loading) {
-      return true;
-    }
-    
-    // If contracts exist but normalized contracts is empty (data might be malformed)
-    if (contracts && contracts.length > 0 && normalizedContracts.length === 0) {
-      return true;
-    }
-    
-    return false;
-  };
-
-  if (shouldRefresh() && refreshContracts) {
-    console.log('Detected missing data, triggering refresh...');
-    
-    // Small delay to avoid rapid refreshes
-    const timer = setTimeout(() => {
-      refreshContracts();
-    }, 1000);
-    
-    return () => clearTimeout(timer);
-  }
-}, [contracts, normalizedContracts, loading, refreshContracts]);
-
-
-
   useEffect(() => {
     if (contracts && Array.isArray(contracts)) {
       const normalized = contracts
@@ -372,6 +340,39 @@ useEffect(() => {
     (contract.contract_number && contract.contract_number.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
+  const fetchDashboardMetrics = async () => {
+  try {
+    setMetricsLoading(true);
+
+    const token = localStorage.getItem("token");
+
+    const response = await fetch(
+      `${API_CONFIG.BASE_URL}/api/dashboard/metrics`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch dashboard summary");
+    }
+
+    const data = await response.json();
+    setMetrics(data);
+
+  } catch (error) {
+    console.error("Dashboard metrics error:", error);
+  } finally {
+    setMetricsLoading(false);
+  }
+};
+
+useEffect(() => {
+  fetchDashboardMetrics();
+}, []);
+
   const renderContractRow = (contract) => {
     if (!contract) return null;
     
@@ -551,35 +552,35 @@ useEffect(() => {
         <div className="metric-card-tall metric-card-total-grants">
           <div className="metric-content">
             <div className="metric-info">
-              <div className="metric-value">{stats.totalGrants}</div>
-              <div className="metric-label">Total Grants</div>
+              <div className="metric-value">{metricsLoading ? "..." : metrics.grants_requiring_action}</div>
+              <div className="metric-label">Grants Requiring Action</div>
             </div>
           </div>
         </div>
 
-        <div className="metric-card-tall">
+        <div className="metric-card-tall metric-card-total-value">
           <div className="metric-content">
             <div className="metric-info">
-              <div className="metric-value">{formatCurrency(stats.totalAmount)}</div>
-              <div className="metric-label">Total Value</div>
+              <div className="metric-value">{metricsLoading ? "..." : formatCurrency(metrics.funds_at_risk)}</div>
+              <div className="metric-label">Funds At Risk</div>
             </div>
           </div>
         </div>
 
-        <div className="metric-card-tall">
+        <div className="metric-card-tall metric-card-total-active">
           <div className="metric-content">
             <div className="metric-info">
-              <div className="metric-value">{stats.activeContracts}</div>
-              <div className="metric-label">Active</div>
+              <div className="metric-value">{metricsLoading ? "..." : metrics.upcoming_submissions}</div>
+              <div className="metric-label">Upcoming Submissions</div>
             </div>
           </div>
         </div>
 
-        <div className="metric-card-tall">
+        <div className="metric-card-tall metric-card-total-pending">
           <div className="metric-content">
             <div className="metric-info">
-              <div className="metric-value">{stats.upcomingDeadlines}</div>
-              <div className="metric-label">Deadlines</div>
+              <div className="metric-value">{metricsLoading ? "..." : metrics.pending_approvals}</div>
+              <div className="metric-label">Pending Approvals</div>
             </div>
           </div>
         </div>
@@ -589,21 +590,12 @@ useEffect(() => {
     style={{ cursor: 'pointer' }}
   >
     <div className="metric-content">
-      {/* <FileArchive size={24} style={{ color: '#6366f1', marginBottom: '8px' }} /> */}
+      <FileArchive size={24} style={{ color: '#6366f1', marginBottom: '8px' }} />
       <div className="metric-info">
         <div className="metric-value">
-          {normalizedContracts.filter(contract => {
-            if (!contract.end_date) return false;
-            try {
-              const endDate = new Date(contract.end_date);
-              const now = new Date();
-              return endDate < now;
-            } catch {
-              return false;
-            }
-          }).length}
+          {metricsLoading ? "..." : metrics.portfolio_on_track}
         </div>
-        <div className="metric-label">Archived</div>
+        <div className="metric-label">Due for Archive</div>
       </div>
     </div>
   </div>
@@ -689,14 +681,14 @@ useEffect(() => {
             <div className="empty-state">
               <FileText size={48} />
               <h3>No grants found</h3>
-              <p>{searchTerm ? 'Try adjusting your search' : 'Upload your first grant to get started'}</p>
+              <p>{searchTerm ? 'Try adjusting your search' : ''}</p>
               {!searchTerm && (
                 <button 
                   className="btn-upload-main"
                   onClick={() => navigate('/upload')}
                 >
-                  <Upload size={20} />
-                  Upload First Grant
+                  <Upload size={16} strokeWidth={2} />
+                  Upload Grant
                 </button>
               )}
             </div>

@@ -343,7 +343,7 @@ function Review() {
           ) : (
             <div className="empty-state">
               <FileText size={48} />
-              <h3>No contracts found</h3>
+              <h3>No grants found</h3>
               <p>{searchTerm ? 'Try adjusting your search' : `No contracts are currently ${selectedStatus.replace('_', ' ')}`}</p>
             </div>
           )}

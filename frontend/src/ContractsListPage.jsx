@@ -749,32 +749,16 @@ function ContractsListPage({ contracts: propContracts = [], user, refreshContrac
             <div className="empty-state">
               <FileText size={48} />
               <h3>No contracts found</h3>
-              <p>{searchTerm || statusFilter !== 'all' || dateFilter !== 'all' ? 'Try adjusting your search or filters' : 'Upload your first contract to get started'}</p>
-              <div className="empty-state-actions">
-                {(searchTerm || statusFilter !== 'all' || dateFilter !== 'all') && (
-                  <button 
-                    className="btn-clear-filters-empty"
-                    onClick={() => {
-                      setSearchTerm('');
-                      setStatusFilter('all');
-                      setDateFilter('all');
-                      if (refreshContracts) refreshContracts();
-                    }}
-                  >
-                    Clear Filters & Refresh
-                  </button>
-                )}
-                {!searchTerm && statusFilter === 'all' && dateFilter === 'all' && (
-                  <button 
-                    className="btn-upload-main"
-                    onClick={() => navigate('/upload')}
-                  >
-                    <Upload size={20} />
-                    Upload First Contract
-                  </button>
-                )}
-             
-              </div>
+              <p>{searchTerm ? 'Try adjusting your search' : 'Upload your first contract to get started'}</p>
+              {!searchTerm && (
+                <button 
+                  className="btn-upload-main"
+                  onClick={() => navigate('/upload')}
+                >
+                  <Upload size={20} />
+                  Upload First Contract
+                </button>
+              )}
             </div>
           )}
         </div>

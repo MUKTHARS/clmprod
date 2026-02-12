@@ -1,9 +1,11 @@
 # app/models.py - Update with ContractVersion model
-from sqlalchemy import Column, Integer, String, DateTime, Text, Float, ForeignKey, UniqueConstraint
+from sqlalchemy import Boolean, Column, Integer, String, DateTime, Text, Float, ForeignKey, UniqueConstraint, JSON, Date
 from sqlalchemy.sql import func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 from app.database import Base
+from datetime import datetime
+
 
 class Contract(Base):
     __tablename__ = "contracts"
@@ -105,3 +107,41 @@ class ExtractionLog(Base):
     extracted_value = Column(Text)
     confidence_score = Column(Float)
     timestamp = Column(DateTime(timezone=True), server_default=func.now())
+
+class ReportingSchedule(Base):
+    __tablename__ = "reporting_schedules"
+
+    id = Column(Integer, primary_key=True, index=True)
+    contract_id = Column(Integer, ForeignKey("contracts.id"))
+    frequency = Column(String)
+    report_types = Column(JSON)
+    due_dates = Column(JSON)
+    format_requirements = Column(String)
+    submission_method = Column(String)
+    recipients = Column(JSON)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class ReportingEvent(Base):
+    __tablename__ = "reporting_events"
+
+    id = Column(Integer, primary_key=True, index=True)
+    contract_id = Column(Integer, ForeignKey("contracts.id"), nullable=False)
+
+    report_type = Column(String, nullable=False)
+    due_date = Column(Date, nullable=False)
+
+    status = Column(String, default="pending")  # pending | submitted | approved | overdue
+    uploaded_file_path = Column(String, nullable=True)
+    submitted_at = Column(DateTime, nullable=True)
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+    uploaded_file_name = Column(String, nullable=True)
+    uploaded_file_path = Column(String, nullable=True)
+    uploaded_at = Column(DateTime, nullable=True)
+
+    pgm_approved = Column(Boolean, default=False)
+    pgm_approved_at = Column(DateTime, nullable=True)
+    pgm_approved_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+
+    director_approved = Column(Boolean, default=False)
+    director_approved_at = Column(DateTime, nullable=True)
