@@ -226,10 +226,6 @@ const Reports = () => {
             <Download size={16} />
             Export CSV
           </button>
-          <button className="btn-refresh" onClick={fetchAllContracts}>
-            <RefreshCw size={16} />
-            Refresh
-          </button>
         </div>
       </div>
 

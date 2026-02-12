@@ -503,13 +503,6 @@ function UploadPage({ setLoading, onUploadComplete }) {
                   <FileText size={16} />
                   View in Drafts
                 </button>
-                <button 
-                  className="btn-upload-another"
-                  onClick={handleUploadAnother}
-                >
-                  <Upload size={16} />
-                  Upload Another
-                </button>
               </div>
             </div>
           </div>

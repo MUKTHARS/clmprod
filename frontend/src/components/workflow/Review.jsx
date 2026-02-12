@@ -239,15 +239,6 @@ function Review() {
                   Rejected
                 </button>
               </div>
-              
-              <button 
-                className="review-refresh-btn"
-                onClick={fetchContractsForReview}
-                disabled={loading}
-              >
-                <RefreshCw size={16} className={loading ? 'spinning' : ''} />
-                Refresh
-              </button>
             </div>
           </div>
         </div>

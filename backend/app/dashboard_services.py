@@ -54,7 +54,7 @@ def get_dashboard_metrics(db: Session):
         .scalar()
 
     return {
-        "total_grants": total_grants,
+        # "total_grants": total_grants,
         "grants_requiring_action": grants_requiring_action,
         "funds_at_risk": float(funds_at_risk or 0),
         "upcoming_submissions": upcoming_submissions,

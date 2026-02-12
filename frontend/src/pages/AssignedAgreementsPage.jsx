@@ -343,13 +343,6 @@ const filteredAgreements = data.drafts?.filter(draft => {
         <div className="header-left">
         </div>
         <div className="header-actions">
-          <button 
-            className="btn-secondary"
-            onClick={fetchAssignedAgreements}
-            disabled={loading}
-          >
-            <RefreshCw size={16} className={loading ? 'spinning' : ''} />
-          </button>
         </div>
       </div>
 

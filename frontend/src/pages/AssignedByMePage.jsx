@@ -416,13 +416,7 @@ function AssignedByMePage({ user }) {
           )}
         </div>
         <div className="header-actions">
-          <button 
-            className="btn-secondary"
-            onClick={fetchAssignedByMeAgreements}
-            disabled={loading}
-          >
-            <RefreshCw size={16} className={loading ? 'spinning' : ''} />
-          </button>
+
         </div>
       </div>
 
