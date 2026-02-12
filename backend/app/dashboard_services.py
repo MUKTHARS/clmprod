@@ -39,7 +39,7 @@ def get_dashboard_metrics(db: Session):
     upcoming_submissions = db.query(func.count(models.ReportingEvent.id)) \
         .filter(
             models.ReportingEvent.due_date >= today,
-            models.ReportingEvent.due_date <= today.replace(day=min(today.day+30,28)),
+            models.ReportingEvent.due_date <= today + timedelta(days=30),
             models.ReportingEvent.status == "pending"
         ).scalar()
 
