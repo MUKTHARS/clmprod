@@ -215,14 +215,14 @@ const Sidebar = ({ user, onLogout }) => {
         showIcon: false // Added flag to indicate no icon
       },
            
-  // { 
-  //   id: 'reports', 
-  //   label: 'Reports', 
-  //   icon: BarChart3,  // Make sure BarChart3 is imported at the top
-  //   path: '/reports', 
-  //   permission: 'can_view_reports',
-  //   roles: ['project_manager', 'program_manager', 'director', 'super_admin']
-  // }
+  { 
+    id: 'reports', 
+    label: 'Reports', 
+    icon: BarChart3,  // Make sure BarChart3 is imported at the top
+    path: '/reports', 
+    permission: 'can_view_reports',
+    roles: ['project_manager', 'program_manager', 'director', 'super_admin']
+  }
     ];
     
     // Filter items based on user role
@@ -374,13 +374,34 @@ const getPendingCounts = useCallback(async (itemId) => {
   if (!itemId) return null;
   
   const token = localStorage.getItem('token');
+  if (!token) return 0;
   
   try {
     const baseUrl = API_CONFIG.BASE_URL;
     
-    // Handle assigned-drafts for ALL roles
+    // ============ PROJECT MANAGER DRAFTS ============
+    if (itemId === 'my-drafts') {
+      const response = await fetch(`${baseUrl}/api/agreements/drafts`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        // Filter to only show drafts created by this user
+        const userStr = localStorage.getItem('user');
+        const user = userStr ? JSON.parse(userStr) : null;
+        const myDrafts = data.filter(draft => 
+          draft.created_by === user?.id || draft.userId === user?.id
+        );
+        return myDrafts.length || 0;
+      }
+      return 0;
+    }
+    
     if (itemId === 'assigned-drafts') {
-      // For assigned drafts - fetch and count for current user
       const response = await fetch(`${baseUrl}/api/agreements/assigned-drafts?limit=1`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -390,14 +411,13 @@ const getPendingCounts = useCallback(async (itemId) => {
       
       if (response.ok) {
         const data = await response.json();
-        return data.total || data.drafts?.length || 0; // ✅ FIX: Check both total and drafts length
+        return data.total || data.drafts?.length || 0;
       }
       return 0;
     }
     
-    // Handle assigned-to-me for Program Managers and Directors
+    // ============ PROGRAM MANAGER & DIRECTOR ASSIGNMENTS ============
     if (itemId === 'assigned-to-me') {
-      // This is for the "Assigned to Me" submenu item
       const response = await fetch(`${baseUrl}/api/agreements/assigned-drafts?limit=1`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -407,14 +427,12 @@ const getPendingCounts = useCallback(async (itemId) => {
       
       if (response.ok) {
         const data = await response.json();
-        return data.total || data.drafts?.length || 0; // ✅ FIX: Check both total and drafts length
+        return data.total || data.drafts?.length || 0;
       }
       return 0;
     }
     
-    // Handle assigned-by-me for Program Managers and Directors
     if (itemId === 'assigned-by-me') {
-      // For "Assigned by Me" submenu item
       const response = await fetch(`${baseUrl}/api/agreements/assigned-by-me?limit=1`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -424,28 +442,50 @@ const getPendingCounts = useCallback(async (itemId) => {
       
       if (response.ok) {
         const data = await response.json();
-        return data.total || data.drafts?.length || 0; // ✅ FIX: Check both total and drafts length
+        return data.total || data.drafts?.length || 0;
       }
       return 0;
     }
     
-    // Rest of the existing logic for other items...
+    // ============ PROGRAM MANAGER REVIEW ============
     if (itemId === 'review') {
-      // For Program Manager review tab - only count UNDER_REVIEW contracts
       const response = await fetch(`${baseUrl}/api/contracts/status/under_review`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
+      
       if (response.ok) {
         const data = await response.json();
-        const pendingOnly = data.filter(contract => contract.status === "under_review");
+        // Filter to only show contracts assigned to this program manager
+        const userStr = localStorage.getItem('user');
+        const user = userStr ? JSON.parse(userStr) : null;
+        const pendingOnly = data.filter(contract => {
+          if (contract.status !== "under_review") return false;
+          
+          // Check if this program manager is assigned
+          if (contract.assigned_pgm_users) {
+            if (Array.isArray(contract.assigned_pgm_users)) {
+              return contract.assigned_pgm_users.includes(user?.id);
+            }
+            if (typeof contract.assigned_pgm_users === 'string') {
+              try {
+                const pgmList = JSON.parse(contract.assigned_pgm_users);
+                return Array.isArray(pgmList) && pgmList.includes(user?.id);
+              } catch (e) {
+                const pgmIds = contract.assigned_pgm_users.split(',').map(id => id.trim());
+                return pgmIds.includes(String(user?.id));
+              }
+            }
+          }
+          return false;
+        });
         return pendingOnly.length;
       }
+      return 0;
     }
     
     if (itemId === 'director-decisions') {
-      // For Program Manager to see Director decisions
       const response = await fetch(`${baseUrl}/api/contracts/program-manager/reviewed-by-director?limit=1`, {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -456,17 +496,17 @@ const getPendingCounts = useCallback(async (itemId) => {
         const data = await response.json();
         return data.total || data.summary?.total || 0;
       }
+      return 0;
     }
     
+    // ============ DIRECTOR APPROVALS ============
     if (itemId === 'approvals') {
-      // For Director approvals tab
       const userStr = localStorage.getItem('user');
-      if (!userStr) return null;
+      if (!userStr) return 0;
       
       const user = JSON.parse(userStr);
       
       if (user.role === 'director') {
-        // Get assigned contracts for approval
         const response = await fetch(`${baseUrl}/api/contracts/director/assigned-approvals-count`, {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -479,56 +519,227 @@ const getPendingCounts = useCallback(async (itemId) => {
           return data.assigned_approvals_count || 0;
         }
       }
+      return 0;
     }
+    
+    // ============ PROJECT MANAGER APPROVED CONTRACTS ============
+    if (itemId === 'approved-contracts') {
+      const userStr = localStorage.getItem('user');
+      if (!userStr) return 0;
+      
+      const user = JSON.parse(userStr);
+      
+      if (user.role === 'project_manager') {
+        const response = await fetch(`${baseUrl}/api/contracts/project-manager/approved-count`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          return data.approved_count || 0;
+        }
+      }
+      return 0;
+    }
+    
   } catch (error) {
-    console.error('Failed to fetch count:', error);
-    return null;
+    console.error(`Failed to fetch count for ${itemId}:`, error);
+    return 0;
   }
   
-  return null;
+  return 0;
 }, []);
 
-  // Fetch all badge counts including drafts
-  useEffect(() => {
-    const fetchAllBadgeCounts = async () => {
-      const newBadgeCounts = {...badgeCounts};
-      
-      // Fetch counts for all badge items
-    const badgeItems = menuItems.allItems.filter(item => item.badge);
-
-for (const item of badgeItems) {
-  let count = 0;
-  
-  if (item.id === 'approved-contracts') {
-    // Special handling for approved contracts count
-    count = await getApprovedCount();
-  } else if (item.id === 'my-drafts' || item.id === 'assigned-drafts') {
-    // Fetch draft counts for project managers
-    count = await getDraftCounts(item.id);
-  } else {
-    // Other badge items - this now includes assigned-to-me and assigned-by-me
-    count = await getPendingCounts(item.id);
-  }
-  
-  if (count && count > 0) {
-    newBadgeCounts[item.id] = count;
-  } else {
-    newBadgeCounts[item.id] = 0;
-  }
-}
-      
-      setBadgeCounts(newBadgeCounts);
-    };
+// Fetch all badge counts including drafts
+useEffect(() => {
+  const fetchAllBadgeCounts = async () => {
+    const token = localStorage.getItem('token');
+    if (!token || !user) return;
     
-    if (user && menuItems.allItems.length > 0) {
-      fetchAllBadgeCounts();
+    const baseUrl = API_CONFIG.BASE_URL;
+    const newBadgeCounts = {...badgeCounts};
+    
+    try {
+      // ============ PROJECT MANAGER DRAFTS ============
+      if (user.role === 'project_manager') {
+        // My Drafts count
+        try {
+          const response = await fetch(`${baseUrl}/api/agreements/drafts`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (response.ok) {
+            const data = await response.json();
+            const myDrafts = data.filter(draft => 
+              draft.created_by === user.id || draft.userId === user.id
+            );
+            newBadgeCounts['my-drafts'] = myDrafts.length;
+          }
+        } catch (error) {
+          console.error('Failed to fetch my drafts count:', error);
+        }
+        
+        // Assigned to Me count (for Project Managers)
+        try {
+          const response = await fetch(`${baseUrl}/api/agreements/assigned-drafts?limit=1`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (response.ok) {
+            const data = await response.json();
+            newBadgeCounts['assigned-drafts'] = data.total || data.drafts?.length || 0;
+          }
+        } catch (error) {
+          console.error('Failed to fetch assigned drafts count:', error);
+        }
+        
+        // Approved Contracts count
+        try {
+          const response = await fetch(`${baseUrl}/api/contracts/project-manager/approved-count`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (response.ok) {
+            const data = await response.json();
+            newBadgeCounts['approved-contracts'] = data.approved_count || 0;
+          }
+        } catch (error) {
+          console.error('Failed to fetch approved count:', error);
+        }
+      }
       
-      // Set up polling for real-time updates (every 30 seconds)
-      const intervalId = setInterval(fetchAllBadgeCounts, 30000);
+      // ============ PROGRAM MANAGER ============
+      if (user.role === 'program_manager') {
+        // Assigned to Me count (for Program Managers)
+        try {
+          const response = await fetch(`${baseUrl}/api/agreements/assigned-drafts?limit=1`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (response.ok) {
+            const data = await response.json();
+            newBadgeCounts['assigned-to-me'] = data.total || data.drafts?.length || 0;
+          }
+        } catch (error) {
+          console.error('Failed to fetch assigned to me count:', error);
+        }
+        
+        // Assigned by Me count
+        try {
+          const response = await fetch(`${baseUrl}/api/agreements/assigned-by-me?limit=1`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (response.ok) {
+            const data = await response.json();
+            newBadgeCounts['assigned-by-me'] = data.total || data.drafts?.length || 0;
+          }
+        } catch (error) {
+          console.error('Failed to fetch assigned by me count:', error);
+        }
+        
+        // Review count (contracts under review)
+        try {
+          const response = await fetch(`${baseUrl}/api/contracts/status/under_review`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (response.ok) {
+            const data = await response.json();
+            // Filter to only show contracts assigned to this program manager
+            const pendingOnly = data.filter(contract => {
+              if (contract.status !== "under_review") return false;
+              
+              if (contract.assigned_pgm_users) {
+                if (Array.isArray(contract.assigned_pgm_users)) {
+                  return contract.assigned_pgm_users.includes(user.id);
+                }
+                if (typeof contract.assigned_pgm_users === 'string') {
+                  try {
+                    const pgmList = JSON.parse(contract.assigned_pgm_users);
+                    return Array.isArray(pgmList) && pgmList.includes(user.id);
+                  } catch (e) {
+                    const pgmIds = contract.assigned_pgm_users.split(',').map(id => id.trim());
+                    return pgmIds.includes(String(user.id));
+                  }
+                }
+              }
+              return false;
+            });
+            newBadgeCounts['review'] = pendingOnly.length;
+          }
+        } catch (error) {
+          console.error('Failed to fetch review count:', error);
+        }
+        
+        // Director Decisions count
+        try {
+          const response = await fetch(`${baseUrl}/api/contracts/program-manager/reviewed-by-director?limit=1`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (response.ok) {
+            const data = await response.json();
+            newBadgeCounts['director-decisions'] = data.total || data.summary?.total || 0;
+          }
+        } catch (error) {
+          console.error('Failed to fetch director decisions count:', error);
+        }
+      }
       
-      return () => clearInterval(intervalId);
+      // ============ DIRECTOR ============
+      if (user.role === 'director') {
+        // Assigned to Me count (for Directors)
+        try {
+          const response = await fetch(`${baseUrl}/api/agreements/assigned-drafts?limit=1`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (response.ok) {
+            const data = await response.json();
+            newBadgeCounts['assigned-to-me'] = data.total || data.drafts?.length || 0;
+          }
+        } catch (error) {
+          console.error('Failed to fetch assigned to me count:', error);
+        }
+        
+        // Assigned by Me count
+        try {
+          const response = await fetch(`${baseUrl}/api/agreements/assigned-by-me?limit=1`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (response.ok) {
+            const data = await response.json();
+            newBadgeCounts['assigned-by-me'] = data.total || data.drafts?.length || 0;
+          }
+        } catch (error) {
+          console.error('Failed to fetch assigned by me count:', error);
+        }
+        
+        // Approvals count
+        try {
+          const response = await fetch(`${baseUrl}/api/contracts/director/assigned-approvals-count`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (response.ok) {
+            const data = await response.json();
+            newBadgeCounts['approvals'] = data.assigned_approvals_count || 0;
+          }
+        } catch (error) {
+          console.error('Failed to fetch approvals count:', error);
+        }
+      }
+      
+    } catch (error) {
+      console.error('Failed to fetch badge counts:', error);
     }
-  }, [user, menuItems.allItems, getPendingCounts, getApprovedCount, getDraftCounts]);
+    
+    setBadgeCounts(newBadgeCounts);
+  };
+  
+  if (user) {
+    fetchAllBadgeCounts();
+    
+    // Set up polling for real-time updates (every 30 seconds)
+    const intervalId = setInterval(fetchAllBadgeCounts, 30000);
+    return () => clearInterval(intervalId);
+  }
+}, [user]);
 
   // Fetch user permissions
   useEffect(() => {
@@ -778,30 +989,39 @@ for (const item of badgeItems) {
                 </button>
                 
                 {/* Assigned Submenu */}
-                {expandedMenus.assigned && menuItems.assignedSubmenuItems?.length > 0 && (
-                  <ul className="submenu">
-                    {menuItems.assignedSubmenuItems.map((subItem) => {
-                      const isSubActive = location.pathname === subItem.path || 
-                                         location.pathname.startsWith(subItem.path);
-                      
-                      return (
-                        <li key={subItem.id}>
-                          <button
-                            className={`nav-item submenu-item ${isSubActive ? 'active' : ''}`}
-                            onClick={() => handleNavigation(subItem.path)}
-                            title={subItem.label}
-                          >
-                            <span className="nav-icon">
-                              {renderIcon(subItem)}
-                            </span>
-                            <span className="nav-label">{subItem.label}</span>
-                            {isSubActive && <span className="nav-indicator" />}
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
+{/* Assigned Submenu */}
+{expandedMenus.assigned && menuItems.assignedSubmenuItems?.length > 0 && (
+  <ul className="submenu">
+    {menuItems.assignedSubmenuItems.map((subItem) => {
+      const isSubActive = location.pathname === subItem.path || 
+                         location.pathname.startsWith(subItem.path);
+
+      const badgeCount = badgeCounts[subItem.id] || 0;
+
+      return (
+        <li key={subItem.id}>
+          <button
+            className={`nav-item submenu-item ${isSubActive ? 'active' : ''}`}
+            onClick={() => handleNavigation(subItem.path)}
+            title={subItem.label}
+          >
+            <span className="nav-icon">
+              {renderIcon(subItem)}
+            </span>
+            <span className="nav-label">{subItem.label}</span>
+
+            {badgeCount > 0 && (
+              <span className="nav-badge">{badgeCount}</span>
+            )}
+
+            {isSubActive && <span className="nav-indicator" />}
+          </button>
+        </li>
+      );
+    })}
+  </ul>
+)}
+
               </li>
             </>
           )}
