@@ -71,7 +71,7 @@ function ComprehensiveView({ contractData }) {
     if (!reportingRequirements) return null;
     
     const { frequency, report_types, due_dates, format_requirements, submission_method } = reportingRequirements;
-    
+    const [reportingEvents, setReportingEvents] = useState([]);
     // Find the maximum length between report_types and due_dates
     const maxLength = Math.max(
       report_types?.length || 0,
@@ -882,13 +882,11 @@ function ComprehensiveView({ contractData }) {
         )}
 
         {/* Deliverables (Original) */}
-        {renderSection("Deliverables & Reporting",
+        {renderSection("Project Deliverables",
           <div className="deliverables-section">
             {renderDeliverables(data.deliverables?.items)}
             
-            {data.deliverables?.reporting_requirements && (
-              renderReportRequirements(data.deliverables.reporting_requirements)
-            )}
+
           </div>
         )}
 

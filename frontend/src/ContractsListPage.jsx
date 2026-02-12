@@ -657,16 +657,16 @@ function ContractsListPage({ contracts: propContracts = [], user }) {
             </>
           ) : (
             <div className="empty-state">
-              <FileText size={48} />
-              <h3>No contracts found</h3>
-              <p>{searchTerm ? 'Try adjusting your search' : 'Upload your first contract to get started'}</p>
+              <FileText size={20} />
+              <h3>No grants found</h3>
+              <p>{searchTerm ? 'Try adjusting your search' : ''}</p>
               {!searchTerm && (
                 <button 
                   className="btn-upload-main"
                   onClick={() => navigate('/upload')}
                 >
                   <Upload size={20} />
-                  Upload First Contract
+                  Upload Grant
                 </button>
               )}
             </div>

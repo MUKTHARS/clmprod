@@ -1285,7 +1285,12 @@ Contract text (first 12000 characters):
                 "deliverables_extracted_count": len(default_deliverables)
             }
         }
-    
+    def extract_reporting_schedule(pdf_text: str) -> list:
+        """
+        Extract reporting schedules, deliverables, milestones and payment schedules
+        from the contract text using LLM structured output.
+        """
+  
     def get_embedding(self, text: str) -> List[float]:
         """Get vector embedding for text"""
         try:

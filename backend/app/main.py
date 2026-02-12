@@ -1,15 +1,21 @@
+from asyncio import events
 import os
 import sys
 from app.notification_service import NotificationService
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from typing import Optional, List, Dict, Any
 from fastapi import Query, Response, Form
-from fastapi.responses import RedirectResponse, JSONResponse
+from fastapi.responses import RedirectResponse, JSONResponse, FileResponse
 from app.auth_models import User, UserSession, ActivityLog, ContractPermission, ReviewComment, UserNotification
 from app.s3_service import s3_service
 from app.deliverable_models import ContractDeliverable
 from app.admin_routes import router as admin_router
 from app.agreement_workflow import router as agreement_router
+from app.dashboard_services import get_dashboard_metrics
+
+
+today = date.today()
+
 # from app.deliverable_routes import router as deliverable_router
 # Remove all proxy environment variables
 proxy_vars = [
@@ -71,6 +77,7 @@ from app.config import settings
 from app import models, schemas
 from app.auth_models import User, ActivityLog, ContractPermission
 from app.auth_schemas import UserCreate, UserResponse, LoginRequest, Token, ChangePasswordRequest
+from app.models import ReportingSchedule
 
 
 # Create tables and setup relationships
@@ -82,7 +89,7 @@ app.include_router(agreement_router)
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:4000", "https://grantapi.saple.ai","https://demo.saple.ai"],
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:4001","http://localhost:4000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -852,6 +859,150 @@ async def upload_deliverable_file(
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to upload file: {str(e)}")
 
+# ================================
+# Reporting Event Upload Endpoint
+# ================================
+
+from fastapi import UploadFile, File, Form, Depends
+from sqlalchemy.orm import Session
+from app.database import get_db
+from app.models import ReportingEvent
+from datetime import datetime
+import shutil
+import os
+
+@app.post("/api/reporting-events/{event_id}/upload")
+async def upload_reporting_event_file(
+    event_id: int,
+    file: UploadFile = File(...),
+    upload_date: str = Form(...),
+    db: Session = Depends(get_db)
+):
+    event = db.query(models.ReportingEvent).filter(models.ReportingEvent.id == event_id).first()
+
+    if not event:
+        raise HTTPException(status_code=404, detail="Reporting event not found")
+
+    # Create uploads folder if not exists
+    upload_dir = "uploads/reporting_events"
+    os.makedirs(upload_dir, exist_ok=True)
+
+    file_path = os.path.join(upload_dir, file.filename)
+
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    # Update event record
+    event.uploaded_file_name = file.filename
+    event.uploaded_file_path = file_path
+    event.uploaded_at = datetime.utcnow()
+    event.status = "submitted"
+    event.submitted_at = datetime.utcnow()
+
+    db.commit()
+    db.refresh(event)
+
+    return {
+        "id": event.id,
+        "status": event.status,
+        "file_name": event.uploaded_file_name
+    }
+# ================================
+# Director Approval
+# ================================
+
+@app.post("/api/reporting-events/{event_id}/approve-director")
+async def approve_reporting_event_director(
+    event_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if current_user.role != "director":
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    event = db.query(models.ReportingEvent).filter(
+        models.ReportingEvent.id == event_id
+    ).first()
+
+    if not event:
+        raise HTTPException(status_code=404, detail="Reporting event not found")
+
+    if event.status != "pgm_approved":
+        raise HTTPException(
+            status_code=400,
+            detail="Program Manager approval required first"
+        )
+
+    event.status = "fully_approved"
+    event.director_approved = True
+    event.director_approved_at = datetime.utcnow()
+
+    db.commit()
+    db.refresh(event)
+
+    return {
+        "id": event.id,
+        "status": event.status,
+        "director_approved_at": event.director_approved_at
+    }
+
+
+@app.get("/api/reporting-events/{event_id}/file")
+def get_reporting_event_file(event_id: int, db: Session = Depends(get_db)):
+    event = db.query(models.ReportingEvent).filter(
+        models.ReportingEvent.id == event_id
+    ).first()
+
+    if not event or not event.uploaded_file_path:
+        raise HTTPException(status_code=404, detail="File not found")
+
+    return FileResponse(
+        path=event.uploaded_file_path,
+        filename=event.uploaded_file_name
+    )
+
+# ============================================
+# Program Manager Approval Endpoint
+# ============================================
+
+@app.post("/api/reporting-events/{event_id}/approve-pgm")
+async def approve_reporting_event_pgm(
+    event_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    # Role check
+    if current_user.role != "program_manager":
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    event = db.query(models.ReportingEvent).filter(
+        models.ReportingEvent.id == event_id
+    ).first()
+
+    if not event:
+        raise HTTPException(status_code=404, detail="Reporting event not found")
+
+    # Only allow approval if submitted
+    if event.status != "submitted":
+        raise HTTPException(
+            status_code=400,
+            detail="Only submitted reports can be approved"
+        )
+
+    # Update status
+    event.status = "pgm_approved"
+    event.pgm_approved_at = datetime.utcnow()
+    event.pgm_approved_by = current_user.id
+
+    db.commit()
+    db.refresh(event)
+
+    return {
+        "id": event.id,
+        "status": event.status,
+        "pgm_approved_at": event.pgm_approved_at,
+        "pgm_approved_by": event.pgm_approved_by
+    }
 
 # Add this endpoint to get deliverables for a contract
 @app.get("/api/deliverables/contract/{contract_id}")
@@ -887,6 +1038,59 @@ async def get_contract_deliverables(
         print(f"❌ Error fetching deliverables: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to fetch deliverables: {str(e)}")
 
+@app.get("/api/contracts/{contract_id}/reporting")
+async def get_contract_reporting_schedule(
+    contract_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    # Check contract exists
+    contract = db.query(models.Contract).filter(
+        models.Contract.id == contract_id
+    ).first()
+
+    if not contract:
+        raise HTTPException(status_code=404, detail="Contract not found")
+
+    # Optional: Permission check
+    if contract.created_by != current_user.id and current_user.role != "director":
+        raise HTTPException(
+            status_code=403,
+            detail="Not authorized to view this contract"
+        )
+
+    # Fetch reporting schedules
+    schedules = db.query(ReportingSchedule).filter(
+        ReportingSchedule.contract_id == contract_id
+    ).all()
+
+    return {
+        "contract_id": contract_id,
+        "reporting_schedules": [
+            {
+                "id": r.id,
+                "frequency": r.frequency,
+                "report_types": r.report_types,
+                "due_dates": r.due_dates,
+                "due_dates": [
+                    {
+                        "date": d,
+                        "status": (
+                            "overdue" if datetime.strptime(d, "%Y-%m-%d").date() < today
+                            else "due_soon" if (datetime.strptime(d, "%Y-%m-%d").date() - today).days <= 30
+                            else "upcoming"
+                        )
+                    }
+                    for d in (r.due_dates or [])
+                ],
+                "format_requirements": r.format_requirements,
+                "submission_method": r.submission_method,
+                "recipients": r.recipients,
+                "created_at": r.created_at.isoformat() if r.created_at else None
+            }
+            for r in schedules
+        ]
+    }
 
 @app.get("/api/admin/users")
 async def get_admin_users(
@@ -1111,7 +1315,67 @@ async def upload_contract(
         db.add(db_contract)
         db.commit()
         db.refresh(db_contract)
-        
+        # -----------------------------
+        # SAVE REPORTING SCHEDULE DATA
+        # -----------------------------
+        try:
+            deliverables_data = comprehensive_data.get("deliverables", {})
+            reporting_data = deliverables_data.get("reporting_requirements", {})
+
+            if reporting_data:
+                # Create structured reporting schedule entries
+                reporting_entry = models.ReportingSchedule(
+                    contract_id=db_contract.id,
+                    frequency=reporting_data.get("frequency"),
+                    report_types=reporting_data.get("report_types", []),
+                    due_dates=reporting_data.get("due_dates", []),
+                    format_requirements=reporting_data.get("format_requirements"),
+                    submission_method=reporting_data.get("submission_method"),
+                    recipients=reporting_data.get("recipients", [])
+                )
+
+                db.add(reporting_entry)
+                db.commit()
+                db.refresh(reporting_entry)
+
+                print(f"✅ Reporting schedule saved for contract {db_contract.id}")
+
+        except Exception as e:
+            print(f"⚠️ Failed to save reporting schedule: {e}")
+
+        # ---------------------------------
+        # CREATE REPORTING EVENTS
+        # ---------------------------------
+        try:
+            report_types = reporting_data.get("report_types", [])
+            due_dates = reporting_data.get("due_dates", [])
+
+            # Basic mapping logic (improve later if needed)
+            for i, due_date_str in enumerate(due_dates):
+                due_date_obj = datetime.strptime(due_date_str, "%Y-%m-%d").date()
+
+                # If multiple progress + one final
+                if "Final Report" in report_types and i == len(due_dates) - 1:
+                    report_type = "Final Report"
+                else:
+                    report_type = "Progress Report"
+
+                event = models.ReportingEvent(
+                    contract_id=db_contract.id,
+                    report_type=report_type,
+                    due_date=due_date_obj,
+                    status="pending"
+                )
+
+                db.add(event)
+
+            db.commit()
+            print(f"✅ Reporting events created for contract {db_contract.id}")
+
+        except Exception as e:
+            print(f"⚠️ Failed creating reporting events: {e}")
+
+
         # ✅ CRITICAL: Store ONLY the original PDF in S3 for AI Copilot
         try:
             # Store original PDF directly in S3 bucket
@@ -1258,6 +1522,51 @@ async def get_assignment_details(
         "comprehensive_data_has_history": "assignment_history" in (contract.comprehensive_data or {})
     }
 
+@app.get("/api/contracts/{contract_id}/reporting-events")
+async def get_reporting_events(
+    contract_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    contract = db.query(models.Contract).filter(
+        models.Contract.id == contract_id
+    ).first()
+
+    if not contract:
+        raise HTTPException(status_code=404, detail="Contract not found")
+
+    events = db.query(models.ReportingEvent).filter(
+        models.ReportingEvent.contract_id == contract_id
+    ).order_by(models.ReportingEvent.due_date.asc()).all()
+
+    today = datetime.utcnow().date()
+
+    result = []
+
+    for e in events:
+
+        # 🔒 If already approved at any level → preserve DB status
+        if e.status in ["submitted", "pgm_approved", "fully_approved"]:
+            computed_status = e.status
+
+        elif e.due_date < today:
+            computed_status = "overdue"
+
+        elif (e.due_date - today).days <= 30:
+            computed_status = "due_soon"
+
+        else:
+            computed_status = "upcoming"
+
+        result.append({
+            "id": e.id,
+            "report_type": e.report_type,
+            "due_date": e.due_date.isoformat(),
+            "status": computed_status,
+            "submitted_at": e.submitted_at.isoformat() if e.submitted_at else None
+        })
+
+    return result
 
 
 @app.delete("/api/contracts/{contract_id}")
@@ -6232,6 +6541,14 @@ async def fix_contract_assignments(
         db.rollback()
         print(f"ERROR in fix_contract_assignments: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to fix assignments: {str(e)}")        
+
+@app.get("/api/dashboard/metrics")
+def dashboard_metrics(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return get_dashboard_metrics(db)
+
 
 
 if __name__ == "__main__":
