@@ -16,7 +16,8 @@ import {
   Shield,
   ChevronRight,
   Eye,
-  ExternalLink
+  ExternalLink,
+  AlertTriangle // Add this import
 } from 'lucide-react';
 import './styles/UploadPage.css';
 
@@ -29,6 +30,7 @@ function UploadPage({ setLoading, onUploadComplete }) {
   const [extractionDetails, setExtractionDetails] = useState(null);
   const [showExtractionResults, setShowExtractionResults] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false); // Add this state
   const navigate = useNavigate();
 
   const extractionStages = [
@@ -52,6 +54,7 @@ function UploadPage({ setLoading, onUploadComplete }) {
       setExtractionDetails(null);
       setShowExtractionResults(false);
       setIsProcessing(false);
+      setShowConfirmation(false);
     } else {
       setUploadStatus('Please select a valid PDF file');
       setFile(null);
@@ -77,12 +80,19 @@ function UploadPage({ setLoading, onUploadComplete }) {
     });
   };
 
-  const handleUpload = async () => {
+  // New function to handle analyze button click
+  const handleAnalyzeClick = () => {
     if (!file) {
       setUploadStatus('Please select a file first');
       return;
     }
+    setShowConfirmation(true);
+  };
 
+  // New function to confirm and start upload
+  const confirmAndUpload = async () => {
+    setShowConfirmation(false);
+    
     const formData = new FormData();
     formData.append('file', file);
 
@@ -152,7 +162,7 @@ function UploadPage({ setLoading, onUploadComplete }) {
           start_date: response.data.start_date,
           end_date: response.data.end_date,
           purpose: response.data.purpose,
-          status: 'draft', // Mark as draft
+          status: 'draft',
           uploaded_at: response.data.uploaded_at,
           comprehensive_data: response.data.comprehensive_data
         };
@@ -169,11 +179,6 @@ function UploadPage({ setLoading, onUploadComplete }) {
           is_draft: true
         });
         localStorage.setItem('user_drafts', JSON.stringify(userDrafts));
-        
-        // Show success message
-        // setTimeout(() => {
-        //   alert(`✅ Grant saved to drafts successfully!\Grant ID: ${response.data.id}`);
-        // }, 500);
       }
       
       if (onUploadComplete) {
@@ -212,6 +217,11 @@ function UploadPage({ setLoading, onUploadComplete }) {
     }
   };
 
+  // Cancel confirmation
+  const cancelUpload = () => {
+    setShowConfirmation(false);
+  };
+
   const handleViewContract = () => {
     if (extractionDetails?.id) {
       navigate(`/contracts/${extractionDetails.id}`);
@@ -227,6 +237,7 @@ function UploadPage({ setLoading, onUploadComplete }) {
     setCurrentStage('idle');
     setStageProgress({});
     setIsProcessing(false);
+    setShowConfirmation(false);
     const fileInput = document.getElementById('pdf-upload');
     if (fileInput) fileInput.value = '';
   };
@@ -275,6 +286,7 @@ function UploadPage({ setLoading, onUploadComplete }) {
         setExtractionDetails(null);
         setShowExtractionResults(false);
         setIsProcessing(false);
+        setShowConfirmation(false);
       } else {
         setUploadStatus('Please select a valid PDF file');
         setFile(null);
@@ -327,6 +339,7 @@ function UploadPage({ setLoading, onUploadComplete }) {
                       setShowExtractionResults(false);
                       setExtractionDetails(null);
                       setIsProcessing(false);
+                      setShowConfirmation(false);
                       document.getElementById('pdf-upload').value = '';
                     }}
                   >
@@ -336,7 +349,7 @@ function UploadPage({ setLoading, onUploadComplete }) {
                 
                 <div className="upload-actions">
                   <button 
-                    onClick={handleUpload} 
+                    onClick={handleAnalyzeClick} // Changed from handleUpload to handleAnalyzeClick
                     className="btn-upload-mains"
                     disabled={!localStorage.getItem('token') || isProcessing}
                   >
@@ -357,6 +370,43 @@ function UploadPage({ setLoading, onUploadComplete }) {
             )}
           </div>
         </div>
+
+        {/* Confirmation Popup - Add this section */}
+        {showConfirmation && (
+          <div className="confirmation-overlay">
+            <div className="confirmation-popup">
+              <div className="confirmation-icon">
+                <AlertTriangle size={32} />
+              </div>
+              <h3>Confirm Grant Analysis</h3>
+              <p className="confirmation-message">
+                Are you sure you want to analyze this grant document?
+              </p>
+              <div className="file-details-confirmation">
+                <FileText size={16} />
+                <span className="filename">{file?.name}</span>
+                <span className="filesize">
+                  ({file ? (file.size / 1024 / 1024).toFixed(2) : 0} MB)
+                </span>
+              </div>
+              <div className="confirmation-actions">
+                <button 
+                  className="btn-cancel"
+                  onClick={cancelUpload}
+                >
+                  Cancel
+                </button>
+                <button 
+                  className="btn-confirm"
+                  onClick={confirmAndUpload}
+                >
+                  <Upload size={16} />
+                  Confirm & Analyze
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Processing Section - Only show when processing */}
         {isProcessing && !showExtractionResults && (
@@ -416,16 +466,7 @@ function UploadPage({ setLoading, onUploadComplete }) {
         {/* Extraction Results Section */}
         {showExtractionResults && extractionDetails && (
           <div className="extraction-results-section">
-            {/* <div className="success-message">
-              <CheckCircle size={24} className="success-icon" />
-              <div>
-                <h3>Grant Saved to Drafts!</h3>
-                <p>Grant has been extracted and saved as draft.</p>
-              </div>
-            </div> */}
-
             <div className="extraction-details-card">
-              {/* <h4>Extracted Grant Details</h4> */}
               <div className="extraction-grid">
                 <div className="extraction-field">
                   <span className="field-label">Grant Name</span>
@@ -468,6 +509,13 @@ function UploadPage({ setLoading, onUploadComplete }) {
                   <FileText size={16} />
                   View in Drafts
                 </button>
+                <button 
+                  className="btn-upload-another"
+                  onClick={handleUploadAnother}
+                >
+                  <Upload size={16} />
+                  Upload Another
+                </button>
               </div>
             </div>
           </div>
@@ -491,6 +539,7 @@ function UploadPage({ setLoading, onUploadComplete }) {
                 setUploadProgress(0);
                 setStageProgress({});
                 setIsProcessing(false);
+                setShowConfirmation(false);
               }}
             >
               Try Again
@@ -503,7 +552,6 @@ function UploadPage({ setLoading, onUploadComplete }) {
 }
 
 export default UploadPage;
-
 
 // import React, { useState } from 'react';
 // import axios from 'axios';
@@ -535,6 +583,7 @@ export default UploadPage;
 //   const [stageProgress, setStageProgress] = useState({});
 //   const [extractionDetails, setExtractionDetails] = useState(null);
 //   const [showExtractionResults, setShowExtractionResults] = useState(false);
+//   const [isProcessing, setIsProcessing] = useState(false);
 //   const navigate = useNavigate();
 
 //   const extractionStages = [
@@ -557,6 +606,7 @@ export default UploadPage;
 //       setStageProgress({});
 //       setExtractionDetails(null);
 //       setShowExtractionResults(false);
+//       setIsProcessing(false);
 //     } else {
 //       setUploadStatus('Please select a valid PDF file');
 //       setFile(null);
@@ -592,6 +642,7 @@ export default UploadPage;
 //     formData.append('file', file);
 
 //     setLoading(true);
+//     setIsProcessing(true);
 //     setCurrentStage('uploading');
 //     setUploadStatus('Uploading file...');
 //     setUploadProgress(0);
@@ -675,9 +726,9 @@ export default UploadPage;
 //         localStorage.setItem('user_drafts', JSON.stringify(userDrafts));
         
 //         // Show success message
-//         setTimeout(() => {
-//           alert(`✅ Contract saved to drafts successfully!\nContract ID: ${response.data.id}`);
-//         }, 500);
+//         // setTimeout(() => {
+//         //   alert(`✅ Grant saved to drafts successfully!\Grant ID: ${response.data.id}`);
+//         // }, 500);
 //       }
       
 //       if (onUploadComplete) {
@@ -687,6 +738,7 @@ export default UploadPage;
 //     } catch (error) {
 //       console.error('Upload error:', error);
 //       setCurrentStage('error');
+//       setIsProcessing(false);
       
 //       let errorMessage = 'Upload failed';
 //       if (error.response) {
@@ -710,7 +762,8 @@ export default UploadPage;
 //       setUploadProgress(0);
 //       setStageProgress({});
 //     } finally {
-//       setTimeout(() => setLoading(false), 1000);
+//       setLoading(false);
+//       setIsProcessing(false);
 //     }
 //   };
 
@@ -728,6 +781,7 @@ export default UploadPage;
 //     setUploadProgress(0);
 //     setCurrentStage('idle');
 //     setStageProgress({});
+//     setIsProcessing(false);
 //     const fileInput = document.getElementById('pdf-upload');
 //     if (fileInput) fileInput.value = '';
 //   };
@@ -775,6 +829,7 @@ export default UploadPage;
 //         setStageProgress({});
 //         setExtractionDetails(null);
 //         setShowExtractionResults(false);
+//         setIsProcessing(false);
 //       } else {
 //         setUploadStatus('Please select a valid PDF file');
 //         setFile(null);
@@ -803,7 +858,7 @@ export default UploadPage;
 //                 <div className="dropzone-content">
 //                   <Upload size={48} className="dropzone-icon" />
 //                   <div className="dropzone-text">
-//                     <h3>Upload Contract PDF</h3>
+//                     <h3>Upload Grant PDF</h3>
 //                     <p>Click to browse or drag & drop your PDF file here</p>
 //                   </div>
 //                   <div className="file-type-badge">
@@ -826,6 +881,7 @@ export default UploadPage;
 //                       setFile(null);
 //                       setShowExtractionResults(false);
 //                       setExtractionDetails(null);
+//                       setIsProcessing(false);
 //                       document.getElementById('pdf-upload').value = '';
 //                     }}
 //                   >
@@ -836,14 +892,13 @@ export default UploadPage;
 //                 <div className="upload-actions">
 //                   <button 
 //                     onClick={handleUpload} 
-//                     className="btn-upload-mainz"
-//                     disabled={!localStorage.getItem('token') || currentStage !== 'idle'}
+//                     className="btn-upload-mains"
+//                     disabled={!localStorage.getItem('token') || isProcessing}
 //                   >
-//                     {currentStage === 'idle' ? (
+//                     {!isProcessing ? (
 //                       <>
-//                         <Upload size={16} />
-//                         <span>Analyze Contract</span>
-//                         {/* <ChevronRight size={16} /> */}
+//                         <Upload size={26} />
+//                         <span>Analyze Grant</span>
 //                       </>
 //                     ) : (
 //                       <>
@@ -858,12 +913,12 @@ export default UploadPage;
 //           </div>
 //         </div>
 
-//         {/* Processing Section - Only show when processing and not complete */}
-//         {(currentStage !== 'idle' && currentStage !== 'complete' && currentStage !== 'error' && !showExtractionResults) && (
+//         {/* Processing Section - Only show when processing */}
+//         {isProcessing && !showExtractionResults && (
 //           <div className="processing-section">
 //             <div className="processing-header">
-//               <h3>Processing Contract</h3>
-//               <p className="processing-subtitle">Extracting contract data...</p>
+//               <h3>Processing Grant</h3>
+//               <p className="processing-subtitle">Extracting grant data...</p>
 //             </div>
 
 //             <div className="progress-container">
@@ -915,57 +970,51 @@ export default UploadPage;
 
 //         {/* Extraction Results Section */}
 //         {showExtractionResults && extractionDetails && (
-//           <div className="extraction-results-section-fixed">
-//             <div className="success-message-fixed">
-//               <CheckCircle size={24} className="text-green-500" />
+//           <div className="extraction-results-section">
+//             {/* <div className="success-message">
+//               <CheckCircle size={24} className="success-icon" />
 //               <div>
-//                 <h3>Contract Saved to Drafts!</h3>
-//                 <p>Contract has been extracted and saved as draft.</p>
+//                 <h3>Grant Saved to Drafts!</h3>
+//                 <p>Grant has been extracted and saved as draft.</p>
 //               </div>
-//             </div>
+//             </div> */}
 
-//             <div className="extraction-details-card-fixed">
-//               <h4>Extracted Contract Details</h4>
-//               <div className="extraction-grid-fixed">
-//                 <div className="extraction-field-fixed">
-//                   <span className="field-label-fixed">Contract Name</span>
-//                   <span className="field-value-fixed">{extractionDetails.grant_name}</span>
+//             <div className="extraction-details-card">
+//               {/* <h4>Extracted Grant Details</h4> */}
+//               <div className="extraction-grid">
+//                 <div className="extraction-field">
+//                   <span className="field-label">Grant Name</span>
+//                   <span className="field-value">{extractionDetails.grant_name}</span>
 //                 </div>
-//                 <div className="extraction-field-fixed">
-//                   <span className="field-label-fixed">Contract ID</span>
-//                   <span className="field-value-fixed">{extractionDetails.id}</span>
+//                 <div className="extraction-field">
+//                   <span className="field-label">Grant ID</span>
+//                   <span className="field-value">{extractionDetails.id}</span>
 //                 </div>
-//                 <div className="extraction-field-fixed">
-//                   <span className="field-label-fixed">Status</span>
-//                   <span className="field-value-fixed status-badge-fixed draft-fixed">Draft</span>
+//                 <div className="extraction-field">
+//                   <span className="field-label">Status</span>
+//                   <span className="field-value status-badge draft">Draft</span>
 //                 </div>
-//                 <div className="extraction-field-fixed">
-//                   <span className="field-label-fixed">Total Amount</span>
-//                   <span className="field-value-fixed">{formatCurrency(extractionDetails.total_amount)}</span>
+//                 <div className="extraction-field">
+//                   <span className="field-label">Total Amount</span>
+//                   <span className="field-value">{formatCurrency(extractionDetails.total_amount)}</span>
 //                 </div>
-//                 <div className="extraction-field-fixed">
-//                   <span className="field-label-fixed">Grantor</span>
-//                   <span className="field-value-fixed">{extractionDetails.grantor || 'Not specified'}</span>
+//                 <div className="extraction-field">
+//                   <span className="field-label">Grantor</span>
+//                   <span className="field-value">{extractionDetails.grantor || 'Not specified'}</span>
 //                 </div>
-//                 <div className="extraction-field-fixed">
-//                   <span className="field-label-fixed">Upload Date</span>
-//                   <span className="field-value-fixed">{formatDate(extractionDetails.uploaded_at)}</span>
+//                 <div className="extraction-field">
+//                   <span className="field-label">Upload Date</span>
+//                   <span className="field-value">{formatDate(extractionDetails.uploaded_at)}</span>
 //                 </div>
 //               </div>
 
-//               <div className="extraction-actions-fixed">
-//                 <button 
-//                   className="btn-upload-another"
-//                   onClick={handleUploadAnother}
-//                 >
-//                   Upload Another
-//                 </button>
+//               <div className="extraction-actions">
 //                 <button 
 //                   className="btn-view-contract"
 //                   onClick={handleViewContract}
 //                 >
 //                   <Eye size={16} />
-//                   View Contract
+//                   View Grant
 //                 </button>
 //                 <button 
 //                   className="btn-view-drafts"
@@ -981,8 +1030,8 @@ export default UploadPage;
 
 //         {/* Error State */}
 //         {currentStage === 'error' && (
-//           <div className="error-section-fixed">
-//             <div className="error-message-fixed">
+//           <div className="error-section">
+//             <div className="error-message">
 //               <AlertCircle size={20} />
 //               <div>
 //                 <h3>Upload Failed</h3>
@@ -990,12 +1039,13 @@ export default UploadPage;
 //               </div>
 //             </div>
 //             <button 
-//               className="btn-retry-fixed"
+//               className="btn-retry"
 //               onClick={() => {
 //                 setCurrentStage('idle');
 //                 setUploadStatus('');
 //                 setUploadProgress(0);
 //                 setStageProgress({});
+//                 setIsProcessing(false);
 //               }}
 //             >
 //               Try Again
