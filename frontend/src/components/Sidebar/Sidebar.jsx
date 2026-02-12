@@ -44,7 +44,102 @@ const Sidebar = ({ user, onLogout }) => {
   });
   const [isDraftSubmenuActive, setIsDraftSubmenuActive] = useState(false);
   const [isAssignedSubmenuActive, setIsAssignedSubmenuActive] = useState(false);
+  // Add this useEffect to refresh review badge when a new contract is submitted for review
+useEffect(() => {
+  // Function to fetch review badge count specifically for program managers
+  const fetchReviewBadgeCount = async () => {
+    if (!user || user.role !== 'program_manager') return;
+    
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    
+    try {
+      const baseUrl = API_CONFIG.BASE_URL;
+      const response = await fetch(`${baseUrl}/api/contracts/status/under_review`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Handle different response formats
+        let contracts = [];
+        if (Array.isArray(data)) {
+          contracts = data;
+        } else if (data.contracts && Array.isArray(data.contracts)) {
+          contracts = data.contracts;
+        } else if (data.data && Array.isArray(data.data)) {
+          contracts = data.data;
+        }
+        
+        // Filter to only show contracts assigned to this program manager
+        const pendingOnly = contracts.filter(contract => {
+          if (!contract || contract.status !== "under_review") return false;
+          
+          // Check assigned_pgm_users
+          if (contract.assigned_pgm_users) {
+            if (Array.isArray(contract.assigned_pgm_users)) {
+              return contract.assigned_pgm_users.includes(user.id);
+            }
+            if (typeof contract.assigned_pgm_users === 'string') {
+              try {
+                const pgmList = JSON.parse(contract.assigned_pgm_users);
+                return Array.isArray(pgmList) && pgmList.includes(user.id);
+              } catch (e) {
+                const pgmIds = contract.assigned_pgm_users.split(',').map(id => id.trim());
+                return pgmIds.includes(String(user.id));
+              }
+            }
+          }
+          
+          // Check comprehensive_data
+          if (contract.comprehensive_data) {
+            if (contract.comprehensive_data.assigned_users?.pgm_users) {
+              return contract.comprehensive_data.assigned_users.pgm_users.includes(user.id);
+            }
+            if (contract.comprehensive_data.agreement_metadata?.assigned_pgm_users) {
+              return contract.comprehensive_data.agreement_metadata.assigned_pgm_users.includes(user.id);
+            }
+          }
+          
+          return false;
+        });
+        
+        setBadgeCounts(prev => ({
+          ...prev,
+          'review': pendingOnly.length
+        }));
+        
+        console.log('Review badge count updated:', pendingOnly.length);
+      }
+    } catch (error) {
+      console.error('Failed to fetch review badge count:', error);
+    }
+  };
   
+  // If user is program manager, fetch review badge count
+  if (user?.role === 'program_manager') {
+    fetchReviewBadgeCount();
+    
+    // Set up a more frequent polling for review badge (every 10 seconds)
+    const reviewIntervalId = setInterval(fetchReviewBadgeCount, 10000);
+    
+    // Also listen for contract submission events
+    const handleContractSubmitted = () => {
+      fetchReviewBadgeCount();
+    };
+    
+    window.addEventListener('contract-submitted', handleContractSubmitted);
+    
+    return () => {
+      clearInterval(reviewIntervalId);
+      window.removeEventListener('contract-submitted', handleContractSubmitted);
+    };
+  }
+}, [user]);
   // Memoize the getMenuItems function to prevent recreation on every render
   const getMenuItems = useCallback(() => {
     const userRole = user?.role || '';
@@ -447,44 +542,67 @@ const getPendingCounts = useCallback(async (itemId) => {
       return 0;
     }
     
-    // ============ PROGRAM MANAGER REVIEW ============
-    if (itemId === 'review') {
-      const response = await fetch(`${baseUrl}/api/contracts/status/under_review`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        // Filter to only show contracts assigned to this program manager
-        const userStr = localStorage.getItem('user');
-        const user = userStr ? JSON.parse(userStr) : null;
-        const pendingOnly = data.filter(contract => {
-          if (contract.status !== "under_review") return false;
-          
-          // Check if this program manager is assigned
-          if (contract.assigned_pgm_users) {
-            if (Array.isArray(contract.assigned_pgm_users)) {
-              return contract.assigned_pgm_users.includes(user?.id);
-            }
-            if (typeof contract.assigned_pgm_users === 'string') {
-              try {
-                const pgmList = JSON.parse(contract.assigned_pgm_users);
-                return Array.isArray(pgmList) && pgmList.includes(user?.id);
-              } catch (e) {
-                const pgmIds = contract.assigned_pgm_users.split(',').map(id => id.trim());
-                return pgmIds.includes(String(user?.id));
-              }
-            }
-          }
-          return false;
-        });
-        return pendingOnly.length;
-      }
-      return 0;
+// ============ PROGRAM MANAGER REVIEW ============
+if (itemId === 'review') {
+  const response = await fetch(`${baseUrl}/api/contracts/status/under_review`, {
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+  
+  if (response.ok) {
+    const data = await response.json();
+    
+    // Handle different response formats
+    let contracts = [];
+    if (Array.isArray(data)) {
+      contracts = data;
+    } else if (data.contracts && Array.isArray(data.contracts)) {
+      contracts = data.contracts;
+    } else if (data.data && Array.isArray(data.data)) {
+      contracts = data.data;
     }
     
+    // Filter to only show contracts assigned to this program manager
+    const userStr = localStorage.getItem('user');
+    const user = userStr ? JSON.parse(userStr) : null;
+    
+    const pendingOnly = contracts.filter(contract => {
+      if (!contract || contract.status !== "under_review") return false;
+      
+      // Check if this program manager is assigned
+      if (contract.assigned_pgm_users) {
+        if (Array.isArray(contract.assigned_pgm_users)) {
+          return contract.assigned_pgm_users.includes(user?.id);
+        }
+        if (typeof contract.assigned_pgm_users === 'string') {
+          try {
+            const pgmList = JSON.parse(contract.assigned_pgm_users);
+            return Array.isArray(pgmList) && pgmList.includes(user?.id);
+          } catch (e) {
+            const pgmIds = contract.assigned_pgm_users.split(',').map(id => id.trim());
+            return pgmIds.includes(String(user?.id));
+          }
+        }
+      }
+      
+      // Also check comprehensive data for assignments
+      if (contract.comprehensive_data) {
+        if (contract.comprehensive_data.assigned_users?.pgm_users) {
+          return contract.comprehensive_data.assigned_users.pgm_users.includes(user?.id);
+        }
+        if (contract.comprehensive_data.agreement_metadata?.assigned_pgm_users) {
+          return contract.comprehensive_data.agreement_metadata.assigned_pgm_users.includes(user?.id);
+        }
+      }
+      
+      return false;
+    });
+    return pendingOnly.length;
+  }
+  return 0;
+}
+
     if (itemId === 'director-decisions') {
       const response = await fetch(`${baseUrl}/api/contracts/program-manager/reviewed-by-director?limit=1`, {
         headers: {
@@ -552,6 +670,48 @@ const getPendingCounts = useCallback(async (itemId) => {
   
   return 0;
 }, []);
+
+// Add this useEffect near your other badge-related useEffect hooks
+useEffect(() => {
+  // Refresh review badge when on review page
+  if (location.pathname === '/review' && user?.role === 'program_manager') {
+    const refreshReviewBadge = async () => {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      
+      const baseUrl = API_CONFIG.BASE_URL;
+      try {
+        const response = await fetch(`${baseUrl}/api/contracts/status/under_review`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          let contracts = [];
+          if (Array.isArray(data)) {
+            contracts = data;
+          } else if (data.contracts && Array.isArray(data.contracts)) {
+            contracts = data.contracts;
+          }
+          
+          const pendingOnly = contracts.filter(contract => 
+            contract.status === "under_review" && 
+            contract.assigned_pgm_users?.includes(user.id)
+          );
+          
+          setBadgeCounts(prev => ({
+            ...prev,
+            'review': pendingOnly.length
+          }));
+        }
+      } catch (error) {
+        console.error('Failed to refresh review badge:', error);
+      }
+    };
+    
+    refreshReviewBadge();
+  }
+}, [location.pathname, user]);
 
 // Fetch all badge counts including drafts
 useEffect(() => {
@@ -636,21 +796,47 @@ useEffect(() => {
           console.error('Failed to fetch assigned by me count:', error);
         }
         
-        // Review count (contracts under review)
+        // FIXED: Review count (contracts under review assigned to this program manager)
         try {
           const response = await fetch(`${baseUrl}/api/contracts/status/under_review`, {
             headers: { 'Authorization': `Bearer ${token}` }
           });
+          
           if (response.ok) {
             const data = await response.json();
+            
+            // Handle different response formats from backend
+            let contracts = [];
+            
+            if (Array.isArray(data)) {
+              // Case 1: Direct array of contracts
+              contracts = data;
+            } else if (data && typeof data === 'object') {
+              // Case 2: Object with contracts property
+              if (data.contracts && Array.isArray(data.contracts)) {
+                contracts = data.contracts;
+              }
+              // Case 3: Object with data property (pagination wrapper)
+              else if (data.data && Array.isArray(data.data)) {
+                contracts = data.data;
+              }
+              // Case 4: Object with items property
+              else if (data.items && Array.isArray(data.items)) {
+                contracts = data.items;
+              }
+            }
+            
             // Filter to only show contracts assigned to this program manager
-            const pendingOnly = data.filter(contract => {
-              if (contract.status !== "under_review") return false;
+            const pendingOnly = contracts.filter(contract => {
+              if (!contract || contract.status !== "under_review") return false;
               
+              // Check assigned_pgm_users field
               if (contract.assigned_pgm_users) {
+                // If it's an array
                 if (Array.isArray(contract.assigned_pgm_users)) {
                   return contract.assigned_pgm_users.includes(user.id);
                 }
+                // If it's a string (JSON array or comma-separated)
                 if (typeof contract.assigned_pgm_users === 'string') {
                   try {
                     const pgmList = JSON.parse(contract.assigned_pgm_users);
@@ -661,14 +847,37 @@ useEffect(() => {
                   }
                 }
               }
+              
+              // Check comprehensive_data for assignments
+              if (contract.comprehensive_data) {
+                // Check assigned_users.pgm_users
+                if (contract.comprehensive_data.assigned_users) {
+                  if (Array.isArray(contract.comprehensive_data.assigned_users.pgm_users)) {
+                    return contract.comprehensive_data.assigned_users.pgm_users.includes(user.id);
+                  }
+                }
+                // Check agreement_metadata.assigned_pgm_users
+                if (contract.comprehensive_data.agreement_metadata) {
+                  if (Array.isArray(contract.comprehensive_data.agreement_metadata.assigned_pgm_users)) {
+                    return contract.comprehensive_data.agreement_metadata.assigned_pgm_users.includes(user.id);
+                  }
+                }
+              }
+              
               return false;
             });
+            
             newBadgeCounts['review'] = pendingOnly.length;
+            console.log(`Review badge count updated: ${pendingOnly.length} contracts assigned to ${user.username}`);
+          } else {
+            console.warn('Failed to fetch under_review contracts, status:', response.status);
+            newBadgeCounts['review'] = 0;
           }
         } catch (error) {
           console.error('Failed to fetch review count:', error);
+          newBadgeCounts['review'] = 0;
         }
-        
+
         // Director Decisions count
         try {
           const response = await fetch(`${baseUrl}/api/contracts/program-manager/reviewed-by-director?limit=1`, {

@@ -162,45 +162,44 @@ function Review() {
 
   return (
     <div className="dashboard review-dashboard">
-      {/* Key Metrics - FIXED with pgmreview classes */}
-     {/* Key Metrics - COMPACT DESIGN */}
-<div className="pgmreview-metrics-compact">
-  <div className="pgmreview-metric-card-compact">
-    <div className="pgmreview-metric-content-compact">
-      <div className="pgmreview-metric-info-compact">
-        <div className="pgmreview-metric-value-compact">{stats.total}</div>
-        <div className="pgmreview-metric-label-compact">Pending Review</div>
-      </div>
-    </div>
-  </div>
+      {/* Key Metrics - COMPACT DESIGN */}
+      <div className="pgmreview-metrics-compact">
+        <div className="pgmreview-metric-card-compact">
+          <div className="pgmreview-metric-content-compact">
+            <div className="pgmreview-metric-info-compact">
+              <div className="pgmreview-metric-value-compact">{stats.total}</div>
+              <div className="pgmreview-metric-label-compact">Pending Review</div>
+            </div>
+          </div>
+        </div>
 
-  <div className="pgmreview-metric-card-compact">
-    <div className="pgmreview-metric-content-compact">
-      <div className="pgmreview-metric-info-compact">
-        <div className="pgmreview-metric-value-compact">{formatCurrency(stats.totalValue)}</div>
-        <div className="pgmreview-metric-label-compact">Total Value</div>
-      </div>
-    </div>
-  </div>
+        <div className="pgmreview-metric-card-compact">
+          <div className="pgmreview-metric-content-compact">
+            <div className="pgmreview-metric-info-compact">
+              <div className="pgmreview-metric-value-compact">{formatCurrency(stats.totalValue)}</div>
+              <div className="pgmreview-metric-label-compact">Total Value</div>
+            </div>
+          </div>
+        </div>
 
-  <div className="pgmreview-metric-card-compact">
-    <div className="pgmreview-metric-content-compact">
-      <div className="pgmreview-metric-info-compact">
-        <div className="pgmreview-metric-value-compact">{stats.flagged}</div>
-        <div className="pgmreview-metric-label-compact">With Flags</div>
-      </div>
-    </div>
-  </div>
+        <div className="pgmreview-metric-card-compact">
+          <div className="pgmreview-metric-content-compact">
+            <div className="pgmreview-metric-info-compact">
+              <div className="pgmreview-metric-value-compact">{stats.flagged}</div>
+              <div className="pgmreview-metric-label-compact">With Flags</div>
+            </div>
+          </div>
+        </div>
 
-  <div className="pgmreview-metric-card-compact">
-    <div className="pgmreview-metric-content-compact">
-      <div className="pgmreview-metric-info-compact">
-        <div className="pgmreview-metric-value-compact">{stats.newThisWeek}</div>
-        <div className="pgmreview-metric-label-compact">New This Week</div>
+        <div className="pgmreview-metric-card-compact">
+          <div className="pgmreview-metric-content-compact">
+            <div className="pgmreview-metric-info-compact">
+              <div className="pgmreview-metric-value-compact">{stats.newThisWeek}</div>
+              <div className="pgmreview-metric-label-compact">New This Week</div>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
-  </div>
-</div>
 
       {/* Contracts Section */}
       <div className="recent-contracts">
@@ -243,7 +242,7 @@ function Review() {
           </div>
         </div>
 
-        {/* Contracts Content - FIXED with pgmreview classes */}
+        {/* Contracts Content */}
         <div className="contracts-content">
           {filteredContracts.length > 0 ? (
             <div className="pgmreview-contracts-grid">
