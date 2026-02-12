@@ -598,3 +598,85 @@ code {
   gap: 1rem;
   flex-wrap: wrap;
 }
+
+
+
+
+
+
+/* PGM REVIEW - COMPACT METRIC CARDS */
+/* Centered alignment matching the reference design */
+.pgmreview-metrics-compact {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  margin-bottom: 32px;
+}
+
+.pgmreview-metric-card-compact {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+  border: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pgmreview-metric-card-compact:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  border-color: #d1d5db;
+}
+
+.pgmreview-metric-content-compact {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.pgmreview-metric-info-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  width: 100%;
+}
+
+.pgmreview-metric-value-compact {
+  font-size: 24px;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.pgmreview-metric-label-compact {
+  font-size: 13px;
+  font-weight: 500;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  text-align: center;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .pgmreview-metrics-compact {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .pgmreview-metrics-compact {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .pgmreview-metric-value-compact {
+    font-size: 22px;
+  }
+}

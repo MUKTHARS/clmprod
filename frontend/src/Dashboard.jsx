@@ -40,7 +40,14 @@ function Dashboard({ contracts, loading, refreshContracts, user }) {
     completionRate: 0,
     riskLevel: 'Low'
   });
-
+const [metricsLoading, setMetricsLoading] = useState(false);
+const [metrics, setMetrics] = useState({
+  grants_requiring_action: 0,
+  funds_at_risk: 0,
+  upcoming_submissions: 0,
+  pending_approvals: 0,
+  portfolio_on_track: 0
+});
   const [activeView, setActiveView] = useState('list');
   const [searchTerm, setSearchTerm] = useState('');
   const [normalizedContracts, setNormalizedContracts] = useState([]);
@@ -590,12 +597,11 @@ useEffect(() => {
     style={{ cursor: 'pointer' }}
   >
     <div className="metric-content">
-      <FileArchive size={24} style={{ color: '#6366f1', marginBottom: '8px' }} />
       <div className="metric-info">
         <div className="metric-value">
           {metricsLoading ? "..." : metrics.portfolio_on_track}
         </div>
-        <div className="metric-label">Due for Archive</div>
+        <div className="metric-label">Archived</div>
       </div>
     </div>
   </div>

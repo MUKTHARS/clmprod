@@ -1246,10 +1246,6 @@
   box-shadow: 0 4px 12px rgba(99, 102, 241, 0.1);
 }
 
-/* =========================
-   TOTAL GRANTS – HIGHLIGHT
-   ========================= */
-
 .metric-card-tall.metric-card-total-grants {
   background: #b9e3fc;
   border-color: #b9e3fc;
