@@ -382,13 +382,7 @@ function UploadPage({ setLoading, onUploadComplete }) {
               <p className="confirmation-message">
                 Are you sure you want to analyze this grant document?
               </p>
-              <div className="file-details-confirmation">
-                <FileText size={16} />
-                <span className="filename">{file?.name}</span>
-                <span className="filesize">
-                  ({file ? (file.size / 1024 / 1024).toFixed(2) : 0} MB)
-                </span>
-              </div>
+            
               <div className="confirmation-actions">
                 <button 
                   className="btn-cancel"
