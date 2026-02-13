@@ -1194,3 +1194,128 @@
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(99, 102, 241, 0.1);
 }
+
+
+/* Add these at the end of your Dashboard.css file */
+
+/* Dashboard-specific metric tiles - higher specificity to prevent overrides */
+.dashtile-grants-action {
+  background: #e6f3ff !important;
+  border-color: #b8d9ff !important;
+}
+
+.dashtile-funds-risk {
+  background:#fbdaf6 !important;
+  border-color: #ffc2c2 !important;
+}
+
+.dashtile-upcoming {
+  background: #b8f5ec !important;
+  border-color: #ffeb99 !important;
+}
+
+.dashtile-pending {
+  background: #f5d0b8 !important;
+  border-color: #ffd1b3 !important;
+}
+
+.dashtile-portfolio {
+  background: #cacff5 !important;
+  border-color: #b8ffd9 !important;
+}
+
+.dashtile-active-grants {
+  background: #e6f0ff !important;
+  border-color: #b8d4ff !important;
+}
+
+.dashtile-pm-submissions {
+  background: #f2e6ff !important;
+  border-color: #d9b8ff !important;
+}
+
+.dashtile-submitted {
+  background: #ffe6f0 !important;
+  border-color: #ffb8d4 !important;
+}
+
+.dashtile-portfolio-value {
+  background: #e6ffe6 !important;
+  border-color: #b8ffb8 !important;
+}
+
+.dashtile-risk-grants {
+  background: #ffe6e6 !important;
+  border-color: #ffb8b8 !important;
+}
+
+.dashtile-total-portfolio {
+  background: #e6f3ff !important;
+  border-color: #b8d9ff !important;
+}
+
+.dashtile-portfolio-total {
+  background: #f2e6ff !important;
+  border-color: #e0b8ff !important;
+}
+
+.dashtile-awaiting {
+  background: #fff8e6 !important;
+  border-color: #ffeb99 !important;
+}
+
+.dashtile-track-percent {
+  background: #e6fff2 !important;
+  border-color: #b8ffd9 !important;
+}
+
+.dashtile-high-risk {
+  background: #ffe6e6 !important;
+  border-color: #ffb8b8 !important;
+}
+
+.dashtile-default {
+  background: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+}
+
+/* Ensure the metric card maintains its structure with these classes */
+.dashtile-grants-action,
+.dashtile-funds-risk,
+.dashtile-upcoming,
+.dashtile-pending,
+.dashtile-portfolio,
+.dashtile-active-grants,
+.dashtile-pm-submissions,
+.dashtile-submitted,
+.dashtile-portfolio-value,
+.dashtile-risk-grants,
+.dashtile-total-portfolio,
+.dashtile-portfolio-total,
+.dashtile-awaiting,
+.dashtile-track-percent,
+.dashtile-high-risk,
+.dashtile-default {
+  transition: all 0.2s ease;
+}
+
+.dashtile-grants-action:hover,
+.dashtile-funds-risk:hover,
+.dashtile-upcoming:hover,
+.dashtile-pending:hover,
+.dashtile-portfolio:hover,
+.dashtile-active-grants:hover,
+.dashtile-pm-submissions:hover,
+.dashtile-submitted:hover,
+.dashtile-portfolio-value:hover,
+.dashtile-risk-grants:hover,
+.dashtile-total-portfolio:hover,
+.dashtile-portfolio-total:hover,
+.dashtile-awaiting:hover,
+.dashtile-track-percent:hover,
+.dashtile-high-risk:hover,
+.dashtile-default:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08);
+  border-color: #cbd5e1 !important;
+}
