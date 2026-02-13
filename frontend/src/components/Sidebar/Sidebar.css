@@ -936,3 +936,36 @@
   display: none;
 }
 
+
+/* Add this to Sidebar.css */
+.nav-green-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background-color: #10b981; /* Green color */
+  border-radius: 50%;
+  margin-left: 6px;
+  animation: pulse-green 2s infinite;
+  box-shadow: 0 0 0 rgba(16, 185, 129, 0.4);
+  position: relative;
+  top: -1px;
+}
+
+@keyframes pulse-green {
+  0% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
+}
+
+/* Adjust position for menu items with arrows */
+.draft-parent .nav-green-dot,
+.assigned-parent .nav-green-dot {
+  margin-left: auto;
+  margin-right: 4px;
+}
