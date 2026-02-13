@@ -31,7 +31,7 @@ import {
 } from 'lucide-react';
 import API_CONFIG from '../../config';
 import './AgreementWorkflow.css';
-
+import ProjectManagerActions from './ProjectManagerActions';
 function AgreementWorkflow({ contract, user, showWorkflow, setShowWorkflow, onWorkflowComplete }) {
   const [activeStep, setActiveStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -45,6 +45,35 @@ function AgreementWorkflow({ contract, user, showWorkflow, setShowWorkflow, onWo
     pgm_users: [],
     director_users: []
   });
+
+    const fetchReviewComments = async () => {
+      if (!contractData?.contract_id) return;
+      
+      try {
+        setPmCommentsLoading(true);
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_CONFIG.BASE_URL}/api/contracts/${contractData.contract_id}/all-review-comments`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+  
+        if (response.ok) {
+          const data = await response.json();
+          const pmComments = data.comments?.filter(comment => 
+            comment.user_role === "project_manager"
+          ) || [];
+          setPmComments(pmComments);
+        }
+      } catch (error) {
+        console.error('Failed to fetch review comments:', error);
+      } finally {
+        setPmCommentsLoading(false);
+      }
+    };
+    const [contractData, setContractData] = useState(null);
+  const [showPMActions, setShowPMActions] = useState(false);
   const [formData, setFormData] = useState({
     grant_name: '',
     contract_number: '',
@@ -876,37 +905,71 @@ const handlePublishAgreement = async (publishToReview = true) => {
             </button>
           )}
           
-          {activeStep < 4 ? (
-            <button 
-              className="ag-btn ag-btn-primary ag-btn-next" 
-              onClick={nextStep} 
-              disabled={loading}
-            >
-              Next
-              <ChevronRight size={16} />
-            </button>
-          ) : (
-            <>
-              <button 
-                className="ag-btn ag-btn-secondary" 
-                onClick={handleUpdateDraft}
-                disabled={loading}
-              >
-                {loading ? <Loader2 size={16} className="ag-spinner" /> : 'Save Draft'}
-              </button>
-              
-              <button 
-                className="ag-btn ag-btn-primary" 
-                onClick={() => handlePublishAgreement(false)}
-                disabled={loading}
-              >
-                {loading ? <Loader2 size={16} className="ag-spinner" /> : 'Publish'}
-              </button>
-            </>
-          )}
+{activeStep < 4 ? (
+  <button 
+    className="ag-btn ag-btn-primary ag-btn-next" 
+    onClick={nextStep} 
+    disabled={loading}
+  >
+    Next
+    <ChevronRight size={16} />
+  </button>
+) : (
+  <>
+    <button 
+      className="ag-btn ag-btn-secondary" 
+      onClick={handleUpdateDraft}
+      disabled={loading}
+    >
+      {loading ? <Loader2 size={16} className="ag-spinner" /> : 'Save Draft'}
+    </button>
+    <button 
+      className="ag-btn ag-btn-primary" 
+      onClick={() => setShowPMActions(true)} // This should open the popup
+      disabled={loading}
+    >
+      {loading ? <Loader2 size={16} className="ag-spinner" /> : 'Review'}
+    </button>
+    <button 
+      className="ag-btn ag-btn-primary" 
+      onClick={() => handlePublishAgreement(false)}
+      disabled={loading}
+    >
+      {loading ? <Loader2 size={16} className="ag-spinner" /> : 'Publish'}
+    </button>
+  </>
+)}
         </div>
       </div>
-
+{/* Project Manager Actions Popup */}
+{showPMActions && user && user.role === "project_manager" && contract && (
+  <div className="ag-popup-overlay">
+    <div className="ag-popup-content">
+      <div className="ag-popup-header">
+        <h3>Project Manager Review</h3>
+        <button 
+          className="ag-popup-close" 
+          onClick={() => setShowPMActions(false)}
+        >
+          ×
+        </button>
+      </div>
+      <div className="ag-popup-body">
+        <ProjectManagerActions 
+          contract={contract}
+          user={user}
+          onActionComplete={() => {
+            // Call onWorkflowComplete to refresh data in parent
+            if (onWorkflowComplete) {
+              onWorkflowComplete();
+            }
+            setShowPMActions(false); // Close popup after action completes
+          }}
+        />
+      </div>
+    </div>
+  </div>
+)}
       {/* Custom Popup Component */}
       {popup.show && (
         <div className="ag-popup-overlay">

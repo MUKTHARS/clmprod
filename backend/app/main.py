@@ -2631,8 +2631,6 @@ async def debug_user_assignments(
         "assigned_contracts": assigned_contracts
     }
 
-
-
 @app.get("/api/contracts/{contract_id}/program-manager-reviews")
 async def get_program_manager_reviews_for_pm(
     contract_id: int,
