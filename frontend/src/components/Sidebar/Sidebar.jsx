@@ -140,6 +140,8 @@ useEffect(() => {
     };
   }
 }, [user]);
+
+
   // Memoize the getMenuItems function to prevent recreation on every render
   const getMenuItems = useCallback(() => {
     const userRole = user?.role || '';
@@ -1177,10 +1179,6 @@ useEffect(() => {
           {/* Assigned Agreements for Program Managers and Directors */}
           {menuItems.assignedParent && (
             <>
-              <div className="nav-section-divider">
-                <div className="nav-section-label">ASSIGNED AGREEMENTS</div>
-              </div>
-              
               <li key={menuItems.assignedParent.id}>
                 <button
                   className={`nav-item assigned-parent ${expandedMenus.assigned || isAssignedSubmenuActive ? 'active' : ''}`}

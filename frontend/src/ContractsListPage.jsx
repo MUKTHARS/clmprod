@@ -520,247 +520,196 @@ function ContractsListPage({ contracts: propContracts = [], user, refreshContrac
 
   return (
     <div className="contracts-list-page">
-      {/* Metrics Container - Same as Dashboard */}
-      <div className="metrics-container">
-        <div className="metric-card-tall">
-          <div className="metric-content">
-            <div className="metric-info">
-              <div className="metric-value">{metrics.totalContracts}</div>
-              <div className="metric-label">Total Grants</div>
-            </div>
+      <div className="contracts-list-page-content">
+        {/* Metrics Container - Same as Dashboard with matching styling */}
+        <div className="metrics-container">
+          <div className="metric-card-tall metric-card-total-grants">
+            <div className="metric-value">{metrics.totalContracts}</div>
+            <div className="metric-title">Total Grants</div>
+          </div>
+
+          <div className="metric-card-tall metric-card-total-value">
+            <div className="metric-value">{formatCurrency(metrics.totalValue)}</div>
+            <div className="metric-title">Total Value</div>
+          </div>
+
+          <div className="metric-card-tall metric-card-active">
+            <div className="metric-value">{metrics.activeContracts}</div>
+            <div className="metric-title">Active</div>
+          </div>
+
+          <div className="metric-card-tall metric-card-deadlines">
+            <div className="metric-value">{metrics.expiringSoon}</div>
+            <div className="metric-title">Deadlines</div>
           </div>
         </div>
 
-        <div className="metric-card-tall">
-          <div className="metric-content">
-            <div className="metric-info">
-              <div className="metric-value">{formatCurrency(metrics.totalValue)}</div>
-              <div className="metric-label">Total Value</div>
-            </div>
-          </div>
-        </div>
-
-        <div className="metric-card-tall">
-          <div className="metric-content">
-            <div className="metric-info">
-              <div className="metric-value">{metrics.activeContracts}</div>
-              <div className="metric-label">Active</div>
-            </div>
-          </div>
-        </div>
-
-        <div className="metric-card-tall">
-          <div className="metric-content">
-            <div className="metric-info">
-              <div className="metric-value">{metrics.expiringSoon}</div>
-              <div className="metric-label">Deadlines</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Search and Controls - Same as Dashboard */}
-      <div className="recent-contracts">
-        <div className="section-controls">
-          <div className="search-box">
-            <Search size={16} />
-            <input
-              type="text"
-              placeholder="Search grants..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="search-input"
-            />
-          </div>
-          
-          <div className="controls-right">
-            <div className="view-toggle">
-              <button 
-                className={`view-btn ${activeView === 'list' ? 'active' : ''}`}
-                onClick={() => setActiveView('list')}
-              >
-                List
-              </button>
-              <button 
-                className={`view-btn ${activeView === 'grid' ? 'active' : ''}`}
-                onClick={() => setActiveView('grid')}
-              >
-                Grid
-              </button>
-            </div>
-
-            <div className="filter-actions">
-              <button 
-                className="btn-filter"
-                onClick={() => setShowFilters(!showFilters)}
-                title="Filter contracts"
-              >
-                <Filter size={16} />
-                <span>Filter</span>
-              </button>
-              
-              <button 
-                className="btn-upload"
-                onClick={() => navigate('/upload', { replace: false })}
-              >
-                <Upload size={16} />
-                <span>Upload</span>
-              </button>
-              
-              <div className="refresh-controls">
+        {/* Recent Contracts Section - Same as Dashboard */}
+        <div className="recent-contracts">
+          <div className="section-controls">
+            <div className="controls-right">
+              <div className="view-toggle">
                 <button 
-                  className="btn-refresh"
-                  onClick={() => {
-                    console.log('Manual refresh triggered');
-                    if (refreshContracts) {
-                      refreshContracts();
-                      setLoading(true);
-                      setTimeout(() => setLoading(false), 1000);
-                    }
-                  }}
-                  disabled={loading}
-                  title="Refresh Data"
+                  className={`view-btn ${activeView === 'list' ? 'active' : ''}`}
+                  onClick={() => setActiveView('list')}
                 >
-                  <RefreshCw size={16} className={loading ? 'spinning' : ''} />
-                  {loading ? 'Refreshing...' : 'Refresh Data'}
+                  List
+                </button>
+                <button 
+                  className={`view-btn ${activeView === 'grid' ? 'active' : ''}`}
+                  onClick={() => setActiveView('grid')}
+                >
+                  Grid
                 </button>
               </div>
-            </div>
-          </div>
 
-          {/* Filter Popup */}
-          {showFilters && (
-            <div className="filter-popup">
-              <div className="filter-popup-header">
-                <h3>Filter Contracts</h3>
+              <div className="filter-actions">
                 <button 
-                  className="filter-close"
-                  onClick={() => setShowFilters(false)}
+                  className="btn-filter"
+                  onClick={() => setShowFilters(!showFilters)}
+                  title="Filter contracts"
                 >
-                  <X size={16} />
+                  <Filter size={16} />
+                  <span>Filter</span>
                 </button>
-              </div>
+                
               
-              <div className="filter-content">
-                <div className="filter-group">
-                  <label className="filter-label">Status</label>
-                  <div className="filter-options">
-                    {['all', 'approved', 'draft', 'under_review', 'reviewed', 'rejected', 'published'].map((status) => (
-                      <button
-                        key={status}
-                        className={`filter-option ${statusFilter === status ? 'active' : ''}`}
-                        onClick={() => {
-                          setStatusFilter(status);
-                          setShowFilters(false);
-                        }}
-                      >
-                        {status === 'all' ? 'All Status' : status.replace('_', ' ').charAt(0).toUpperCase() + status.slice(1)}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+              </div>
+            </div>
 
-                <div className="filter-group">
-                  <label className="filter-label">Date Range</label>
-                  <div className="filter-options">
-                    {['all', 'last30', 'expiring', 'expired'].map((date) => (
-                      <button
-                        key={date}
-                        className={`filter-option ${dateFilter === date ? 'active' : ''}`}
-                        onClick={() => {
-                          setDateFilter(date);
-                          setShowFilters(false);
-                        }}
-                      >
-                        {date === 'all' && 'All Dates'}
-                        {date === 'last30' && 'Last 30 Days'}
-                        {date === 'expiring' && 'Expiring Soon'}
-                        {date === 'expired' && 'Expired'}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="filter-actions-bottom">
+            {/* Filter Popup */}
+            {showFilters && (
+              <div className="filter-popup">
+                <div className="filter-popup-header">
+                  <h3>Filter Contracts</h3>
                   <button 
-                    className="btn-clear-filters"
-                    onClick={() => {
-                      setStatusFilter('all');
-                      setDateFilter('all');
-                      setShowFilters(false);
-                    }}
+                    className="filter-close"
+                    onClick={() => setShowFilters(false)}
                   >
-                    Clear Filters
+                    <X size={16} />
                   </button>
                 </div>
-              </div>
-            </div>
-          )}
-        </div>
+                
+                <div className="filter-content">
+                  <div className="filter-group">
+                    <label className="filter-label">Status</label>
+                    <div className="filter-options">
+                      {['all', 'approved', 'draft', 'under_review', 'reviewed', 'rejected', 'published'].map((status) => (
+                        <button
+                          key={status}
+                          className={`filter-option ${statusFilter === status ? 'active' : ''}`}
+                          onClick={() => {
+                            setStatusFilter(status);
+                            setShowFilters(false);
+                          }}
+                        >
+                          {status === 'all' ? 'All Status' : status.replace('_', ' ').charAt(0).toUpperCase() + status.slice(1)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
 
-        {/* Contracts Content - Switch between views */}
-        <div className="contracts-content">
-          {loading ? (
-            <div className="loading-state">
-              <RefreshCw className="spinner" />
-              <p>Loading contracts...</p>
-            </div>
-          ) : filteredContracts.length > 0 ? (
-            <>
-              <div className="results-header">
-                <span className="results-count">
-                  Showing {filteredContracts.length} of {propContracts.length} grants
-                </span>
-                <span className="results-value">
-                  Total Value: {formatCurrency(metrics.totalValue)}
-                </span>
-                <span className="auto-refresh-info">
-                  Auto-refreshed {autoRefreshCount} times
-                </span>
-              </div>
+                  <div className="filter-group">
+                    <label className="filter-label">Date Range</label>
+                    <div className="filter-options">
+                      {['all', 'last30', 'expiring', 'expired'].map((date) => (
+                        <button
+                          key={date}
+                          className={`filter-option ${dateFilter === date ? 'active' : ''}`}
+                          onClick={() => {
+                            setDateFilter(date);
+                            setShowFilters(false);
+                          }}
+                        >
+                          {date === 'all' && 'All Dates'}
+                          {date === 'last30' && 'Last 30 Days'}
+                          {date === 'expiring' && 'Expiring Soon'}
+                          {date === 'expired' && 'Expired'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
 
-              {activeView === 'list' ? (
-                <div className="contracts-table-container">
-                  <table className="contracts-table">
-                    <thead>
-                      <tr>
-                        <th className="table-header-large">Grant Name</th>
-                        <th className="table-header-large">Grant ID</th>
-                        <th className="table-header-large">Grantor</th>
-                        <th className="table-header-large">Amount</th>
-                        <th className="table-header-large">Upload Date</th>
-                        <th className="table-header-large">End Date</th>
-                        <th className="table-header-large">Status</th>
-                        <th className="table-header-large">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredContracts.map(renderContractRow)}
-                    </tbody>
-                  </table>
+                  <div className="filter-actions-bottom">
+                    <button 
+                      className="btn-clear-filters"
+                      onClick={() => {
+                        setStatusFilter('all');
+                        setDateFilter('all');
+                        setShowFilters(false);
+                      }}
+                    >
+                      Clear Filters
+                    </button>
+                  </div>
                 </div>
-              ) : (
-                <div className="contracts-grid">
-                  {filteredContracts.map(renderContractCard)}
-                </div>
-              )}
-            </>
-          ) : (
-            <div className="empty-state">
-              <FileText size={48} />
-              <h3>No contracts found</h3>
-              <p>{searchTerm ? 'Try adjusting your search' : 'Upload your first contract to get started'}</p>
-              {!searchTerm && (
-                <button 
-                  className="btn-upload-main"
-                  onClick={() => navigate('/upload')}
-                >
-                  <Upload size={20} />
-                  Upload First Contract
-                </button>
-              )}
-            </div>
-          )}
+              </div>
+            )}
+          </div>
+
+          {/* Results Header - Reduced space */}
+          <div className="results-header">
+            <span className="results-count">
+              Showing {filteredContracts.length} of {propContracts.length} grants
+            </span>
+            <span className="results-value">
+              Total Value: {formatCurrency(metrics.totalValue)}
+            </span>
+
+          </div>
+
+          {/* Contracts Content - Switch between views */}
+          <div className="contracts-content">
+            {loading ? (
+              <div className="loading-state">
+                <RefreshCw className="spinner" />
+                <p>Loading contracts...</p>
+              </div>
+            ) : filteredContracts.length > 0 ? (
+              <>
+                {activeView === 'list' ? (
+                  <div className="contracts-table-container">
+                    <table className="contracts-table">
+                      <thead>
+                        <tr>
+                          <th className="table-header-large">Grant Name</th>
+                          <th className="table-header-large">Grant ID</th>
+                          <th className="table-header-large">Grantor</th>
+                          <th className="table-header-large">Amount</th>
+                          <th className="table-header-large">Upload Date</th>
+                          <th className="table-header-large">End Date</th>
+                          <th className="table-header-large">Status</th>
+                          <th className="table-header-large">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredContracts.map(renderContractRow)}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="contracts-grid">
+                    {filteredContracts.map(renderContractCard)}
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="empty-state">
+                <FileText size={48} />
+                <h3>No contracts found</h3>
+                <p>{searchTerm ? 'Try adjusting your search' : 'Upload your first contract to get started'}</p>
+                {!searchTerm && (
+                  <button 
+                    className="btn-upload-main"
+                    onClick={() => navigate('/upload')}
+                  >
+                    <Upload size={20} />
+                    Upload First Contract
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -768,6 +717,7 @@ function ContractsListPage({ contracts: propContracts = [], user, refreshContrac
 }
 
 export default ContractsListPage;
+
 
 // import React, { useState, useEffect } from 'react';
 // import { useNavigate } from 'react-router-dom';
@@ -791,7 +741,7 @@ export default ContractsListPage;
 // } from 'lucide-react';
 // import './styles/ContractsListPage.css';
 
-// function ContractsListPage({ contracts: propContracts = [], user }) {
+// function ContractsListPage({ contracts: propContracts = [], user, refreshContracts }) {
 //   const [filteredContracts, setFilteredContracts] = useState([]);
 //   const [loading, setLoading] = useState(false);
 //   const [searchTerm, setSearchTerm] = useState('');
@@ -806,7 +756,81 @@ export default ContractsListPage;
 //     expiringSoon: 0,
 //     averageValue: 0
 //   });
+  
+//   const [refreshInterval, setRefreshInterval] = useState(null);
+//   const [autoRefreshCount, setAutoRefreshCount] = useState(0);
+//   const [normalizedContracts, setNormalizedContracts] = useState([]);
+  
 //   const navigate = useNavigate();
+
+//   // Auto-refresh logic
+//   useEffect(() => {
+//     // If contracts are empty and we're not loading, trigger a refresh
+//     if ((!propContracts || propContracts.length === 0) && !loading && refreshContracts) {
+//       console.log('No contracts found, triggering auto-refresh...');
+//       refreshContracts();
+//     }
+//   }, [propContracts, loading, refreshContracts]);
+
+//   // Set up interval to periodically refresh
+//   useEffect(() => {
+//     // Set up an interval to refresh every 30 seconds
+//     const interval = setInterval(() => {
+//       if (refreshContracts && !loading) {
+//         console.log('Auto-refreshing contracts data...');
+//         refreshContracts();
+//         setAutoRefreshCount(prev => prev + 1);
+//       }
+//     }, 30000); // 30 seconds
+
+//     setRefreshInterval(interval);
+
+//     // Clean up interval on component unmount
+//     return () => {
+//       if (interval) {
+//         clearInterval(interval);
+//       }
+//     };
+//   }, [refreshContracts, loading]);
+
+//   // Additional check for data consistency
+//   useEffect(() => {
+//     // Check if we need to trigger a refresh
+//     const shouldRefresh = () => {
+//       // If no contracts and not currently loading
+//       if ((!propContracts || propContracts.length === 0) && !loading) {
+//         return true;
+//       }
+      
+//       // If contracts exist but filtered contracts is empty when there should be data
+//       if (propContracts && propContracts.length > 0 && filteredContracts.length === 0 && !searchTerm && statusFilter === 'all' && dateFilter === 'all') {
+//         return true;
+//       }
+      
+//       return false;
+//     };
+
+//     if (shouldRefresh() && refreshContracts) {
+//       console.log('Detected missing or inconsistent data, triggering refresh...');
+      
+//       // Small delay to avoid rapid refreshes
+//       const timer = setTimeout(() => {
+//         refreshContracts();
+//       }, 1500);
+      
+//       return () => clearTimeout(timer);
+//     }
+//   }, [propContracts, filteredContracts, loading, refreshContracts, searchTerm, statusFilter, dateFilter]);
+
+//   useEffect(() => {
+//     // Log data state for debugging
+//     console.log('ContractsListPage state:', {
+//       propContractsCount: propContracts?.length || 0,
+//       filteredCount: filteredContracts.length,
+//       loading,
+//       autoRefreshCount
+//     });
+//   }, [propContracts, filteredContracts, loading, autoRefreshCount]);
 
 //   useEffect(() => {
 //     if (propContracts.length > 0) {
@@ -882,6 +906,9 @@ export default ContractsListPage;
 //     console.log('DEBUG: All contracts found:', propContracts.length);
     
 //     let filtered = propContracts.map(normalizeContractData).filter(Boolean);
+    
+//     // Store normalized contracts
+//     setNormalizedContracts(filtered);
     
 //     if (searchTerm) {
 //       filtered = filtered.filter(contract => 
@@ -1301,14 +1328,24 @@ export default ContractsListPage;
 //                 <span>Upload</span>
 //               </button>
               
-//               <button 
-//                 className="btn-refresh"
-//                 onClick={() => window.location.reload()}
-//                 disabled={loading}
-//                 title="Refresh"
-//               >
-//                 <RefreshCw size={16} className={loading ? 'spinning' : ''} />
-//               </button>
+//               <div className="refresh-controls">
+//                 <button 
+//                   className="btn-refresh"
+//                   onClick={() => {
+//                     console.log('Manual refresh triggered');
+//                     if (refreshContracts) {
+//                       refreshContracts();
+//                       setLoading(true);
+//                       setTimeout(() => setLoading(false), 1000);
+//                     }
+//                   }}
+//                   disabled={loading}
+//                   title="Refresh Data"
+//                 >
+//                   <RefreshCw size={16} className={loading ? 'spinning' : ''} />
+//                   {loading ? 'Refreshing...' : 'Refresh Data'}
+//                 </button>
+//               </div>
 //             </div>
 //           </div>
 
@@ -1397,6 +1434,9 @@ export default ContractsListPage;
 //                 </span>
 //                 <span className="results-value">
 //                   Total Value: {formatCurrency(metrics.totalValue)}
+//                 </span>
+//                 <span className="auto-refresh-info">
+//                   Auto-refreshed {autoRefreshCount} times
 //                 </span>
 //               </div>
 
