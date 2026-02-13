@@ -30,6 +30,7 @@ import API_CONFIG from './config';
 
 import './styles/Dashboard.css';
 import { Link } from 'react-router-dom';
+
 function Dashboard({ contracts, loading, refreshContracts, user }) {
   const navigate = useNavigate();
   const [stats, setStats] = useState({
@@ -42,61 +43,101 @@ function Dashboard({ contracts, loading, refreshContracts, user }) {
     completionRate: 0,
     riskLevel: 'Low'
   });
-const [metricsLoading, setMetricsLoading] = useState(false);
-const [metrics, setMetrics] = useState(null);
-//const role = user?.role;
-const renderTiles = () => {
+  const [metricsLoading, setMetricsLoading] = useState(false);
+  const [metrics, setMetrics] = useState(null);
+  
+  // Map variant to CSS class - FIXED to match Dashboard.css
+  const getTileVariantClass = (variant) => {
+    const variantMap = {
+      // Project Manager variants
+      'grants-action': 'metric-card-grants-action',
+      'funds-risk': 'metric-card-funds-risk',
+      'upcoming': 'metric-card-upcoming',
+      'pending': 'metric-card-pending',
+      'portfolio': 'metric-card-portfolio',
+      
+      // Program Manager variants
+      'active-grants': 'metric-card-active-grants',
+      'pm-submissions': 'metric-card-pm-submissions',
+      'submitted': 'metric-card-submitted',
+      'portfolio-value': 'metric-card-portfolio-value',
+      'risk-grants': 'metric-card-risk-grants',
+      
+      // Director variants
+      'total-portfolio': 'metric-card-total-portfolio',
+      'portfolio-total': 'metric-card-portfolio-total',
+      'awaiting': 'metric-card-awaiting',
+      'track-percent': 'metric-card-track-percent',
+      'high-risk': 'metric-card-high-risk',
+      
+      // Default
+      'default': 'metric-card-default'
+    };
+    
+    return variantMap[variant] || 'metric-card-default';
+  };
 
-  if (metricsLoading) {
-    return <div>Loading dashboard...</div>;
-  }
+  const Tile = ({ title, value, variant = 'default' }) => {
+    const variantClass = getTileVariantClass(variant);
+    
+    return (
+      <div className={`metric-card-tall ${variantClass}`}>
+        <div className="metric-value">{value}</div>
+        <div className="metric-title">{title}</div>
+      </div>
+    );
+  };
 
-  if (!metrics || Object.keys(metrics).length === 0) {
+  const renderTiles = () => {
+    if (metricsLoading) {
+      return <div>Loading dashboard...</div>;
+    }
+
+    if (!metrics || Object.keys(metrics).length === 0) {
+      return null;
+    }
+
+    // Project Manager
+    if (metrics.grants_requiring_action !== undefined) {
+      return (
+        <>
+          <Tile title="Grants Requiring Action" value={metrics.grants_requiring_action} variant="grants-action" />
+          <Tile title="Funds At Risk" value={formatCurrency(metrics.funds_at_risk)} variant="funds-risk" />
+          <Tile title="Upcoming Submissions" value={metrics.upcoming_submissions} variant="upcoming" />
+          <Tile title="Pending Approvals" value={metrics.pending_approvals} variant="pending" />
+          <Tile title="Portfolio On Track" value={metrics.portfolio_on_track} variant="portfolio" />
+        </>
+      );
+    }
+
+    // Program Manager
+    if (metrics.total_active_grants !== undefined) {
+      return (
+        <>
+          <Tile title="Total Active Grants" value={metrics.total_active_grants} variant="active-grants" />
+          <Tile title="Pending PM Submissions" value={metrics.pending_pm_submissions} variant="pm-submissions" />
+          <Tile title="Submitted To Director" value={metrics.submitted_to_director} variant="submitted" />
+          <Tile title="Total Portfolio Value" value={formatCurrency(metrics.total_portfolio_value)} variant="portfolio-value" />
+          <Tile title="At Risk Grants" value={metrics.at_risk_grants} variant="risk-grants" />
+        </>
+      );
+    }
+
+    // Director
+    if (metrics.total_portfolio !== undefined) {
+      return (
+        <>
+          <Tile title="Total Portfolio" value={metrics.total_portfolio} variant="total-portfolio" />
+          <Tile title="Total Portfolio Value" value={formatCurrency(metrics.total_portfolio_value)} variant="portfolio-total" />
+          <Tile title="Awaiting Director Approval" value={metrics.awaiting_director_approval} variant="awaiting" />
+          <Tile title="Portfolio On Track %" value={`${metrics.portfolio_on_track_percent}%`} variant="track-percent" />
+          <Tile title="High Risk Grants" value={metrics.high_risk_grants} variant="high-risk" />
+        </>
+      );
+    }
+
     return null;
-  }
-  // Project Manager
-  if (metrics.grants_requiring_action !== undefined) {
-    return (
-      <>
-        <Tile title="Grants Requiring Action" value={metrics.grants_requiring_action} />
-        <Tile title="Funds At Risk" value={formatCurrency(metrics.funds_at_risk)} />
-        <Tile title="Upcoming Submissions" value={metrics.upcoming_submissions} />
-        <Tile title="Pending Approvals" value={metrics.pending_approvals} />
-        <Tile title="Portfolio On Track" value={metrics.portfolio_on_track} />
-      </>
-    );
-  }
-
-  // Program Manager
-  if (metrics.total_active_grants !== undefined) {
-    return (
-      <>
-        <Tile title="Total Active Grants" value={metrics.total_active_grants} />
-        <Tile title="Pending PM Submissions" value={metrics.pending_pm_submissions} />
-        <Tile title="Submitted To Director" value={metrics.submitted_to_director} />
-        <Tile title="Total Portfolio Value" value={formatCurrency(metrics.total_portfolio_value)} />
-        <Tile title="At Risk Grants" value={metrics.at_risk_grants} />
-      </>
-    );
-  }
-
-  // Director
-  if (metrics.total_portfolio !== undefined) {
-    return (
-      <>
-        <Tile title="Total Portfolio" value={metrics.total_portfolio} />
-        <Tile title="Total Portfolio Value" value={formatCurrency(metrics.total_portfolio_value)} />
-        <Tile title="Awaiting Director Approval" value={metrics.awaiting_director_approval} />
-        <Tile title="Portfolio On Track %" value={`${metrics.portfolio_on_track_percent}%`} />
-        <Tile title="High Risk Grants" value={metrics.high_risk_grants} />
-      </>
-    );
-  }
-
-  if (!metrics) return null;
-};
-
-
+  };
 
   const [activeView, setActiveView] = useState('list');
   const [searchTerm, setSearchTerm] = useState('');
@@ -178,7 +219,6 @@ const renderTiles = () => {
                                financial.totalGrantAmount || 
                                normalized.total_amount;
       
-      // Store payment schedule data
       normalized.payment_schedule = financial.payment_schedule || financial.paymentSchedule;
     }
     
@@ -214,7 +254,6 @@ const renderTiles = () => {
       const amount = contract.total_amount || 0;
       totalAmount += amount;
       
-      // Calculate actual received amount from payment schedule
       let received = calculateReceivedAmount(contract);
       
       fundsReceived += received;
@@ -258,14 +297,12 @@ const renderTiles = () => {
     let received = 0;
     const today = new Date();
     
-    // Check comprehensive data first
     if (contract.comprehensive_data) {
       const compData = contract.comprehensive_data;
       const paymentSchedule = compData.financial_details?.payment_schedule || 
                              compData.financialDetails?.payment_schedule;
       
       if (paymentSchedule) {
-        // Check installments
         if (paymentSchedule.installments && Array.isArray(paymentSchedule.installments)) {
           paymentSchedule.installments.forEach(installment => {
             if (installment.due_date && installment.amount) {
@@ -281,7 +318,6 @@ const renderTiles = () => {
           });
         }
         
-        // Check milestones
         if (paymentSchedule.milestones && Array.isArray(paymentSchedule.milestones)) {
           paymentSchedule.milestones.forEach(milestone => {
             if (milestone.due_date && milestone.amount) {
@@ -398,42 +434,37 @@ const renderTiles = () => {
   );
 
   const fetchDashboardMetrics = async () => {
-  try {
-    setMetricsLoading(true);
+    try {
+      setMetricsLoading(true);
+      const token = localStorage.getItem("token");
+      console.log("Calling:", `${API_CONFIG.BASE_URL}/api/dashboard/metrics`);  
+      const response = await fetch(
+        `${API_CONFIG.BASE_URL}/api/dashboard/metrics`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
-    const token = localStorage.getItem("token");
-    console.log("Calling:", `${API_CONFIG.BASE_URL}/api/dashboard/metrics`);  
-    const response = await fetch(
-      `${API_CONFIG.BASE_URL}/api/dashboard/metrics`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      if (!response.ok) {
+        throw new Error("Failed to fetch dashboard summary");
       }
-    );
 
-    if (!response.ok) {
-      throw new Error("Failed to fetch dashboard summary");
+      const data = await response.json();
+      setMetrics(data);
+    } catch (error) {
+      console.error("Dashboard metrics error:", error);
+    } finally {
+      setMetricsLoading(false);
     }
+  };
 
-    const data = await response.json();
-    setMetrics(data);
-
-  } catch (error) {
-    console.error("Dashboard metrics error:", error);
-  } finally {
-    setMetricsLoading(false);
-  }
-};
-
-useEffect(() => {
-  fetchDashboardMetrics();
-  console.log("BASE URL:", API_CONFIG.BASE_URL);
-  console.log("FULL URL:", `${API_CONFIG.BASE_URL}/api/dashboard/metrics`);
-  console.log("Calling:", `${API_CONFIG.BASE_URL}/api/dashboard/metrics`);
-
-
-}, []);
+  useEffect(() => {
+    fetchDashboardMetrics();
+    console.log("BASE URL:", API_CONFIG.BASE_URL);
+    console.log("FULL URL:", `${API_CONFIG.BASE_URL}/api/dashboard/metrics`);
+  }, []);
 
   const renderContractRow = (contract) => {
     if (!contract) return null;
@@ -607,247 +638,230 @@ useEffect(() => {
       </div>
     );
   };
-  const Tile = ({ title, value, variant }) => {
-    return (
-      <div className={`metric-card-tall metric-card-${variant}`}>
-        <h2 className="metric-value">{value}</h2>
-        <p className="metric-title">{title}</p>
-      </div>
-    );
-  };
 
   return (
     <div className="dashboard">
-      <div className="metrics-container">
-        {renderTiles()}
-      </div>
-
-      {/* Recent Grants Section */}
-      <div className="recent-contracts">
-        <div className="section-controls">
-          {/* <div className="search-box">
-            <Search size={16} />
-            <input
-              type="text"
-              placeholder="Search grants..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="search-input"
-            />
-          </div> */}
-          
-          <div className="controls-right">
-            <div className="view-toggle">
-              <button 
-                className={`view-btn ${activeView === 'list' ? 'active' : ''}`}
-                onClick={() => setActiveView('list')}
-              >
-                List
-              </button>
-              <button 
-                className={`view-btn ${activeView === 'grid' ? 'active' : ''}`}
-                onClick={() => setActiveView('grid')}
-              >
-                Grid
-              </button>
-            </div>
-
-            <button 
-              className="btn-view-all"
-              onClick={() => navigate('/contracts')}
-            >
-              View All
-            </button>
-          </div>
+      <div className="dashboard-content">
+        <div className="metrics-container">
+          {renderTiles()}
         </div>
 
-        {/* Grants Content */}
-        <div className="contracts-content">
-          {loading ? (
-            <div className="loading-state">
-              <RefreshCw className="spinner" />
-              <p>Loading grants...</p>
-            </div>
-          ) : filteredContracts.length > 0 ? (
-            <>
-              {activeView === 'list' ? (
-                <div className="contracts-table-container">
-                  <table className="contracts-table">
-                    <thead>
-                      <tr>
-                        <th className="table-header-large">Grant Name</th>
-                        <th className="table-header-large">Grant ID</th>
-                        <th className="table-header-large">Grantor</th>
-                        <th className="table-header-large">Amount</th>
-                        <th className="table-header-large">Upload Date</th>
-                        <th className="table-header-large">End Date</th>
-                        <th className="table-header-large">Status</th>
-                        <th className="table-header-large">Progress</th>
-                        <th className="table-header-large">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredContracts.slice(0, 5).map(renderContractRow)}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="contracts-grid">
-                  {filteredContracts.slice(0, 6).map(renderContractCard)}
-                </div>
-              )}
-            </>
-          ) : (
-            <div className="empty-state">
-              <FileText size={48} />
-              <h3>No grants found</h3>
-              <p>{searchTerm ? 'Try adjusting your search' : ''}</p>
-              {!searchTerm && (
+        {/* Recent Grants Section */}
+        <div className="recent-contracts">
+          <div className="section-controlz">
+            <div className="controls-right">
+              <div className="view-toggle">
                 <button 
-                  className="btn-upload-main"
-                  onClick={() => navigate('/upload')}
+                  className={`view-btn ${activeView === 'list' ? 'active' : ''}`}
+                  onClick={() => setActiveView('list')}
                 >
-                  <Upload size={16} strokeWidth={2} />
-                  Upload Grant
+                  List
                 </button>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
+                <button 
+                  className={`view-btn ${activeView === 'grid' ? 'active' : ''}`}
+                  onClick={() => setActiveView('grid')}
+                >
+                  Grid
+                </button>
+              </div>
 
-      {/* Financial & Deadlines Summary */}
-      <div className="summary-container">
-        <div className="summary-card">
-          <div className="summary-header">
-            <h3 className="summary-title-large">Financial Summary</h3>
-          </div>
-          <div className="financial-summary">
-            {normalizedContracts.slice(0, 3).map((contract) => {
-              const totalAmount = contract.total_amount || 0;
-              const fundsReceived = calculateReceivedAmount(contract);
-              const progressPercentage = totalAmount > 0 ? Math.round((fundsReceived / totalAmount) * 100) : 0;
-              
-              if (!contract.id) return null;
-              
-              return (
-                <div key={contract.id} className="contract-financial-item">
-                  <div className="contract-financial-header">
-                    <h4 className="contract-financial-name">
-                      {contract.grant_name || contract.filename || 'Unnamed Grant'}
-                    </h4>
-                    <div className="contract-financial-id">
-                      {getContractDisplayId(contract)}
-                    </div>
-                  </div>
-                  
-                  <div className="contract-financial-details">
-                    <div className="financial-item">
-                      <span className="item-label">Total Value</span>
-                      <span className="item-value total">{formatCurrency(totalAmount)}</span>
-                    </div>
-                    <div className="financial-item">
-                      <span className="item-label">Funds Received</span>
-                      <span className="item-value received">{formatCurrencyWithDecimals(fundsReceived)}</span>
-                    </div>
-                  </div>
-                  
-                  <div className="progress-container contract-progress">
-                    <div className="progress-bar">
-                      <div 
-                        className="progress-fill"
-                        style={{ 
-                          width: `${progressPercentage}%`,
-                          backgroundColor: getProgressColor(progressPercentage)
-                        }}
-                      ></div>
-                    </div>
-                    <div className="progress-text">
-                      <span>Progress: {progressPercentage}%</span>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-            
-            <div className="overall-progress">
-              <div className="financial-item">
-                <span className="item-label">Total Value (All)</span>
-                <span className="item-value total">{formatCurrency(stats.totalAmount)}</span>
-              </div>
-              <div className="financial-item">
-                <span className="item-label">Funds Received (All)</span>
-                <span className="item-value received">{formatCurrencyWithDecimals(stats.fundsReceived)}</span>
-              </div>
-              <div className="progress-container">
-                <div className="progress-bar">
-                  <div 
-                    className="progress-fill"
-                    style={{ 
-                      width: `${stats.totalAmount > 0 ? Math.round((stats.fundsReceived / stats.totalAmount * 100)) : 0}%`,
-                      backgroundColor: getProgressColor(stats.totalAmount > 0 ? Math.round((stats.fundsReceived / stats.totalAmount * 100)) : 0)
-                    }}
-                  ></div>
-                </div>
-                <div className="progress-text">
-                  <span>Overall Progress: {stats.totalAmount > 0 ? Math.round((stats.fundsReceived / stats.totalAmount * 100)) : 0}%</span>
-                </div>
-              </div>
+              <button 
+                className="btn-view-all"
+                onClick={() => navigate('/contracts')}
+              >
+                View All
+              </button>
             </div>
+          </div>
+
+          {/* Grants Content */}
+          <div className="contracts-content">
+            {loading ? (
+              <div className="loading-state">
+                <RefreshCw className="spinner" />
+                <p>Loading grants...</p>
+              </div>
+            ) : filteredContracts.length > 0 ? (
+              <>
+                {activeView === 'list' ? (
+                  <div className="contracts-table-container">
+                    <table className="contracts-table">
+                      <thead>
+                        <tr>
+                          <th className="table-header-large">Grant Name</th>
+                          <th className="table-header-large">Grant ID</th>
+                          <th className="table-header-large">Grantor</th>
+                          <th className="table-header-large">Amount</th>
+                          <th className="table-header-large">Upload Date</th>
+                          <th className="table-header-large">End Date</th>
+                          <th className="table-header-large">Status</th>
+                          <th className="table-header-large">Progress</th>
+                          <th className="table-header-large">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredContracts.slice(0, 5).map(renderContractRow)}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="contracts-grid">
+                    {filteredContracts.slice(0, 6).map(renderContractCard)}
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="empty-state">
+                <FileText size={48} />
+                <h3>No grants found</h3>
+                <p>{searchTerm ? 'Try adjusting your search' : ''}</p>
+                {!searchTerm && (
+                  <button 
+                    className="btn-upload-main"
+                    onClick={() => navigate('/upload')}
+                  >
+                    <Upload size={16} strokeWidth={2} />
+                    Upload Grant
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
-        <div className="summary-card">
-          <div className="summary-header">
-            <h3 className="summary-title-large">Upcoming Deadlines</h3>
-            <span className="deadline-count">{stats.upcomingDeadlines}</span>
-          </div>
-          
-          {normalizedContracts.filter(c => c.end_date && !getDaysRemaining(c.end_date).includes('Expired')).length > 0 ? (
-            <div className="deadlines-list">
-              {normalizedContracts
-                .filter(c => c.end_date && !getDaysRemaining(c.end_date).includes('Expired') && !getDaysRemaining(c.end_date).includes('Invalid'))
-                .sort((a, b) => new Date(a.end_date) - new Date(b.end_date))
-                .slice(0, 3)
-                .map((contract) => (
-                  <div key={contract.id} className="deadline-item">
-                    <div className="deadline-info">
-                      <h4 className="deadline-title">{contract.grant_name || 'Unnamed Grant'}</h4>
-                      <div className="deadline-details">
-                        <span className="detail">
-                          {contract.grantor || 'No grantor'}
-                        </span>
+        {/* Financial & Deadlines Summary */}
+        <div className="summary-container">
+          <div className="summary-card">
+            <div className="summary-header">
+              <h3 className="summary-title-large">Financial Summary</h3>
+            </div>
+            <div className="financial-summary">
+              {normalizedContracts.slice(0, 3).map((contract) => {
+                const totalAmount = contract.total_amount || 0;
+                const fundsReceived = calculateReceivedAmount(contract);
+                const progressPercentage = totalAmount > 0 ? Math.round((fundsReceived / totalAmount) * 100) : 0;
+                
+                if (!contract.id) return null;
+                
+                return (
+                  <div key={contract.id} className="contract-financial-item">
+                    <div className="contract-financial-header">
+                      <h4 className="contract-financial-name">
+                        {contract.grant_name || contract.filename || 'Unnamed Grant'}
+                      </h4>
+                      <div className="contract-financial-id">
+                        {getContractDisplayId(contract)}
                       </div>
                     </div>
-                    <div className="deadline-right">
-                      <span className={`deadline-days ${getDaysColor(getDaysRemaining(contract.end_date))}`}>
-                        {getDaysRemaining(contract.end_date)}
-                      </span>
-                      <button 
-                        className="btn-action-small"
-                        onClick={() => navigate(`/contracts/${contract.id}`)}
-                      >
-                        <ChevronRight size={16} />
-                      </button>
+                    
+                    <div className="contract-financial-details">
+                      <div className="financial-item">
+                        <span className="item-label">Total Value</span>
+                        <span className="item-value total">{formatCurrency(totalAmount)}</span>
+                      </div>
+                      <div className="financial-item">
+                        <span className="item-label">Funds Received</span>
+                        <span className="item-value received">{formatCurrencyWithDecimals(fundsReceived)}</span>
+                      </div>
+                    </div>
+                    
+                    <div className="progress-container contract-progress">
+                      <div className="progress-bar">
+                        <div 
+                          className="progress-fill"
+                          style={{ 
+                            width: `${progressPercentage}%`,
+                            backgroundColor: getProgressColor(progressPercentage)
+                          }}
+                        ></div>
+                      </div>
+                      <div className="progress-text">
+                        <span>Progress: {progressPercentage}%</span>
+                      </div>
                     </div>
                   </div>
-                ))}
+                );
+              })}
+              
+              <div className="overall-progress">
+                <div className="financial-item">
+                  <span className="item-label">Total Value (All)</span>
+                  <span className="item-value total">{formatCurrency(stats.totalAmount)}</span>
+                </div>
+                <div className="financial-item">
+                  <span className="item-label">Funds Received (All)</span>
+                  <span className="item-value received">{formatCurrencyWithDecimals(stats.fundsReceived)}</span>
+                </div>
+                <div className="progress-container">
+                  <div className="progress-bar">
+                    <div 
+                      className="progress-fill"
+                      style={{ 
+                        width: `${stats.totalAmount > 0 ? Math.round((stats.fundsReceived / stats.totalAmount * 100)) : 0}%`,
+                        backgroundColor: getProgressColor(stats.totalAmount > 0 ? Math.round((stats.fundsReceived / stats.totalAmount * 100)) : 0)
+                      }}
+                    ></div>
+                  </div>
+                  <div className="progress-text">
+                    <span>Overall Progress: {stats.totalAmount > 0 ? Math.round((stats.fundsReceived / stats.totalAmount * 100)) : 0}%</span>
+                  </div>
+                </div>
+              </div>
             </div>
-          ) : (
-            <div className="empty-deadlines">
-              <p>No upcoming deadlines</p>
+          </div>
+
+          <div className="summary-card">
+            <div className="summary-header">
+              <h3 className="summary-title-large">Upcoming Deadlines</h3>
+              <span className="deadline-count">{stats.upcomingDeadlines}</span>
             </div>
-          )}
-          
-          {normalizedContracts.filter(c => c.end_date && !getDaysRemaining(c.end_date).includes('Expired')).length > 0 && (
-            <button 
-              className="btn-view-more"
-              onClick={() => navigate('/contracts')}
-            >
-              <span>View All Deadlines</span>
-              <ArrowRight size={16} />
-            </button>
-          )}
+            
+            {normalizedContracts.filter(c => c.end_date && !getDaysRemaining(c.end_date).includes('Expired')).length > 0 ? (
+              <div className="deadlines-list">
+                {normalizedContracts
+                  .filter(c => c.end_date && !getDaysRemaining(c.end_date).includes('Expired') && !getDaysRemaining(c.end_date).includes('Invalid'))
+                  .sort((a, b) => new Date(a.end_date) - new Date(b.end_date))
+                  .slice(0, 3)
+                  .map((contract) => (
+                    <div key={contract.id} className="deadline-item">
+                      <div className="deadline-info">
+                        <h4 className="deadline-title">{contract.grant_name || 'Unnamed Grant'}</h4>
+                        <div className="deadline-details">
+                          <span className="detail">
+                            {contract.grantor || 'No grantor'}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="deadline-right">
+                        <span className={`deadline-days ${getDaysColor(getDaysRemaining(contract.end_date))}`}>
+                          {getDaysRemaining(contract.end_date)}
+                        </span>
+                        <button 
+                          className="btn-action-small"
+                          onClick={() => navigate(`/contracts/${contract.id}`)}
+                        >
+                          <ChevronRight size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            ) : (
+              <div className="empty-deadlines">
+                <p>No upcoming deadlines</p>
+              </div>
+            )}
+            
+            {normalizedContracts.filter(c => c.end_date && !getDaysRemaining(c.end_date).includes('Expired')).length > 0 && (
+              <button 
+                className="btn-view-more"
+                onClick={() => navigate('/contracts')}
+              >
+                <span>View All Deadlines</span>
+                <ArrowRight size={16} />
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -855,4 +869,3 @@ useEffect(() => {
 }
 
 export default Dashboard;
-

@@ -1,57 +1,40 @@
 .dashboard {
-  padding: 12px;
+  padding: 24px 24px 12px 24px !important;
   max-width: 1400px;
   margin: 0 auto;
   min-height: 100vh;
   background: #f8fafc;
-  padding-top: 4px !important;
+  padding-top: 24px !important;
 }
 
-.main-content {
-  padding-top: 0 !important;
+.dashboard-content {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
-/* Or if you have a specific container for dashboard */
-.content-container {
-  padding-top: 0;
-  margin-top: 0;
-}
-
-/* Remove top space before cards */
 .dashboard > *:first-child {
   margin-top: 0;
 }
 
-/* Key Metrics - Taller cards (25% increase) */
+/* Key Metrics - Taller cards with minimalist light colors */
 .metrics-container {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 12px;
-  margin-bottom: 16px;
+  margin-bottom: 8px;
   margin-top: 0 !important;
 }
-
-
 
 .metric-card-tall {
   background: white;
   border-radius: 8px;
-  padding: 16px; /* Increased padding */
+  padding: 20px;
   border: 1px solid #e5e7eb;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
   transition: all 0.2s ease;
-  min-height: 120px; /* Increased height */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.metric-card-tall:hover {
-  border-color: #cbd5e1;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-}
-
-.metric-content {
+  min-height: 140px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -59,25 +42,107 @@
   text-align: center;
 }
 
-.metric-info {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+.metric-card-tall:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08);
 }
 
-.metric-value {
-  font-size: 22px; /* Slightly larger */
+.metric-card-tall .metric-value {
+  font-size: 28px;
   font-weight: 700;
   color: #1e293b;
-  margin-bottom: 4px;
-  line-height: 1;
+  margin-bottom: 8px;
+  line-height: 1.1;
+  display: block;
+  width: 100%;
 }
 
-.metric-label {
-  font-size: 20px; /* Slightly larger */
-  color: #64748b;
-  font-weight: 500;
+.metric-card-tall .metric-title {
+  font-size: 14px;
+  color: #000000;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  display: block;
+  width: 100%;
+  word-break: break-word;
 }
+
+/* ===== MINIMALIST LIGHT COLORS FOR ALL METRIC TILES ===== */
+/* Project Manager Tiles */
+.metric-card-grants-action {
+  background: #e6f3ff;
+  border-color: #b8d9ff;
+}
+.metric-card-funds-risk {
+  background: #ffe6e6;
+  border-color: #ffc2c2;
+}
+.metric-card-upcoming {
+  background: #fff8e6;
+  border-color: #ffeb99;
+}
+.metric-card-pending {
+  background: #fff0e6;
+  border-color: #ffd1b3;
+}
+.metric-card-portfolio {
+  background: #e6fff2;
+  border-color: #b8ffd9;
+}
+
+/* Program Manager Tiles */
+.metric-card-active-grants {
+  background: #e6f0ff;
+  border-color: #b8d4ff;
+}
+.metric-card-pm-submissions {
+  background: #f2e6ff;
+  border-color: #d9b8ff;
+}
+.metric-card-submitted {
+  background: #ffe6f0;
+  border-color: #ffb8d4;
+}
+.metric-card-portfolio-value {
+  background: #e6ffe6;
+  border-color: #b8ffb8;
+}
+.metric-card-risk-grants {
+  background: #ffe6e6;
+  border-color: #ffb8b8;
+}
+
+/* Director Tiles */
+.metric-card-total-portfolio {
+  background: #e6f3ff;
+  border-color: #b8d9ff;
+}
+.metric-card-portfolio-total {
+  background: #f2e6ff;
+  border-color: #e0b8ff;
+}
+.metric-card-awaiting {
+  background: #fff8e6;
+  border-color: #ffeb99;
+}
+.metric-card-track-percent {
+  background: #e6fff2;
+  border-color: #b8ffd9;
+}
+.metric-card-high-risk {
+  background: #ffe6e6;
+  border-color: #ffb8b8;
+}
+
+/* Default Fallback */
+.metric-card-default {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+
+/* ===== END OF METRIC TILE COLORS ===== */
 
 /* Recent Grants Section */
 .recent-contracts {
@@ -94,60 +159,28 @@
 }
 
 .section-title-large {
-  font-size: 20px; /* Larger title */
+  font-size: 20px;
   font-weight: 600;
   color: #1e293b;
   margin: 0;
 }
 
-/* Section Controls - Search left, buttons right */
-.section-controls {
+/* Section Controls - FIXED spacing and alignment */
+.section-controlz {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 16px 20px;
+  justify-content: flex-end;
+  padding: 4px 12px;
   border-bottom: 1px solid #e5e7eb;
   background: #f8fafc;
-}
-
-.search-box {
-  flex: 1;
-  min-width: 280px;
-  max-width: 360px;
-  position: relative;
-}
-
-.search-box svg {
-  position: absolute;
-  left: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #94a3b8;
-  font-size: 14px;
-}
-
-.search-input {
-  width: 100%;
-  padding: 8px 10px 8px 32px; /* Slightly taller */
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
-  font-size: 13px;
-  color: #1e293b;
-  transition: all 0.2s ease;
-}
-
-.search-input:focus {
-  outline: none;
-  border-color: #94a3b8;
-  background: white;
-  box-shadow: 0 0 0 2px rgba(148, 163, 184, 0.1);
 }
 
 .controls-right {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .view-toggle {
@@ -156,10 +189,11 @@
   border: 1px solid #e2e8f0;
   border-radius: 6px;
   padding: 2px;
+  gap: 2px;
 }
 
 .view-btn {
-  padding: 6px 12px; /* Slightly larger */
+  padding: 6px 10px;
   background: transparent;
   border: none;
   border-radius: 4px;
@@ -167,17 +201,19 @@
   color: #64748b;
   cursor: pointer;
   transition: all 0.2s ease;
+  white-space: nowrap;
+  font-weight: 500;
 }
 
 .view-btn.active {
   background: white;
-  color: #475569;
-  font-weight: 500;
+  color: #2563eb;
+  font-weight: 600;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .btn-view-all {
-  padding: 6px 12px; /* Slightly larger */
+  padding: 6px 10px;
   background: white;
   border: 1px solid #e2e8f0;
   color: #475569;
@@ -186,6 +222,7 @@
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
+  white-space: nowrap;
 }
 
 .btn-view-all:hover {
@@ -206,17 +243,18 @@
   width: 100%;
   border-collapse: collapse;
 }
-.contracts-table th:nth-child(1), /* Grant Name */
-.contracts-table th:nth-child(2), /* Grant ID */
-.contracts-table th:nth-child(3) { /* Grantor */
-  min-width: 0; /* Allow them to shrink */
+
+.contracts-table th:nth-child(1),
+.contracts-table th:nth-child(2),
+.contracts-table th:nth-child(3) {
+  min-width: 0;
 }
-.contracts-table th:nth-child(4) { width: 10%; } /* Amount */
-.contracts-table th:nth-child(5) { width: 10%; } /* Upload Date */
-.contracts-table th:nth-child(6) { width: 10%; } /* End Date */
-.contracts-table th:nth-child(7) { width: 8%; }  /* Status */
-.contracts-table th:nth-child(8) { /* Actions */
-  width: auto; /* Or specific widths */
+.contracts-table th:nth-child(4) { width: 10%; }
+.contracts-table th:nth-child(5) { width: 10%; }
+.contracts-table th:nth-child(6) { width: 10%; }
+.contracts-table th:nth-child(7) { width: 8%; }
+.contracts-table th:nth-child(8) {
+  width: auto;
 }
 
 .contracts-table thead {
@@ -224,17 +262,19 @@
 }
 
 .table-header-large {
-  padding: 12px; /* Increased padding */
+  padding: 12px;
   text-align: left;
   font-weight: 600;
   color: #475569;
-  font-size: 13px; /* Larger font */
+  font-size: 13px;
   border-bottom: 1px solid #e5e7eb;
   white-space: nowrap;
 }
+
 .contracts-table th:last-child {
-  min-width: 80px; /* Enough for 2 buttons with gap */
+  min-width: 80px;
 }
+
 .contracts-table td {
   padding: 12px;
   border-bottom: 1px solid #f1f5f9;
@@ -263,7 +303,7 @@
   font-weight: 500;
   color: #1e293b;
   margin-bottom: 2px;
-  font-size: 12px; /* Smaller font */
+  font-size: 12px;
   line-height: 1.3;
 }
 
@@ -331,21 +371,20 @@
 }
 
 .action-buttons {
-  display: flex;
-  gap: 8px;
-  justify-content: flex-start; /* Changed from center to flex-start */
-  flex-wrap: nowrap;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 8px !important;
+  min-width: 100px !important;
 }
-.contracts-table td {
-  display: table-cell !important;
-}
-
-
 
 .btn-action {
-  width: 32px; /* Smaller width to fit better */
+  display: inline-flex !important;
+  float: none !important;
+  margin: 0 !important;
+  width: 32px;
   height: 32px;
-  display: flex;
   align-items: center;
   justify-content: center;
   background: white;
@@ -359,17 +398,47 @@
   padding: 0;
 }
 
+.btn-action svg {
+  stroke: #2563eb;
+  transition: stroke 0.2s ease;
+}
+
 .btn-action:hover {
-  background: #f1f5f9;
-  border-color: #cbd5e1;
-  color: #475569;
-  transform: translateY(-1px); 
+  background: #eff6ff;
+  border-color: #2563eb;
+  transform: translateY(-1px);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+.btn-action:hover svg {
+  stroke: #1e40af;
+}
+
+.btn-action:active {
+  transform: scale(0.95);
+}
+
+.btn-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  background: #f9fafb;
+}
+
+.btn-action:disabled svg {
+  stroke: #9ca3af;
+}
+
+.contracts-table td:last-child .action-buttons {
+  justify-content: center;
+}
+
+.card-footer .action-buttons {
+  justify-content: flex-end;
+}
+
 .btn-action-small {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -388,7 +457,6 @@
   color: #475569;
 }
 
-/* Contracts Grid (Grid View) */
 .contracts-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -549,18 +617,15 @@
   align-items: center !important;
 }
 
-/* For card view, ensure buttons are properly spaced */
 .card-footer .action-buttons {
   justify-content: center;
   width: 100%;
 }
 
-/* Remove any old styles for the MoreVertical button if they exist */
 .btn-action[title="More"] {
   display: none;
 }
 
-/* Loading & Empty States */
 .loading-state {
   padding: 40px 0;
   display: flex;
@@ -618,10 +683,9 @@
   height: 22px !important;
   position: relative;
   vertical-align: middle;
-  top: 8px;   /* tweak this */
+  top: 8px;
   stroke: white !important;
 }
-
 
 .empty-state .btn-upload-main {
   display: inline-flex;
@@ -643,7 +707,6 @@
   background: #1d6cea;
 }
 
-/* Summary Container */
 .summary-container {
   display: grid;
   grid-template-columns: 2fr 1fr;
@@ -671,7 +734,7 @@
 }
 
 .summary-title-large {
-  font-size: 18px; /* Larger title */
+  font-size: 18px;
   font-weight: 600;
   color: #1e293b;
   margin: 0;
@@ -681,13 +744,12 @@
 .deadline-count {
   background: #fee2e2;
   color: #dc2626;
-  padding: 4px 10px; /* Slightly larger */
+  padding: 4px 10px;
   border-radius: 10px;
   font-size: 12px;
   font-weight: 600;
 }
 
-/* Financial Summary - Compact styling */
 .financial-summary {
   display: flex;
   flex-direction: column;
@@ -697,7 +759,6 @@
   padding-right: 4px;
 }
 
-/* Scrollbar styling for financial summary */
 .financial-summary::-webkit-scrollbar {
   width: 4px;
 }
@@ -846,7 +907,6 @@
   text-align: right;
 }
 
-/* Deadlines List - Compact styling */
 .deadlines-list {
   display: flex;
   flex-direction: column;
@@ -856,7 +916,6 @@
   padding-right: 4px;
 }
 
-/* Scrollbar styling for deadlines */
 .deadlines-list::-webkit-scrollbar {
   width: 4px;
 }
@@ -972,13 +1031,15 @@
   border-color: #cbd5e1;
 }
 
-/* Spinner animation */
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
 
-/* Responsive */
 @media (max-width: 1024px) {
+  .dashboard {
+    padding: 20px 16px !important;
+  }
+  
   .summary-container {
     grid-template-columns: 1fr;
   }
@@ -990,7 +1051,7 @@
 
 @media (max-width: 768px) {
   .dashboard {
-    padding: 8px;
+    padding: 16px 12px !important;
   }
   
   .metrics-container {
@@ -999,21 +1060,13 @@
   }
   
   .section-controls {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 8px;
     padding: 12px 16px;
   }
   
-  .search-box {
-    min-width: 100%;
-    max-width: 100%;
-  }
-  
   .controls-right {
-    width: 100%;
-    justify-content: space-between;
-    flex-wrap: wrap;
+    width: auto;
+    justify-content: flex-end;
+    gap: 6px;
   }
   
   .contracts-table-container {
@@ -1021,7 +1074,7 @@
   }
   
   .contracts-table {
-    min-width: 800px; /* Increased for additional column */
+    min-width: 800px;
   }
   
   .contracts-grid {
@@ -1046,25 +1099,24 @@
 }
 
 @media (max-width: 480px) {
+  .dashboard {
+    padding: 12px 10px !important;
+  }
+  
   .metrics-container {
     grid-template-columns: 1fr;
   }
   
   .controls-right {
-    flex-wrap: wrap;
-    gap: 6px;
+    gap: 4px;
   }
   
-  .view-toggle {
-    order: 1;
-    flex: 1;
-    justify-content: center;
+  .view-btn {
+    padding: 5px 8px;
   }
   
   .btn-view-all {
-    order: 2;
-    flex: 1;
-    justify-content: center;
+    padding: 5px 8px;
   }
   
   .contracts-grid {
@@ -1076,9 +1128,6 @@
   }
 }
 
-
-
-/* Add these styles for separate name and ID */
 .contract-name-only {
   font-weight: 500;
   color: #1e293b;
@@ -1098,51 +1147,32 @@
   display: inline-block;
 }
 
-/* Remove the old contract-info styles that combined name and ID */
-.contract-name-small,
-.contract-id-small {
-  /* Keep these for grid view if needed */
-}
-
-/* For table view specifically, you might want to adjust cell padding */
-.contracts-table td {
-  padding: 12px 8px; /* Slightly smaller horizontal padding */
-  border-bottom: 1px solid #f1f5f9;
-  font-size: 13px;
-  vertical-align: middle;
-}
-
-
-
-
-/* Increase size of metric cards */
 .metric-card-tall {
-  min-height: 140px; /* Increased from 120px */
-  padding: 20px; /* Increased from 16px */
-  border-radius: 10px; /* Slightly larger radius */
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); /* Add subtle shadow */
+  min-height: 140px;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
 }
 
-.metric-content {
-  gap: 8px; /* Add some spacing */
+.metric-card-tall .metric-content {
+  gap: 8px;
 }
 
-.metric-value {
-  font-size: 24px !important; /* Increased from 22px */
+.metric-card-tall .metric-value {
+  font-size: 28px !important;
   font-weight: 700;
   color: #1e293b;
-  margin-bottom: 4px;
+  margin-bottom: 8px;
   line-height: 1.1;
 }
 
-.metric-label {
-  font-size: 16px !important; /* Increased from 13px */
+.metric-card-tall .metric-title {
+  font-size: 14px !important;
   color: #000000;
   font-weight: 600;
   letter-spacing: 0.3px;
 }
 
-/* Optional: Add icons to metric cards */
 .metric-card-tall .metric-content {
   display: flex;
   flex-direction: column;
@@ -1152,119 +1182,15 @@
   width: 100%;
 }
 
-/* Add hover effect for better visual feedback */
 .metric-card-tall:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08);
   border-color: #cbd5e1;
 }
 
-
-
-/* =========================
-   ACTION BUTTONS – FIX
-   ========================= */
-
-.action-buttons {
-  display: flex !important;
-  flex-direction: row !important;
-  align-items: center !important;
-  justify-content: flex-start !important;
-  gap: 8px !important;
-  min-width: 100px !important;
-}
-
-/* Ensure buttons are side by side */
-.btn-action {
-  display: inline-flex !important;
-  float: none !important;
-  margin: 0 !important;
-}
-
-/* Icon color */
-.btn-action svg {
-  stroke: #2563eb; /* blue */
-  transition: stroke 0.2s ease;
-}
-
-/* Hover effect */
-.btn-action:hover {
-  background: #eff6ff; /* blue tint */
-  border-color: #2563eb;
-  transform: translateY(-1px);
-}
-
-/* Active click */
-.btn-action:active {
-  transform: scale(0.95);
-}
-
-/* Disabled (example if used later) */
-.btn-action:disabled {
-  cursor: not-allowed;
-  opacity: 0.45;
-  background: #f9fafb;
-}
-
-.btn-action:disabled svg {
-  stroke: #9ca3af;
-}
-
-/* Table-specific alignment */
-.contracts-table td .action-buttons {
-  justify-content: center;
-}
-
-/* Card footer buttons */
-.card-footer .action-buttons {
-  justify-content: flex-end;
-}
-
-/* Small action button (used in deadlines section) */
-.btn-action-small {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: 1px solid #e5e7eb;
-  background: #ffffff;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.btn-action-small:hover {
-  background: #f3f4f6;
-}
-
-
 .metric-card-tall.archive-metric:hover {
   border-color: #6366f1;
   background: #f0f9ff;
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(99, 102, 241, 0.1);
-}
-
-.metric-card-tall.metric-card-total-grants {
-  background: #b9e3fc;
-  border-color: #b9e3fc;
-}
-
-.metric-card-tall.metric-card-total-value {
-  background: #fbdaf6;
-  border-color: #fbdaf6;
-}
-
-.metric-card-tall.metric-card-total-active {
-  background: #b8f5ec;
-  border-color: #b8f5ec;
-}
-
-.metric-card-tall.metric-card-total-pending{
-  background: #f5d0b8;
-  border-color: #f5d0b8;
-}
-.metric-card-tall.metric-card-portfolio {
-  background: hsl(149, 50%, 66%); /* light green */
 }

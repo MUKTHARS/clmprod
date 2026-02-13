@@ -16,44 +16,39 @@ body {
 .app-container {
   display: flex;
   min-height: 100vh;
+  background-color: #f9fafb;
 }
 
 .main-content {
   flex: 1;
-  margin-left: 70px; /* Fixed sidebar width */
-  min-height: 100vh;
+  margin-left: 240px; /* Sidebar width */
   display: flex;
   flex-direction: column;
+  min-height: 100vh;
+  padding-top: 0 !important;
 }
 
 .content-area {
   flex: 1;
-  padding: 24px;
-  margin-top: 70px;
+  padding: 0 !important; /* Remove all padding */
+  margin-top: 0 !important; /* Remove top margin */
   background: #f8fafc;
   min-height: calc(100vh - 70px);
   overflow-y: auto;
 }
 
-/* Responsive */
-@media (max-width: 1024px) {
-  .sidebar {
-    width: 60px;
-  }
-  
-  .main-content {
-    margin-left: 60px;
-  }
-  
-  .content-area {
-    margin-top: 60px;
-    padding: 16px;
-  }
+/* Ensure the dashboard takes full width and has proper spacing */
+.dashboard {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 24px 24px 12px 24px !important;
 }
 
-/* Remove mobile menu button styles since sidebar is always visible */
-.mobile-menu-btn {
-  display: none;
+/* Remove any top space from the first element in content area */
+.content-area > *:first-child {
+  margin-top: 0;
+  padding-top: 0;
 }
 
 /* Common Button Styles */
@@ -311,65 +306,6 @@ textarea:focus {
   gap: 16px;
 }
 
-
-
-/* App.css - Add or update these styles */
-.app-container {
-  display: flex;
-  min-height: 100vh;
-  background-color: #f9fafb;
-}
-
-.main-content {
-  flex: 1;
-  margin-left: 240px; /* Sidebar width */
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-}
-
-.content-area {
-  flex: 1;
-  padding: 0 !important; /* Remove all padding */
-  margin-top: 0 !important; /* Remove top margin */
-  background: #f8fafc;
-  min-height: calc(100vh - 70px);
-  overflow-y: auto;
-}
-
-/* Responsive design */
-@media (max-width: 768px) {
-  .sidebar {
-    width: 64px;
-  }
-  
-  .main-content {
-    margin-left: 64px;
-  }
-  
-  .nav-label,
-  .logo-text,
-  .user-info,
-  .logout-btn span,
-  .sidebar-version {
-    display: none;
-  }
-  
-  .user-profile-section {
-    justify-content: center;
-    padding: 1rem;
-  }
-  
-  .profile-btn {
-    min-width: auto;
-    padding: 0.375rem;
-  }
-  
-  .profile-info {
-    display: none;
-  }
-}
-
 /* Loading spinner */
 .loading-spinner {
   display: flex;
@@ -377,60 +313,6 @@ textarea:focus {
   justify-content: center;
   height: 100vh;
 }
-
-.spinner {
-  width: 40px;
-  height: 40px;
-  border: 3px solid #e5e7eb;
-  border-top-color: #667eea;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/* Empty state */
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 3rem 1rem;
-  text-align: center;
-}
-
-.empty-state-icon {
-  width: 64px;
-  height: 64px;
-  color: #9ca3af;
-  margin-bottom: 1rem;
-}
-
-.empty-state-title {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #374151;
-  margin-bottom: 0.5rem;
-}
-
-.empty-state-description {
-  color: #6b7280;
-  max-width: 400px;
-  margin: 0 auto;
-}
-
-
-
-
-
-
-
-
-
 
 /* Director specific styles */
 .director-dashboard {
@@ -543,46 +425,6 @@ textarea:focus {
   color: #10b981;
 }
 
-.main-content {
-  flex: 1;
-  margin-left: 240px; /* Sidebar width */
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-  padding-top: 0 !important;
-}
-
-/* Ensure the dashboard takes full width */
-.dashboard {
-  width: 100%;
-  max-width: none;
-  padding: 0;
-  margin: 0;
-}
-
-/* Remove any top space from the first element in content area */
-.content-area > *:first-child {
-  margin-top: 0;
-  padding-top: 0;
-}
-.content-area {
-  flex: 1;
-  padding: 1.5rem;
-  overflow-y: auto;
-  background-color: #f9fafb;
-}
-
-/* Responsive design */
-@media (max-width: 768px) {
-  .sidebar {
-    width: 64px;
-  }
-  
-  .main-content {
-    margin-left: 64px;
-  }
-}
-
 /* Ensure sidebar doesn't show on login page */
 .login-page .sidebar {
   display: none;
@@ -592,51 +434,25 @@ textarea:focus {
   margin-left: 0;
 }
 
-
-
-
-
-
-.app-container {
-  display: flex;
-  min-height: 100vh;
-  background-color: #f9fafb;
-}
-
-.main-content {
-  flex: 1;
-  margin-left: 240px; /* Sidebar width */
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-  padding-top: 0 !important;
-}
-
-.content-area {
-  flex: 1;
-  padding: 0 !important; /* Remove all padding */
-  margin-top: 0 !important; /* Remove top margin */
-  background: #f8fafc;
-  min-height: calc(100vh - 70px);
-  overflow-y: auto;
-}
-
-/* Ensure the dashboard and contracts pages take full width */
-.dashboard,
-.contracts-list-page {
-  width: 100%;
-  max-width: none;
-  padding: 0;
-  margin: 0;
-}
-
-/* Remove any top space from the first element in content area */
-.content-area > *:first-child {
-  margin-top: 0;
-  padding-top: 0;
-}
-
 /* Responsive design */
+@media (max-width: 1024px) {
+  .sidebar {
+    width: 60px;
+  }
+  
+  .main-content {
+    margin-left: 60px;
+  }
+  
+  .content-area {
+    padding: 0 !important;
+  }
+  
+  .dashboard {
+    padding: 20px 16px !important;
+  }
+}
+
 @media (max-width: 768px) {
   .sidebar {
     width: 64px;
@@ -644,5 +460,35 @@ textarea:focus {
   
   .main-content {
     margin-left: 64px;
+  }
+  
+  .nav-label,
+  .logo-text,
+  .user-info,
+  .logout-btn span,
+  .sidebar-version {
+    display: none;
+  }
+  
+  .user-profile-section {
+    justify-content: center;
+    padding: 1rem;
+  }
+  
+  .profile-btn {
+    min-width: auto;
+    padding: 0.375rem;
+  }
+  
+  .profile-info {
+    display: none;
+  }
+  
+  .content-area {
+    padding: 0 !important;
+  }
+  
+  .dashboard {
+    padding: 16px 12px !important;
   }
 }

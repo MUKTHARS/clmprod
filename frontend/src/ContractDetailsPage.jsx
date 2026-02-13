@@ -158,6 +158,34 @@ const handleBack = () => {
       setLoadingPDF(false);
     }
   };
+
+
+    // Reporting Upload Modal - File input change handler
+  useEffect(() => {
+    const fileInput = document.getElementById('cdp-report-file-input');
+    const fileInfo = document.getElementById('cdp-selected-file-info');
+    const fileNameSpan = document.getElementById('cdp-selected-file-name');
+    
+    if (fileInput && fileInfo && fileNameSpan) {
+      const handleFileChange = function() {
+        if (this.files && this.files[0]) {
+          const file = this.files[0];
+          const fileSizeMB = (file.size / 1024 / 1024).toFixed(2);
+          fileNameSpan.textContent = `${file.name} (${fileSizeMB} MB)`;
+          fileInfo.style.display = 'flex';
+        } else {
+          fileInfo.style.display = 'none';
+        }
+      };
+      
+      fileInput.addEventListener('change', handleFileChange);
+      
+      return () => {
+        fileInput.removeEventListener('change', handleFileChange);
+      };
+    }
+  }, [showReportUploadModal]); // Run when modal opens/closes
+
 useEffect(() => {
   if (contractData) {
     setIsDraft(contractData.status === 'draft');
@@ -427,7 +455,8 @@ const handleSubmitReportUpload = async () => {
     return;
   }
 
-  const fileInput = document.getElementById("report-file-input");
+  // FIX: Changed from "report-file-input" to "cdp-report-file-input"
+  const fileInput = document.getElementById("cdp-report-file-input");
   if (!fileInput?.files?.length) {
     alert("Please select a file");
     return;
@@ -463,6 +492,14 @@ const handleSubmitReportUpload = async () => {
 
     setShowReportUploadModal(false);
     setSelectedReport(null);
+    setReportUploadDate('');
+    
+    // Clear the file input
+    if (fileInput) fileInput.value = '';
+    
+    // Hide the selected file info
+    const fileInfo = document.getElementById('cdp-selected-file-info');
+    if (fileInfo) fileInfo.style.display = 'none';
 
   } catch (error) {
     console.error(error);
@@ -2047,56 +2084,106 @@ const hasDeliverableBeenUploaded = (index) => {
         </div>
       )}
 
-      {/* Reporting Upload Modal */}
+       {/* Reporting Upload Modal - FIXED with isolated classnames */}
       {showReportUploadModal && selectedReport && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <div className="modal-header">
+        <div className="cdp-modal-overlay">
+          <div className="cdp-modal-content">
+            <div className="cdp-modal-header">
               <h3>Upload Report</h3>
               <button
-                className="modal-close"
+                className="cdp-modal-close"
                 onClick={() => setShowReportUploadModal(false)}
               >
                 ×
               </button>
             </div>
 
-            <div className="modal-body">
-              <p><strong>Report Type:</strong> {selectedReport.report_type}</p>
-              <p><strong>Due Date:</strong> {formatDate(selectedReport.due_date)}</p>
+            <div className="cdp-modal-body">
+              <div className="cdp-report-info">
+                <p><strong>Report Type:</strong> {selectedReport.report_type}</p>
+                <p><strong>Due Date:</strong> {formatDate(selectedReport.due_date)}</p>
+              </div>
 
-              <div className="form-group">
-                <label>Submission Date *</label>
+              <div className="cdp-form-group">
+                <label htmlFor="cdp-report-upload-date">Submission Date *</label>
                 <input
                   type="date"
+                  id="cdp-report-upload-date"
+                  className="cdp-date-picker"
                   value={reportUploadDate}
                   onChange={(e) => setReportUploadDate(e.target.value)}
                 />
               </div>
 
-              <div className="form-group">
+              <div className="cdp-form-group">
+                <label>Select File *</label>
+                <div 
+                  className="cdp-file-upload-area"
+                  onClick={() => document.getElementById('cdp-report-file-input').click()}
+                >
+                  <FileUp size={24} />
+                  <p>Click to select file</p>
+                  <p className="cdp-file-hint">or drag and drop here</p>
+                  <p className="cdp-file-types">Supported: PDF, DOC, XLS, PPT</p>
+                  <p className="cdp-file-size">Max file size: 10MB</p>
+                </div>
+                
                 <input
                   type="file"
-                  id="report-file-input"
+                  id="cdp-report-file-input"
+                  className="cdp-file-input-hidden"
                   accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
+                  onChange={(e) => {
+                    const fileInfo = document.getElementById('cdp-selected-file-info');
+                    const fileNameSpan = document.getElementById('cdp-selected-file-name');
+                    if (e.target.files && e.target.files[0]) {
+                      const file = e.target.files[0];
+                      const fileSizeMB = (file.size / 1024 / 1024).toFixed(2);
+                      fileNameSpan.textContent = `${file.name} (${fileSizeMB} MB)`;
+                      fileInfo.style.display = 'flex';
+                    } else {
+                      fileInfo.style.display = 'none';
+                    }
+                  }}
                 />
+                
+                <div id="cdp-selected-file-info" className="cdp-selected-file-info" style={{ display: 'none' }}>
+                  <strong>Selected:</strong>
+                  <span id="cdp-selected-file-name" className="cdp-selected-file-name">No file selected</span>
+                </div>
               </div>
             </div>
 
-            <div className="modal-actions">
+            <div className="cdp-modal-actions">
               <button
-                className="btn-secondary"
-                onClick={() => setShowReportUploadModal(false)}
+                className="cdp-btn-secondary"
+                onClick={() => {
+                  setShowReportUploadModal(false);
+                  setSelectedReport(null);
+                  setReportUploadDate('');
+                  const fileInput = document.getElementById('cdp-report-file-input');
+                  if (fileInput) fileInput.value = '';
+                  const fileInfo = document.getElementById('cdp-selected-file-info');
+                  if (fileInfo) fileInfo.style.display = 'none';
+                }}
+                disabled={reportUploading}
               >
                 Cancel
               </button>
 
               <button
-                className="btn-primary"
+                className="cdp-btn-primary"
                 onClick={handleSubmitReportUpload}
                 disabled={!reportUploadDate || reportUploading}
               >
-                {reportUploading ? "Uploading..." : "Upload"}
+                {reportUploading ? (
+                  <>
+                    <Loader2 size={16} className="cdp-spinning" />
+                    Uploading...
+                  </>
+                ) : (
+                  'Upload Report'
+                )}
               </button>
             </div>
           </div>
