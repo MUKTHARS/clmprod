@@ -378,9 +378,9 @@ function UploadPage({ setLoading, onUploadComplete }) {
               <div className="confirmation-icon">
                 <AlertTriangle size={32} />
               </div>
-              <h3>Confirm Grant Analysis</h3>
+              <h3>Confirm Grant Upload</h3>
               <p className="confirmation-message">
-                Are you sure you want to analyze this grant document?
+                Are you sure you want to upload this grant?
               </p>
             
               <div className="confirmation-actions">
@@ -395,7 +395,7 @@ function UploadPage({ setLoading, onUploadComplete }) {
                   onClick={confirmAndUpload}
                 >
                   <Upload size={16} />
-                  Confirm & Analyze
+                  Confirm
                 </button>
               </div>
             </div>
