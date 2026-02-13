@@ -46,7 +46,7 @@ function Login({ onLogin }) {  // Add onLogin prop
             navigate('/dashboard');
             break;
           case 'program_manager':
-            navigate('/contracts');
+            navigate('/dashboard');
             break;
           case 'director':
             navigate('/dashboard');
