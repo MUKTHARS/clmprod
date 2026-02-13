@@ -1265,3 +1265,6 @@
   background: #f5d0b8;
   border-color: #f5d0b8;
 }
+.metric-card-tall.metric-card-portfolio {
+  background: hsl(149, 50%, 66%); /* light green */
+}

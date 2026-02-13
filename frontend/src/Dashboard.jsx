@@ -26,6 +26,8 @@ import {
   Filter,
   Search
 } from 'lucide-react';
+import API_CONFIG from './config';
+
 import './styles/Dashboard.css';
 import { Link } from 'react-router-dom';
 function Dashboard({ contracts, loading, refreshContracts, user }) {
@@ -41,13 +43,61 @@ function Dashboard({ contracts, loading, refreshContracts, user }) {
     riskLevel: 'Low'
   });
 const [metricsLoading, setMetricsLoading] = useState(false);
-const [metrics, setMetrics] = useState({
-  grants_requiring_action: 0,
-  funds_at_risk: 0,
-  upcoming_submissions: 0,
-  pending_approvals: 0,
-  portfolio_on_track: 0
-});
+const [metrics, setMetrics] = useState(null);
+//const role = user?.role;
+const renderTiles = () => {
+
+  if (metricsLoading) {
+    return <div>Loading dashboard...</div>;
+  }
+
+  if (!metrics || Object.keys(metrics).length === 0) {
+    return null;
+  }
+  // Project Manager
+  if (metrics.grants_requiring_action !== undefined) {
+    return (
+      <>
+        <Tile title="Grants Requiring Action" value={metrics.grants_requiring_action} />
+        <Tile title="Funds At Risk" value={formatCurrency(metrics.funds_at_risk)} />
+        <Tile title="Upcoming Submissions" value={metrics.upcoming_submissions} />
+        <Tile title="Pending Approvals" value={metrics.pending_approvals} />
+        <Tile title="Portfolio On Track" value={metrics.portfolio_on_track} />
+      </>
+    );
+  }
+
+  // Program Manager
+  if (metrics.total_active_grants !== undefined) {
+    return (
+      <>
+        <Tile title="Total Active Grants" value={metrics.total_active_grants} />
+        <Tile title="Pending PM Submissions" value={metrics.pending_pm_submissions} />
+        <Tile title="Submitted To Director" value={metrics.submitted_to_director} />
+        <Tile title="Total Portfolio Value" value={formatCurrency(metrics.total_portfolio_value)} />
+        <Tile title="At Risk Grants" value={metrics.at_risk_grants} />
+      </>
+    );
+  }
+
+  // Director
+  if (metrics.total_portfolio !== undefined) {
+    return (
+      <>
+        <Tile title="Total Portfolio" value={metrics.total_portfolio} />
+        <Tile title="Total Portfolio Value" value={formatCurrency(metrics.total_portfolio_value)} />
+        <Tile title="Awaiting Director Approval" value={metrics.awaiting_director_approval} />
+        <Tile title="Portfolio On Track %" value={`${metrics.portfolio_on_track_percent}%`} />
+        <Tile title="High Risk Grants" value={metrics.high_risk_grants} />
+      </>
+    );
+  }
+
+  if (!metrics) return null;
+};
+
+
+
   const [activeView, setActiveView] = useState('list');
   const [searchTerm, setSearchTerm] = useState('');
   const [normalizedContracts, setNormalizedContracts] = useState([]);
@@ -352,7 +402,7 @@ const [metrics, setMetrics] = useState({
     setMetricsLoading(true);
 
     const token = localStorage.getItem("token");
-
+    console.log("Calling:", `${API_CONFIG.BASE_URL}/api/dashboard/metrics`);  
     const response = await fetch(
       `${API_CONFIG.BASE_URL}/api/dashboard/metrics`,
       {
@@ -378,6 +428,11 @@ const [metrics, setMetrics] = useState({
 
 useEffect(() => {
   fetchDashboardMetrics();
+  console.log("BASE URL:", API_CONFIG.BASE_URL);
+  console.log("FULL URL:", `${API_CONFIG.BASE_URL}/api/dashboard/metrics`);
+  console.log("Calling:", `${API_CONFIG.BASE_URL}/api/dashboard/metrics`);
+
+
 }, []);
 
   const renderContractRow = (contract) => {
@@ -552,60 +607,19 @@ useEffect(() => {
       </div>
     );
   };
+  const Tile = ({ title, value, variant }) => {
+    return (
+      <div className={`metric-card-tall metric-card-${variant}`}>
+        <h2 className="metric-value">{value}</h2>
+        <p className="metric-title">{title}</p>
+      </div>
+    );
+  };
 
   return (
     <div className="dashboard">
       <div className="metrics-container">
-        <div className="metric-card-tall metric-card-total-grants">
-          <div className="metric-content">
-            <div className="metric-info">
-              <div className="metric-value">{metricsLoading ? "..." : metrics.grants_requiring_action}</div>
-              <div className="metric-label">Grants Requiring Action</div>
-            </div>
-          </div>
-        </div>
-
-        <div className="metric-card-tall metric-card-total-value">
-          <div className="metric-content">
-            <div className="metric-info">
-              <div className="metric-value">{metricsLoading ? "..." : formatCurrency(metrics.funds_at_risk)}</div>
-              <div className="metric-label">Funds At Risk</div>
-            </div>
-          </div>
-        </div>
-
-        <div className="metric-card-tall metric-card-total-active">
-          <div className="metric-content">
-            <div className="metric-info">
-              <div className="metric-value">{metricsLoading ? "..." : metrics.upcoming_submissions}</div>
-              <div className="metric-label">Upcoming Submissions</div>
-            </div>
-          </div>
-        </div>
-
-        <div className="metric-card-tall metric-card-total-pending">
-          <div className="metric-content">
-            <div className="metric-info">
-              <div className="metric-value">{metricsLoading ? "..." : metrics.pending_approvals}</div>
-              <div className="metric-label">Pending Approvals</div>
-            </div>
-          </div>
-        </div>
-  <div 
-    className="metric-card-tall archive-metric"
-    onClick={() => navigate('/archive')}
-    style={{ cursor: 'pointer' }}
-  >
-    <div className="metric-content">
-      <div className="metric-info">
-        <div className="metric-value">
-          {metricsLoading ? "..." : metrics.portfolio_on_track}
-        </div>
-        <div className="metric-label">Archived</div>
-      </div>
-    </div>
-  </div>
-        
+        {renderTiles()}
       </div>
 
       {/* Recent Grants Section */}
