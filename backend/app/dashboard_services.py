@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import distinct, func
 from datetime import date, timedelta
 from app import models
 
@@ -41,33 +41,55 @@ def get_dashboard_metrics(db: Session, current_user):
             models.Contract.status == "draft"
         ).count()
 
-        # 2️⃣ Overdue Reports
+
+        # 2️⃣ Overdue Reports (count events)
         overdue_reports = db.query(func.count(models.ReportingEvent.id)) \
             .join(models.Contract,
-                  models.ReportingEvent.contract_id == models.Contract.id) \
+                models.ReportingEvent.contract_id == models.Contract.id) \
             .filter(
                 models.ReportingEvent.due_date < today,
                 models.ReportingEvent.status == "pending",
                 models.Contract.created_by == current_user.id
             ).scalar()
 
-        grants_requiring_action = drafts + overdue_reports
 
+        # 3️⃣ Grants Requiring Action (count distinct contracts)
+        grants_requiring_action = db.query(
+                func.count(distinct(models.ReportingEvent.contract_id))
+            ) \
+            .join(models.Contract,
+                models.ReportingEvent.contract_id == models.Contract.id) \
+            .filter(
+                models.ReportingEvent.due_date < today,
+                models.ReportingEvent.status == "pending",
+                models.Contract.created_by == current_user.id
+            ).scalar()
+        
         # 3️⃣ Funds At Risk
+        # Subquery: contracts that have overdue pending reports
+        overdue_contracts = db.query(
+                distinct(models.ReportingEvent.contract_id)
+            ) \
+            .join(models.Contract,
+                models.ReportingEvent.contract_id == models.Contract.id) \
+            .filter(
+                models.ReportingEvent.due_date < today,
+                models.ReportingEvent.status == "pending",
+                models.Contract.created_by == current_user.id
+            ).subquery()
+
+
+        # Now sum only those contracts once
         funds_at_risk = db.query(
-            func.coalesce(func.sum(models.Contract.total_amount), 0)
-        ).join(
-            models.ReportingEvent,
-            models.ReportingEvent.contract_id == models.Contract.id
-        ).filter(
-            models.ReportingEvent.due_date < today,
-            models.ReportingEvent.status == "pending",
-            models.Contract.created_by == current_user.id
-        ).scalar()
+                func.coalesce(func.sum(models.Contract.total_amount), 0)
+            ) \
+            .filter(models.Contract.id.in_(overdue_contracts)) \
+            .scalar()
+
 
         # 4️⃣ Upcoming Submissions
         upcoming_submissions = db.query(
-            func.count(models.ReportingEvent.id)
+            func.count(distinct(models.ReportingEvent.contract_id))
         ).join(
             models.Contract,
             models.ReportingEvent.contract_id == models.Contract.id
