@@ -46,36 +46,35 @@ function Dashboard({ contracts, loading, refreshContracts, user }) {
   const [metricsLoading, setMetricsLoading] = useState(false);
   const [metrics, setMetrics] = useState(null);
   
-  // Map variant to CSS class - FIXED to match Dashboard.css
-  const getTileVariantClass = (variant) => {
-    const variantMap = {
-      // Project Manager variants
-      'grants-action': 'metric-card-grants-action',
-      'funds-risk': 'metric-card-funds-risk',
-      'upcoming': 'metric-card-upcoming',
-      'pending': 'metric-card-pending',
-      'portfolio': 'metric-card-portfolio',
-      
-      // Program Manager variants
-      'active-grants': 'metric-card-active-grants',
-      'pm-submissions': 'metric-card-pm-submissions',
-      'submitted': 'metric-card-submitted',
-      'portfolio-value': 'metric-card-portfolio-value',
-      'risk-grants': 'metric-card-risk-grants',
-      
-      // Director variants
-      'total-portfolio': 'metric-card-total-portfolio',
-      'portfolio-total': 'metric-card-portfolio-total',
-      'awaiting': 'metric-card-awaiting',
-      'track-percent': 'metric-card-track-percent',
-      'high-risk': 'metric-card-high-risk',
-      
-      // Default
-      'default': 'metric-card-default'
-    };
+const getTileVariantClass = (variant) => {
+  const variantMap = {
+    // Project Manager variants
+    'grants-action': 'dashtile-grants-action',
+    'funds-risk': 'dashtile-funds-risk',
+    'upcoming': 'dashtile-upcoming',
+    'pending': 'dashtile-pending',
+    'portfolio': 'dashtile-portfolio',
     
-    return variantMap[variant] || 'metric-card-default';
+    // Program Manager variants
+    'active-grants': 'dashtile-active-grants',
+    'pm-submissions': 'dashtile-pm-submissions',
+    'submitted': 'dashtile-submitted',
+    'portfolio-value': 'dashtile-portfolio-value',
+    'risk-grants': 'dashtile-risk-grants',
+    
+    // Director variants
+    'total-portfolio': 'dashtile-total-portfolio',
+    'portfolio-total': 'dashtile-portfolio-total',
+    'awaiting': 'dashtile-awaiting',
+    'track-percent': 'dashtile-track-percent',
+    'high-risk': 'dashtile-high-risk',
+    
+    // Default
+    'default': 'dashtile-default'
   };
+  
+  return variantMap[variant] || 'dashtile-default';
+};
 
   const Tile = ({ title, value, variant = 'default' }) => {
     const variantClass = getTileVariantClass(variant);
