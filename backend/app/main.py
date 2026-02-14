@@ -1897,7 +1897,7 @@ async def submit_contract_for_review(
                 contract_id=contract_id,
                 user_id=current_user.id,
                 comment_type="project_manager_submission",
-                comment=f"Project Manager submission notes: {submit_data.notes}",
+                comment=submit_data.notes.strip(),
                 flagged_risk=False,
                 flagged_issue=False,
                 recommendation=None,
