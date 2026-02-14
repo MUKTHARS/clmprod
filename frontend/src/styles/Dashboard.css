@@ -1319,3 +1319,198 @@
   box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08);
   border-color: #cbd5e1 !important;
 }
+
+
+/* Responsive Dashboard Fixes - Add at the end of Dashboard.css */
+
+/* Make metrics container more responsive on smaller screens */
+@media (max-width: 1200px) {
+  .metrics-container {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 900px) {
+  .metrics-container {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .metrics-container {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Fix table responsiveness */
+@media (max-width: 1024px) {
+  .contracts-table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .contracts-table {
+    min-width: 900px; /* Slightly reduced from 800px to 900px for better proportion */
+  }
+  
+  /* Remove fixed widths on table headers for better flexibility */
+  .contracts-table th:nth-child(4),
+  .contracts-table th:nth-child(5),
+  .contracts-table th:nth-child(6),
+  .contracts-table th:nth-child(7),
+  .contracts-table th:nth-child(8) {
+    width: auto !important;
+    min-width: 100px;
+  }
+}
+
+/* Better grid card sizing */
+@media (max-width: 768px) {
+  .contracts-grid {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 12px;
+  }
+  
+  .contract-card {
+    min-width: 0; /* Prevent cards from overflowing */
+  }
+  
+  .card-content {
+    padding: 12px;
+  }
+  
+  .contract-name-small {
+    font-size: 14px;
+    word-break: break-word;
+  }
+  
+  .contract-id-small {
+    font-size: 11px;
+    word-break: break-word;
+  }
+}
+
+/* Improve summary container responsiveness */
+@media (max-width: 900px) {
+  .summary-container {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .summary-card {
+    width: 100%;
+  }
+  
+  .financial-summary,
+  .deadlines-list {
+    max-height: 350px;
+  }
+}
+
+/* Fix action buttons on small screens */
+@media (max-width: 480px) {
+  .action-buttons {
+    min-width: 80px !important;
+    gap: 4px !important;
+  }
+  
+  .btn-action {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .btn-action svg {
+    width: 14px;
+    height: 14px;
+  }
+  
+  .section-controlz {
+    padding: 8px 12px;
+  }
+  
+  .controls-right {
+    gap: 4px;
+  }
+  
+  .view-btn {
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+  
+  .btn-view-all {
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+  
+  .contracts-content {
+    padding: 12px;
+  }
+}
+
+/* Fix deadline items on small screens */
+@media (max-width: 600px) {
+  .deadline-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .deadline-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .contract-financial-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  
+  .contract-financial-id {
+    margin-left: 0;
+  }
+}
+
+/* Ensure proper touch scrolling on mobile */
+@media (max-width: 768px) {
+  .financial-summary,
+  .deadlines-list {
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .contracts-table-container {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Fix for very small screens */
+@media (max-width: 360px) {
+  .metric-card-tall {
+    padding: 15px;
+    min-height: 120px;
+  }
+  
+  .metric-card-tall .metric-value {
+    font-size: 24px !important;
+  }
+  
+  .metric-card-tall .metric-title {
+    font-size: 12px !important;
+  }
+  
+  .contract-card {
+    border-radius: 6px;
+  }
+  
+  .card-header {
+    padding: 8px 10px;
+  }
+  
+  .card-content {
+    padding: 10px;
+  }
+  
+  .card-footer {
+    padding: 8px 10px;
+  }
+}
