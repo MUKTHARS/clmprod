@@ -212,17 +212,6 @@ const Sidebar = ({ user, onLogout }) => {
         badge: true
       },
       { 
-        id: 'director-decisions', 
-        label: 'Director Decisions', 
-        icon: Shield, 
-        path: '/program-manager/director-decisions', 
-        permission: 'can_review',
-        roles: ['program_manager'],
-        badge: true
-      },
-      
-      // DIRECTOR SPECIFIC ITEMS
-      { 
         id: 'approvals', 
         label: 'Approvals', 
         icon: Shield, 

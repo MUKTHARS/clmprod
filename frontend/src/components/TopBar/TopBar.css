@@ -558,3 +558,56 @@
     color: #f9fafb;
   }
 }
+
+/* Fix for topbar title being hidden behind hamburger menu */
+@media (max-width: 1024px) {
+  .tb-topbar-left {
+    padding-left: 48px; /* Make room for the hamburger menu */
+  }
+}
+
+@media (max-width: 768px) {
+  .tb-topbar-left {
+    padding-left: 44px; /* Slightly less padding for smaller screens */
+  }
+}
+
+@media (max-width: 480px) {
+  .tb-topbar-left {
+    padding-left: 40px; /* Even less padding for mobile */
+  }
+}
+
+
+/* Fix for close button colliding with sidebar logo */
+@media (max-width: 1024px) {
+  /* When sidebar is open, move the toggle button to the right side of sidebar */
+  .sbr-sidebar-open ~ .sbr-mobile-toggle {
+    left: auto !important;
+    right: 16px;
+    background: #ef4444;
+    color: white;
+    border-color: #dc2626;
+  }
+  
+  .sbr-sidebar-open ~ .sbr-mobile-toggle:hover {
+    background: #dc2626;
+  }
+  
+  /* Adjust for different screen sizes */
+  @media (max-width: 768px) {
+    .sbr-sidebar-open ~ .sbr-mobile-toggle {
+      right: 12px;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .sbr-sidebar-open ~ .sbr-mobile-toggle {
+      right: 10px;
+      width: 32px;
+      height: 32px;
+    }
+  }
+}
+
+

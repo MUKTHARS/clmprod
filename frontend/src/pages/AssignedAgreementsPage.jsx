@@ -1,4 +1,3 @@
-// C:\saple.ai\POC\frontend\src\pages\AssignedAgreementsPage.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -71,49 +70,47 @@ function AssignedAgreementsPage({ user }) {
         const data = await response.json();
         console.log('Assigned agreements response:', data);
         
-// In AssignedAgreementsPage.jsx - update the filtering logic:
-
-const filteredAgreements = data.drafts?.filter(draft => {
-  if (!draft) return false;
-  
-  // For program managers, check if they're in assigned_pgm_users array
-  if (user.role === 'program_manager') {
-    // Handle both array and string formats
-    let pgmUsers = draft.assigned_pgm_users;
-    
-    // If it's a string, try to parse it
-    if (typeof pgmUsers === 'string') {
-      try {
-        pgmUsers = JSON.parse(pgmUsers);
-      } catch (e) {
-        // If not valid JSON, try comma-separated
-        pgmUsers = pgmUsers.split(',').map(id => id.trim()).filter(id => id);
-      }
-    }
-    
-    return Array.isArray(pgmUsers) && pgmUsers.includes(user.id);
-  }
-  
-  // For directors, check if they're in assigned_director_users array
-  if (user.role === 'director') {
-    // Handle both array and string formats
-    let directorUsers = draft.assigned_director_users;
-    
-    // If it's a string, try to parse it
-    if (typeof directorUsers === 'string') {
-      try {
-        directorUsers = JSON.parse(directorUsers);
-      } catch (e) {
-        // If not valid JSON, try comma-separated
-        directorUsers = directorUsers.split(',').map(id => id.trim()).filter(id => id);
-      }
-    }
-    
-    return Array.isArray(directorUsers) && directorUsers.includes(user.id);
-  }
-  
-  return false;
-}) || [];
+        const filteredAgreements = data.drafts?.filter(draft => {
+          if (!draft) return false;
+          
+          // For program managers, check if they're in assigned_pgm_users array
+          if (user.role === 'program_manager') {
+            // Handle both array and string formats
+            let pgmUsers = draft.assigned_pgm_users;
+            
+            // If it's a string, try to parse it
+            if (typeof pgmUsers === 'string') {
+              try {
+                pgmUsers = JSON.parse(pgmUsers);
+              } catch (e) {
+                // If not valid JSON, try comma-separated
+                pgmUsers = pgmUsers.split(',').map(id => id.trim()).filter(id => id);
+              }
+            }
+            
+            return Array.isArray(pgmUsers) && pgmUsers.includes(user.id);
+          }
+          
+          // For directors, check if they're in assigned_director_users array
+          if (user.role === 'director') {
+            // Handle both array and string formats
+            let directorUsers = draft.assigned_director_users;
+            
+            // If it's a string, try to parse it
+            if (typeof directorUsers === 'string') {
+              try {
+                directorUsers = JSON.parse(directorUsers);
+              } catch (e) {
+                // If not valid JSON, try comma-separated
+                directorUsers = directorUsers.split(',').map(id => id.trim()).filter(id => id);
+              }
+            }
+            
+            return Array.isArray(directorUsers) && directorUsers.includes(user.id);
+          }
+          
+          return false;
+        }) || [];
         
         setAgreements(filteredAgreements);
       } else {
@@ -178,62 +175,62 @@ const filteredAgreements = data.drafts?.filter(draft => {
     const assignedAt = agreement.assigned_at ? formatDate(agreement.assigned_at) : "Unknown";
 
     return (
-      <tr key={agreement.id || index} className="agreement-row">
+      <tr key={agreement.id || index} className="aap-agreement-row">
         <td>
-          <div className="agreement-info-list">
-            <div className="agreement-name-list">
+          <div className="aap-agreement-info-list">
+            <div className="aap-agreement-name-list">
               {agreement.grant_name || agreement.filename || 'Unnamed Agreement'}
             </div>
-            <div className="assigned-by-info">
+            <div className="aap-assigned-by-info">
               <UserCog size={12} />
-              <span className="assigned-by-text">
+              <span className="aap-assigned-by-text">
                 Assigned by: {assignedBy.name} ({assignedBy.role})
               </span>
-              <span className="assigned-date">on {assignedAt}</span>
+              <span className="aap-assigned-date">on {assignedAt}</span>
             </div>
           </div>
         </td>
         <td>
-          <div className="agreement-id-list">
+          <div className="aap-agreement-id-list">
             {agreement.id || 'N/A'}
           </div>
         </td>
         <td>
-          <div className="grantor-cell">
+          <div className="aap-grantor-cell">
             <span>{agreement.grantor || 'N/A'}</span>
           </div>
         </td>
         <td>
-          <div className="amount-cell">
+          <div className="aap-amount-cell">
             <span>{formatCurrency(agreement.total_amount)}</span>
           </div>
         </td>
         <td>
-          <div className="date-cell">
+          <div className="aap-date-cell">
             <span>{formatDate(agreement.uploaded_at)}</span>
           </div>
         </td>
         <td>
-          <div className="status-cell">
-            <span className={`status-text ${agreement.status || 'draft'}`}>
+          <div className="aap-status-cell">
+            <span className={`aap-status-text ${agreement.status || 'draft'}`}>
               {agreement.status ? agreement.status.replace('_', ' ') : 'Draft'}
             </span>
-            <div className="user-role-badge">
+            <div className="aap-user-role-badge">
               {user.role === 'program_manager' ? (
                 <Shield size={12} />
               ) : (
                 <Award size={12} />
               )}
-              <span className="role-text">
+              <span className="aap-role-text">
                 {user.role === 'program_manager' ? 'PGM' : 'Director'}
               </span>
             </div>
           </div>
         </td>
         <td>
-          <div className="action-buttons">
+          <div className="aap-action-buttons">
             <button 
-              className="btn-action"
+              className="aap-btn-action"
               onClick={() => handleViewAgreement(agreement.id)}
               title="View details"
             >
@@ -250,19 +247,19 @@ const filteredAgreements = data.drafts?.filter(draft => {
     const assignedAt = agreement.assigned_at ? formatDate(agreement.assigned_at) : "Unknown";
 
     return (
-      <div key={agreement.id || index} className="agreement-card">
-        <div className="card-header">
-          <div className="agreement-status">
-            <span className={`status-badge ${agreement.status || 'draft'}`}>
+      <div key={agreement.id || index} className="aap-agreement-card">
+        <div className="aap-card-header">
+          <div className="aap-agreement-status">
+            <span className={`aap-status-badge ${agreement.status || 'draft'}`}>
               {agreement.status ? agreement.status.replace('_', ' ') : 'Draft'}
             </span>
-            <span className="status-badge assigned">
+            <span className="aap-status-badge aap-assigned">
               {user.role === 'program_manager' ? 'PGM Assigned' : 'Director Assigned'}
             </span>
           </div>
-          <div className="card-actions">
+          <div className="aap-card-actions">
             <button 
-              className="btn-action"
+              className="aap-btn-action"
               onClick={() => handleViewAgreement(agreement.id)}
               title="View Details"
             >
@@ -271,43 +268,43 @@ const filteredAgreements = data.drafts?.filter(draft => {
           </div>
         </div>
 
-        <div className="card-content">
-          <div className="agreement-icon">
+        <div className="aap-card-content">
+          <div className="aap-agreement-icon">
             <FileText size={24} />
           </div>
-          <h3 className="agreement-name">
+          <h3 className="aap-agreement-name">
             {agreement.grant_name || agreement.filename || 'Unnamed Agreement'}
           </h3>
-          <p className="agreement-id">
+          <p className="aap-agreement-id">
             ID: {agreement.id || 'N/A'}
           </p>
 
-          <div className="assigned-by-section">
-            <div className="assigned-by-header">
+          <div className="aap-assigned-by-section">
+            <div className="aap-assigned-by-header">
               <UserCog size={14} />
               <span>Assigned by:</span>
             </div>
-            <div className="assigned-by-details">
-              <div className="assigner-name">{assignedBy.name}</div>
-              <div className="assigner-role">{assignedBy.role}</div>
-              <div className="assigner-date">on {assignedAt}</div>
+            <div className="aap-assigned-by-details">
+              <div className="aap-assigner-name">{assignedBy.name}</div>
+              <div className="aap-assigner-role">{assignedBy.role}</div>
+              <div className="aap-assigner-date">on {assignedAt}</div>
             </div>
           </div>
 
-          <div className="agreement-details">
-            <div className="detail-item">
+          <div className="aap-agreement-details">
+            <div className="aap-detail-item">
               <DollarSign size={14} />
               <span>{formatCurrency(agreement.total_amount)}</span>
             </div>
-            <div className="detail-item">
+            <div className="aap-detail-item">
               <Building size={14} />
               <span>{agreement.grantor || 'No grantor'}</span>
             </div>
-            <div className="detail-item">
+            <div className="aap-detail-item">
               <Calendar size={14} />
               <span>{formatDate(agreement.uploaded_at)}</span>
             </div>
-            <div className="detail-item">
+            <div className="aap-detail-item">
               {user.role === 'program_manager' ? (
                 <Shield size={14} />
               ) : (
@@ -318,15 +315,15 @@ const filteredAgreements = data.drafts?.filter(draft => {
           </div>
 
           {agreement.purpose && (
-            <div className="agreement-purpose">
+            <div className="aap-agreement-purpose">
               <p>{agreement.purpose.length > 100 ? agreement.purpose.substring(0, 100) + '...' : agreement.purpose}</p>
             </div>
           )}
         </div>
 
-        <div className="card-footer">
+        <div className="aap-card-footer">
           <button 
-            className="btn-view"
+            className="aap-btn-view"
             onClick={() => handleViewAgreement(agreement.id)}
           >
             View Agreement Details
@@ -338,37 +335,45 @@ const filteredAgreements = data.drafts?.filter(draft => {
   };
 
   return (
-    <div className="assigned-agreements-page">
-      <div className="agreements-header">
-        <div className="header-left">
+    <div className="aap-assigned-agreements-page">
+      <div className="aap-agreements-header">
+        <div className="aap-header-left">
         </div>
-        <div className="header-actions">
+        <div className="aap-header-actions">
+          <button 
+            className="aap-btn-refresh"
+            onClick={fetchAssignedAgreements}
+            disabled={loading}
+            title="Refresh"
+          >
+            <RefreshCw size={16} className={loading ? 'aap-spinning' : ''} />
+          </button>
         </div>
       </div>
 
-      <div className="agreements-controls">
-        <div className="search-container">
-          <Search className="search-icon" />
+      <div className="aap-agreements-controls">
+        <div className="aap-search-container">
+          <Search className="aap-search-icon" />
           <input
             type="text"
             placeholder="Search assigned agreements..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="search-input"
+            className="aap-search-input"
           />
         </div>
 
-        <div className="controls-right">
-          <div className="view-toggle">
+        <div className="aap-controls-right">
+          <div className="aap-view-toggle">
             <button 
-              className={`view-btn ${activeView === 'list' ? 'active' : ''}`}
+              className={`aap-view-btn ${activeView === 'list' ? 'aap-active' : ''}`}
               onClick={() => setActiveView('list')}
               title="List View"
             >
               <List size={16} />
             </button>
             <button 
-              className={`view-btn ${activeView === 'grid' ? 'active' : ''}`}
+              className={`aap-view-btn ${activeView === 'grid' ? 'aap-active' : ''}`}
               onClick={() => setActiveView('grid')}
               title="Grid View"
             >
@@ -378,14 +383,14 @@ const filteredAgreements = data.drafts?.filter(draft => {
         </div>
       </div>
 
-      <div className="agreements-content">
+      <div className="aap-agreements-content">
         {loading ? (
-          <div className="loading-state">
-            <Loader2 className="spinner" />
+          <div className="aap-loading-state">
+            <Loader2 className="aap-spinner" />
             <p>Loading assigned agreements...</p>
           </div>
         ) : filteredAgreements.length === 0 ? (
-          <div className="empty-state">
+          <div className="aap-empty-state">
             <FileText size={48} />
             <h3>No agreements assigned to you yet</h3>
             <p>
@@ -394,24 +399,24 @@ const filteredAgreements = data.drafts?.filter(draft => {
           </div>
         ) : (
           <>
-            <div className="results-header">
-              <span className="results-count">
+            <div className="aap-results-header">
+              <span className="aap-results-count">
                 Showing {filteredAgreements.length} assigned agreement(s)
               </span>
             </div>
 
             {activeView === 'list' ? (
-              <div className="agreements-table-container">
-                <table className="agreements-table">
+              <div className="aap-agreements-table-container">
+                <table className="aap-agreements-table">
                   <thead>
                     <tr>
-                      <th className="table-header">Agreement Name</th>
-                      <th className="table-header">Agreement ID</th>
-                      <th className="table-header">Grantor</th>
-                      <th className="table-header">Amount</th>
-                      <th className="table-header">Upload Date</th>
-                      <th className="table-header">Status</th>
-                      <th className="table-header">Actions</th>
+                      <th className="aap-table-header">Agreement Name</th>
+                      <th className="aap-table-header">Agreement ID</th>
+                      <th className="aap-table-header">Grantor</th>
+                      <th className="aap-table-header">Amount</th>
+                      <th className="aap-table-header">Upload Date</th>
+                      <th className="aap-table-header">Status</th>
+                      <th className="aap-table-header">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -420,7 +425,7 @@ const filteredAgreements = data.drafts?.filter(draft => {
                 </table>
               </div>
             ) : (
-              <div className="agreements-grid">
+              <div className="aap-agreements-grid">
                 {filteredAgreements.map((agreement, index) => renderAgreementCard(agreement, index))}
               </div>
             )}

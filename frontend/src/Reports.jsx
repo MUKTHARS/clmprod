@@ -103,18 +103,18 @@ const Reports = () => {
 
   const getStatusBadge = (status) => {
     const statusConfig = {
-      'draft': { class: 'status-draft', icon: Clock },
-      'under_review': { class: 'status-review', icon: RefreshCw },
-      'reviewed': { class: 'status-reviewed', icon: CheckCircle },
-      'approved': { class: 'status-approved', icon: CheckCircle },
-      'rejected': { class: 'status-rejected', icon: AlertCircle }
+      'draft': { class: 'rpt-status-draft', icon: Clock },
+      'under_review': { class: 'rpt-status-review', icon: RefreshCw },
+      'reviewed': { class: 'rpt-status-reviewed', icon: CheckCircle },
+      'approved': { class: 'rpt-status-approved', icon: CheckCircle },
+      'rejected': { class: 'rpt-status-rejected', icon: AlertCircle }
     };
     
-    const config = statusConfig[status] || { class: 'status-default', icon: FileText };
+    const config = statusConfig[status] || { class: 'rpt-status-default', icon: FileText };
     const Icon = config.icon;
     
     return (
-      <span className={`status-badge ${config.class}`}>
+      <span className={`rpt-status-badge ${config.class}`}>
         <Icon size={12} />
         {status?.replace('_', ' ') || 'unknown'}
       </span>
@@ -215,93 +215,77 @@ const Reports = () => {
   const draftCount = filteredContracts.filter(c => c.status === 'draft').length;
 
   return (
-    <div className="reports-page">
-      <div className="reports-header">
-        <div className="header-left">
-          <h1>Contract Reports</h1>
-          <p className="subtitle">Comprehensive view of all contracts and agreements</p>
-        </div>
-        <div className="header-right">
-          <button className="btn-export" onClick={exportToCSV}>
-            <Download size={16} />
-            Export CSV
-          </button>
+    <div className="rpt-reports-page">
+      <div className="rpt-reports-header">
+
+        <div className="rpt-header-right">
+
         </div>
       </div>
 
       {/* Summary Cards */}
-      <div className="report-summary-cards">
-        <div className="summary-card">
-          <div className="summary-icon total">
-            <FileText size={24} />
-          </div>
-          <div className="summary-details">
-            <span className="summary-label">Total Contracts</span>
-            <span className="summary-value">{filteredContracts.length}</span>
+      <div className="rpt-report-summary-cards">
+        <div className="rpt-summary-card">
+          
+          <div className="rpt-summary-details">
+            <span className="rpt-summary-label">Total Contracts</span>
+            <span className="rpt-summary-value">{filteredContracts.length}</span>
           </div>
         </div>
         
-        <div className="summary-card">
-          <div className="summary-icon value">
-            <DollarSign size={24} />
-          </div>
-          <div className="summary-details">
-            <span className="summary-label">Total Value</span>
-            <span className="summary-value">{formatCurrency(totalValue)}</span>
+        <div className="rpt-summary-card">
+         
+          <div className="rpt-summary-details">
+            <span className="rpt-summary-label">Total Value</span>
+            <span className="rpt-summary-value">{formatCurrency(totalValue)}</span>
           </div>
         </div>
         
-        <div className="summary-card">
-          <div className="summary-icon approved">
-            <CheckCircle size={24} />
-          </div>
-          <div className="summary-details">
-            <span className="summary-label">Approved</span>
-            <span className="summary-value">{approvedCount}</span>
+        <div className="rpt-summary-card">
+          
+          <div className="rpt-summary-details">
+            <span className="rpt-summary-label">Approved</span>
+            <span className="rpt-summary-value">{approvedCount}</span>
           </div>
         </div>
         
-        <div className="summary-card">
-          <div className="summary-icon review">
-            <RefreshCw size={24} />
-          </div>
-          <div className="summary-details">
-            <span className="summary-label">Under Review</span>
-            <span className="summary-value">{pendingReview}</span>
+        <div className="rpt-summary-card">
+          
+          <div className="rpt-summary-details">
+            <span className="rpt-summary-label">Under Review</span>
+            <span className="rpt-summary-value">{pendingReview}</span>
           </div>
         </div>
         
-        <div className="summary-card">
-          <div className="summary-icon draft">
-            <Clock size={24} />
-          </div>
-          <div className="summary-details">
-            <span className="summary-label">Drafts</span>
-            <span className="summary-value">{draftCount}</span>
+        <div className="rpt-summary-card">
+         
+          <div className="rpt-summary-details">
+            <span className="rpt-summary-label">Drafts</span>
+            <span className="rpt-summary-value">{draftCount}</span>
           </div>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="filters-section">
-        <div className="search-box">
+      <div className="rpt-filters-section">
+        <div className="rpt-search-box">
           <Search size={16} />
           <input
             type="text"
             placeholder="Search by grant name, number, grantor, grantee..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="search-input"
+            className="rpt-search-input"
           />
         </div>
 
-        <div className="filter-controls">
-          <div className="filter-group">
-            <Filter size={16} className="filter-icon" />
+        <div className="rpt-filter-controls">
+          <div className="rpt-filter-group">
+            <Filter size={16} className="rpt-filter-icon" />
             <select 
               value={filterStatus} 
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="filter-select"
+              className="rpt-filter-select"
             >
               <option value="all">All Statuses</option>
               <option value="draft">Draft</option>
@@ -312,12 +296,12 @@ const Reports = () => {
             </select>
           </div>
 
-          <div className="filter-group">
-            <Calendar size={16} className="filter-icon" />
+          <div className="rpt-filter-group">
+            <Calendar size={16} className="rpt-filter-icon" />
             <select 
               value={dateRange} 
               onChange={(e) => setDateRange(e.target.value)}
-              className="filter-select"
+              className="rpt-filter-select"
             >
               <option value="all">All Time</option>
               <option value="last30">Last 30 Days</option>
@@ -329,91 +313,91 @@ const Reports = () => {
       </div>
 
       {/* Main Table */}
-      <div className="reports-table-container">
+      <div className="rpt-reports-table-container">
         {loading ? (
-          <div className="loading-state">
-            <RefreshCw className="spinner" size={32} />
+          <div className="rpt-loading-state">
+            <RefreshCw className="rpt-spinner" size={32} />
             <p>Loading contracts...</p>
           </div>
         ) : (
-          <table className="reports-table">
+          <table className="rpt-reports-table">
             <thead>
               <tr>
                 <th>Grant Name</th>
                 <th>Contract #</th>
                 <th>Grantor</th>
                 <th>Grantee</th>
-                <th className="text-right">Amount</th>
+                <th className="rpt-text-right">Amount</th>
                 <th>Start Date</th>
                 <th>End Date</th>
                 <th>Status</th>
-                <th className="text-right">Version</th>
-                <th className="text-center">Actions</th>
+                <th className="rpt-text-right">Version</th>
+                <th className="rpt-text-center">Actions</th>
               </tr>
             </thead>
             <tbody>
               {filteredContracts.length > 0 ? (
                 filteredContracts.map((contract) => (
-                  <tr key={contract.id} className="contract-row">
-                    <td className="contract-name-cell">
-                      <div className="contract-name-wrapper">
-                        <span className="contract-name">{contract.grant_name}</span>
+                  <tr key={contract.id} className="rpt-contract-row">
+                    <td className="rpt-contract-name-cell">
+                      <div className="rpt-contract-name-wrapper">
+                        <span className="rpt-contract-name">{contract.grant_name}</span>
                         {contract.purpose && contract.purpose !== 'N/A' && (
-                          <span className="contract-purpose">{contract.purpose.substring(0, 60)}...</span>
+                          <span className="rpt-contract-purpose">{contract.purpose.substring(0, 60)}...</span>
                         )}
                       </div>
                     </td>
                     <td>
-                      <span className="contract-number">{contract.contract_number}</span>
+                      <span className="rpt-contract-number">{contract.contract_number}</span>
                       {contract.investment_id && (
-                        <span className="contract-id-badge">INV-{contract.investment_id}</span>
+                        <span className="rpt-contract-id-badge">INV-{contract.investment_id}</span>
                       )}
                     </td>
                     <td>
-                      <div className="organization-info">
+                      <div className="rpt-organization-info">
                         <Building size={14} />
                         <span>{contract.grantor}</span>
                       </div>
                     </td>
                     <td>
-                      <div className="organization-info">
+                      <div className="rpt-organization-info">
                         <Building size={14} />
                         <span>{contract.grantee}</span>
                       </div>
                     </td>
-                    <td className="text-right">
-                      <span className="amount-value">{formatCurrency(contract.total_amount)}</span>
+                    <td className="rpt-text-right">
+                      <span className="rpt-amount-value">{formatCurrency(contract.total_amount)}</span>
                     </td>
                     <td>
-                      <span className="date-value">{formatDate(contract.start_date)}</span>
+                      <span className="rpt-date-value">{formatDate(contract.start_date)}</span>
                     </td>
                     <td>
-                      <span className="date-value">{formatDate(contract.end_date)}</span>
+                      <span className="rpt-date-value">{formatDate(contract.end_date)}</span>
                     </td>
                     <td>
                       {getStatusBadge(contract.status)}
                     </td>
-                    <td className="text-right">
-                      <span className="version-badge">v{contract.version}</span>
+                    <td className="rpt-text-right">
+                      <span className="rpt-version-badge">v{contract.version}</span>
                     </td>
-                    <td className="text-center">
-                      <div className="action-buttons">
+                    <td className="rpt-text-center">
+                      <div className="rpt-action-buttons">
                         <button 
-                          className="btn-action"
+                          className="rpt-btn-action"
                           onClick={() => navigate(`/contracts/${contract.id}`)}
                           title="View Details"
                         >
                           <Eye size={16} />
                         </button>
                         <button 
-                          className="btn-action"
+                          className="rpt-btn-action"
                           onClick={() => {}}
                           title="Download"
                         >
                           <Download size={16} />
                         </button>
                         <button 
-                          className="btn-action"
+                          className="rpt-btn-action"
                           onClick={() => {}}
                           title="More Details"
                         >
@@ -425,7 +409,7 @@ const Reports = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="10" className="empty-state">
+                  <td colSpan="10" className="rpt-empty-state">
                     <FileText size={48} />
                     <h3>No contracts found</h3>
                     <p>Try adjusting your filters or upload a new contract</p>
@@ -439,11 +423,11 @@ const Reports = () => {
 
       {/* Table Footer with Summary */}
       {filteredContracts.length > 0 && (
-        <div className="table-footer">
-          <div className="pagination-info">
+        <div className="rpt-table-footer">
+          <div className="rpt-pagination-info">
             Showing {filteredContracts.length} of {contracts.length} contracts
           </div>
-          <div className="total-summary">
+          <div className="rpt-total-summary">
             <span>Total Value: {formatCurrency(totalValue)}</span>
             <span>Average: {formatCurrency(totalValue / filteredContracts.length)}</span>
           </div>

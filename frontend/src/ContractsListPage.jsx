@@ -316,25 +316,25 @@ function ContractsListPage({ contracts: propContracts = [], user, refreshContrac
     const statusLower = status?.toLowerCase();
     switch (statusLower) {
       case 'approved':
-        return 'approved';
+        return 'clp-approved';
       case 'draft':
-        return 'draft';
+        return 'clp-draft';
       case 'under_review':
-        return 'under_review';
+        return 'clp-under-review';
       case 'reviewed':
-        return 'reviewed';
+        return 'clp-reviewed';
       case 'rejected':
-        return 'rejected';
+        return 'clp-rejected';
       case 'published':
-        return 'published';
+        return 'clp-published';
       case 'processed':
-        return 'processed';
+        return 'clp-processed';
       case 'processing':
-        return 'processing';
+        return 'clp-processing';
       case 'error':
-        return 'error';
+        return 'clp-error';
       default:
-        return 'default';
+        return 'clp-default';
     }
   };
 
@@ -342,43 +342,43 @@ function ContractsListPage({ contracts: propContracts = [], user, refreshContrac
     const statusLower = status?.toLowerCase();
     switch (statusLower) {
       case 'approved':
-        return <CheckCircle size={14} className="status-icon approved" />;
+        return <CheckCircle size={14} className="clp-status-icon clp-approved" />;
       case 'draft':
-        return <FileText size={14} className="status-icon draft" />;
+        return <FileText size={14} className="clp-status-icon clp-draft" />;
       case 'under_review':
-        return <Clock size={14} className="status-icon under_review" />;
+        return <Clock size={14} className="clp-status-icon clp-under-review" />;
       case 'reviewed':
-        return <CheckCircle size={14} className="status-icon reviewed" />;
+        return <CheckCircle size={14} className="clp-status-icon clp-reviewed" />;
       case 'rejected':
-        return <AlertCircle size={14} className="status-icon rejected" />;
+        return <AlertCircle size={14} className="clp-status-icon clp-rejected" />;
       case 'published':
-        return <CheckCircle size={14} className="status-icon published" />;
+        return <CheckCircle size={14} className="clp-status-icon clp-published" />;
       case 'processed':
-        return <CheckCircle size={14} className="status-icon processed" />;
+        return <CheckCircle size={14} className="clp-status-icon clp-processed" />;
       case 'processing':
-        return <Loader2 size={14} className="status-icon processing" />;
+        return <Loader2 size={14} className="clp-status-icon clp-processing" />;
       case 'error':
-        return <AlertCircle size={14} className="status-icon error" />;
+        return <AlertCircle size={14} className="clp-status-icon clp-error" />;
       default:
-        return <Clock size={14} className="status-icon default" />;
+        return <Clock size={14} className="clp-status-icon clp-default" />;
     }
   };
 
   const getDaysColor = (days) => {
-    if (days === 'Expired') return 'expired';
-    if (days === 'Today') return 'today';
+    if (days === 'Expired') return 'clp-expired';
+    if (days === 'Today') return 'clp-today';
     if (days.includes('days')) {
       const numDays = parseInt(days);
-      if (numDays <= 7) return 'critical';
-      if (numDays <= 30) return 'warning';
+      if (numDays <= 7) return 'clp-critical';
+      if (numDays <= 30) return 'clp-warning';
     }
-    return 'normal';
+    return 'clp-normal';
   };
 
   // Handle click outside filter popup
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (showFilters && !event.target.closest('.filter-popup') && !event.target.closest('.btn-filter')) {
+      if (showFilters && !event.target.closest('.clp-filter-popup') && !event.target.closest('.clp-btn-filter')) {
         setShowFilters(false);
       }
     };
@@ -394,57 +394,57 @@ function ContractsListPage({ contracts: propContracts = [], user, refreshContrac
     const daysRemaining = getDaysRemaining(contract.end_date);
 
     return (
-      <tr key={contract.id} className="contract-row">
+      <tr key={contract.id} className="clp-contract-row">
         <td>
-          <div className="contract-info">
-            <div className="contract-name-only">
+          <div className="clp-contract-info">
+            <div className="clp-contract-name">
               {contract.grant_name || contract.filename || 'Unnamed Contract'}
             </div>
           </div>
         </td>
         <td>
-          <div className="contract-id-only">
+          <div className="clp-contract-id">
             {displayId}
           </div>
         </td>
         <td>
-          <div className="grantor-cell">
+          <div className="clp-grantor-cell">
             <span>{contract.grantor || 'N/A'}</span>
           </div>
         </td>
         <td>
-          <div className="amount-cell">
+          <div className="clp-amount-cell">
             <span>{formatCurrency(contract.total_amount)}</span>
           </div>
         </td>
         <td>
-          <div className="date-cell">
+          <div className="clp-date-cell">
             <span>{formatDate(contract.uploaded_at)}</span>
           </div>
         </td>
         <td>
-          <div className="date-cell">
+          <div className="clp-date-cell">
             <span>{formatDate(contract.end_date)}</span>
           </div>
         </td>
         <td>
-          <div className="status-cell">
+          <div className="clp-status-cell">
             {getStatusIconForApproved(contract.status)}
-            <span className={`status-text ${getStatusColorForApproved(contract.status)}`}>
+            <span className={`clp-status-text ${getStatusColorForApproved(contract.status)}`}>
               {contract.status ? contract.status.replace('_', ' ') : 'Unknown'}
             </span>
           </div>
         </td>
         <td>
-          <div className="action-buttons">
+          <div className="clp-action-buttons">
             <button 
-              className="btn-action"
+              className="clp-btn-action"
               onClick={() => navigate(`/contracts/${contract.id}`)}
               title="View details"
             >
               <Eye size={16} />
             </button>
-            <button className="btn-action" title="Download">
+            <button className="clp-btn-action" title="Download">
               <Download size={16} />
             </button>
           </div>
@@ -459,57 +459,57 @@ function ContractsListPage({ contracts: propContracts = [], user, refreshContrac
     const daysColor = getDaysColor(daysRemaining);
 
     return (
-      <div key={contract.id} className="contract-card">
-        <div className="card-header">
-          <div className="contract-status">
+      <div key={contract.id} className="clp-contract-card">
+        <div className="clp-card-header">
+          <div className="clp-contract-status">
             {getStatusIconForApproved(contract.status)}
-            <span className={`status-text ${getStatusColorForApproved(contract.status)}`}>
+            <span className={`clp-status-text ${getStatusColorForApproved(contract.status)}`}>
               {contract.status ? contract.status.replace('_', ' ') : 'unknown'}
             </span>
           </div>
         </div>
 
-        <div className="card-content">
-          <h3 className="contract-name-small">
+        <div className="clp-card-content">
+          <h3 className="clp-contract-name-small">
             {contract.grant_name || contract.filename || 'Unnamed Contract'}
           </h3>
-          <p className="contract-id-small">
+          <p className="clp-contract-id-small">
             ID: {displayId}
           </p>
 
-          <div className="contract-meta">
-            <div className="meta-item">
+          <div className="clp-contract-meta">
+            <div className="clp-meta-item">
               <span>{contract.grantor || 'No grantor'}</span>
             </div>
-            <div className="meta-item">
+            <div className="clp-meta-item">
               <span>{contract.uploaded_at ? formatDate(contract.uploaded_at) : 'No date'}</span>
             </div>
           </div>
 
-          <div className="contract-amount">
+          <div className="clp-contract-amount">
             <span>{formatCurrency(contract.total_amount)}</span>
           </div>
 
-          <div className="contract-timeline">
-            <div className="timeline-item">
-              <span className="timeline-label">Ends in</span>
-              <span className={`timeline-value ${daysColor}`}>
+          <div className="clp-contract-timeline">
+            <div className="clp-timeline-item">
+              <span className="clp-timeline-label">Ends in</span>
+              <span className={`clp-timeline-value ${daysColor}`}>
                 {daysRemaining}
               </span>
             </div>
           </div>
         </div>
 
-        <div className="card-footer">
-          <div className="action-buttons">
+        <div className="clp-card-footer">
+          <div className="clp-action-buttons">
             <button 
-              className="btn-action"
+              className="clp-btn-action"
               onClick={() => navigate(`/contracts/${contract.id}`)}
               title="View details"
             >
               <Eye size={16} />
             </button>
-            <button className="btn-action" title="Download">
+            <button className="clp-btn-action" title="Download">
               <Download size={16} />
             </button>
           </div>
@@ -519,85 +519,83 @@ function ContractsListPage({ contracts: propContracts = [], user, refreshContrac
   };
 
   return (
-    <div className="contracts-list-page">
-      <div className="contracts-list-page-content">
-        {/* Metrics Container - Same as Dashboard with matching styling */}
-        <div className="metrics-container">
-          <div className="metric-card-tall metric-card-total-grants">
-            <div className="metric-value">{metrics.totalContracts}</div>
-            <div className="metric-title">Total Grants</div>
+    <div className="clp-contracts-list-page">
+      <div className="clp-contracts-list-page-content">
+        {/* Metrics Container */}
+        <div className="clp-metrics-container">
+          <div className="clp-metric-card clp-metric-total-grants">
+            <div className="clp-metric-value">{metrics.totalContracts}</div>
+            <div className="clp-metric-title">Total Grants</div>
           </div>
 
-          <div className="metric-card-tall metric-card-total-value">
-            <div className="metric-value">{formatCurrency(metrics.totalValue)}</div>
-            <div className="metric-title">Total Value</div>
+          <div className="clp-metric-card clp-metric-total-value">
+            <div className="clp-metric-value">{formatCurrency(metrics.totalValue)}</div>
+            <div className="clp-metric-title">Total Value</div>
           </div>
 
-          <div className="metric-card-tall metric-card-active">
-            <div className="metric-value">{metrics.activeContracts}</div>
-            <div className="metric-title">Active</div>
+          <div className="clp-metric-card clp-metric-active">
+            <div className="clp-metric-value">{metrics.activeContracts}</div>
+            <div className="clp-metric-title">Active</div>
           </div>
 
-          <div className="metric-card-tall metric-card-deadlines">
-            <div className="metric-value">{metrics.expiringSoon}</div>
-            <div className="metric-title">Deadlines</div>
+          <div className="clp-metric-card clp-metric-deadlines">
+            <div className="clp-metric-value">{metrics.expiringSoon}</div>
+            <div className="clp-metric-title">Deadlines</div>
           </div>
         </div>
 
-        {/* Recent Contracts Section - Same as Dashboard */}
-        <div className="recent-contracts">
-          <div className="section-controls">
-            <div className="controls-right">
-              <div className="view-toggle">
+        {/* Recent Contracts Section */}
+        <div className="clp-recent-contracts">
+          <div className="clp-section-controls">
+            <div className="clp-controls-right">
+              <div className="clp-view-toggle">
                 <button 
-                  className={`view-btn ${activeView === 'list' ? 'active' : ''}`}
+                  className={`clp-view-btn ${activeView === 'list' ? 'clp-active' : ''}`}
                   onClick={() => setActiveView('list')}
                 >
                   List
                 </button>
                 <button 
-                  className={`view-btn ${activeView === 'grid' ? 'active' : ''}`}
+                  className={`clp-view-btn ${activeView === 'grid' ? 'clp-active' : ''}`}
                   onClick={() => setActiveView('grid')}
                 >
                   Grid
                 </button>
               </div>
 
-              <div className="filter-actions">
+              <div className="clp-filter-actions">
                 <button 
-                  className="btn-filter"
+                  className="clp-btn-filter"
                   onClick={() => setShowFilters(!showFilters)}
                   title="Filter contracts"
                 >
                   <Filter size={16} />
-                  <span>Filter</span>
+                  <span className="clp-filter-label">Filter</span>
                 </button>
-                
-              
               </div>
             </div>
 
             {/* Filter Popup */}
             {showFilters && (
-              <div className="filter-popup">
-                <div className="filter-popup-header">
+              <div className="clp-filter-popup">
+                <div className="clp-filter-popup-header">
                   <h3>Filter Contracts</h3>
                   <button 
-                    className="filter-close"
+                    className="clp-filter-close"
                     onClick={() => setShowFilters(false)}
                   >
                     <X size={16} />
                   </button>
                 </div>
                 
-                <div className="filter-content">
-                  <div className="filter-group">
-                    <label className="filter-label">Status</label>
-                    <div className="filter-options">
+                <div className="clp-filter-content">
+                  <div className="clp-filter-group">
+                    <label className="clp-filter-label">Status</label>
+                    <div className="clp-filter-options">
                       {['all', 'approved', 'draft', 'under_review', 'reviewed', 'rejected', 'published'].map((status) => (
                         <button
                           key={status}
-                          className={`filter-option ${statusFilter === status ? 'active' : ''}`}
+                          className={`clp-filter-option ${statusFilter === status ? 'clp-active' : ''}`}
                           onClick={() => {
                             setStatusFilter(status);
                             setShowFilters(false);
@@ -609,13 +607,13 @@ function ContractsListPage({ contracts: propContracts = [], user, refreshContrac
                     </div>
                   </div>
 
-                  <div className="filter-group">
-                    <label className="filter-label">Date Range</label>
-                    <div className="filter-options">
+                  <div className="clp-filter-group">
+                    <label className="clp-filter-label">Date Range</label>
+                    <div className="clp-filter-options">
                       {['all', 'last30', 'expiring', 'expired'].map((date) => (
                         <button
                           key={date}
-                          className={`filter-option ${dateFilter === date ? 'active' : ''}`}
+                          className={`clp-filter-option ${dateFilter === date ? 'clp-active' : ''}`}
                           onClick={() => {
                             setDateFilter(date);
                             setShowFilters(false);
@@ -630,9 +628,9 @@ function ContractsListPage({ contracts: propContracts = [], user, refreshContrac
                     </div>
                   </div>
 
-                  <div className="filter-actions-bottom">
+                  <div className="clp-filter-actions-bottom">
                     <button 
-                      className="btn-clear-filters"
+                      className="clp-btn-clear-filters"
                       onClick={() => {
                         setStatusFilter('all');
                         setDateFilter('all');
@@ -647,39 +645,38 @@ function ContractsListPage({ contracts: propContracts = [], user, refreshContrac
             )}
           </div>
 
-          {/* Results Header - Reduced space */}
-          <div className="results-header">
-            <span className="results-count">
+          {/* Results Header */}
+          <div className="clp-results-header">
+            <span className="clp-results-count">
               Showing {filteredContracts.length} of {propContracts.length} grants
             </span>
-            <span className="results-value">
+            <span className="clp-results-value">
               Total Value: {formatCurrency(metrics.totalValue)}
             </span>
-
           </div>
 
-          {/* Contracts Content - Switch between views */}
-          <div className="contracts-content">
+          {/* Contracts Content */}
+          <div className="clp-contracts-content">
             {loading ? (
-              <div className="loading-state">
-                <RefreshCw className="spinner" />
+              <div className="clp-loading-state">
+                <RefreshCw className="clp-spinner" />
                 <p>Loading contracts...</p>
               </div>
             ) : filteredContracts.length > 0 ? (
               <>
                 {activeView === 'list' ? (
-                  <div className="contracts-table-container">
-                    <table className="contracts-table">
+                  <div className="clp-contracts-table-container">
+                    <table className="clp-contracts-table">
                       <thead>
                         <tr>
-                          <th className="table-header-large">Grant Name</th>
-                          <th className="table-header-large">Grant ID</th>
-                          <th className="table-header-large">Grantor</th>
-                          <th className="table-header-large">Amount</th>
-                          <th className="table-header-large">Upload Date</th>
-                          <th className="table-header-large">End Date</th>
-                          <th className="table-header-large">Status</th>
-                          <th className="table-header-large">Actions</th>
+                          <th className="clp-table-header">Grant Name</th>
+                          <th className="clp-table-header">Grant ID</th>
+                          <th className="clp-table-header">Grantor</th>
+                          <th className="clp-table-header">Amount</th>
+                          <th className="clp-table-header">Upload Date</th>
+                          <th className="clp-table-header">End Date</th>
+                          <th className="clp-table-header">Status</th>
+                          <th className="clp-table-header">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -688,19 +685,19 @@ function ContractsListPage({ contracts: propContracts = [], user, refreshContrac
                     </table>
                   </div>
                 ) : (
-                  <div className="contracts-grid">
+                  <div className="clp-contracts-grid">
                     {filteredContracts.map(renderContractCard)}
                   </div>
                 )}
               </>
             ) : (
-              <div className="empty-state">
+              <div className="clp-empty-state">
                 <FileText size={48} />
                 <h3>No contracts found</h3>
                 <p>{searchTerm ? 'Try adjusting your search' : 'Upload your first contract to get started'}</p>
                 {!searchTerm && (
                   <button 
-                    className="btn-upload-main"
+                    className="clp-btn-upload-main"
                     onClick={() => navigate('/upload')}
                   >
                     <Upload size={20} />
