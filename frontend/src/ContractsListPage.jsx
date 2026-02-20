@@ -18,6 +18,7 @@ import {
   ChevronDown,
   Loader2
 } from 'lucide-react';
+import API_CONFIG from './config';
 import './styles/ContractsListPage.css';
 
 function ContractsListPage({ contracts: propContracts = [], user, refreshContracts }) {
@@ -36,92 +37,56 @@ function ContractsListPage({ contracts: propContracts = [], user, refreshContrac
     averageValue: 0
   });
   
-  const [refreshInterval, setRefreshInterval] = useState(null);
-  const [autoRefreshCount, setAutoRefreshCount] = useState(0);
   const [normalizedContracts, setNormalizedContracts] = useState([]);
+  const [contracts, setContracts] = useState([]);
   
   const navigate = useNavigate();
 
-  // Auto-refresh logic
-  useEffect(() => {
-    // If contracts are empty and we're not loading, trigger a refresh
-    if ((!propContracts || propContracts.length === 0) && !loading && refreshContracts) {
-      console.log('No contracts found, triggering auto-refresh...');
-      refreshContracts();
+  // Fetch contracts from backend directly
+  const fetchContracts = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem("token");
+      const response = await fetch(
+        `${API_CONFIG.BASE_URL}/api/contracts/`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch contracts");
+      }
+
+      const data = await response.json();
+      
+      // Store the fetched contracts
+      setContracts(data);
+      
+      // Normalize and filter them
+      const normalized = Array.isArray(data) ? data
+        .map(normalizeContractData)
+        .filter(Boolean) : [];
+      
+      setNormalizedContracts(normalized);
+      
+      // Apply current filters
+      const filtered = applyFilters(normalized, searchTerm, statusFilter, dateFilter);
+      setFilteredContracts(filtered);
+      
+    } catch (error) {
+      console.error("Error fetching contracts:", error);
+    } finally {
+      setLoading(false);
     }
-  }, [propContracts, loading, refreshContracts]);
-
-  // Set up interval to periodically refresh
-  useEffect(() => {
-    // Set up an interval to refresh every 30 seconds
-    const interval = setInterval(() => {
-      if (refreshContracts && !loading) {
-        console.log('Auto-refreshing contracts data...');
-        refreshContracts();
-        setAutoRefreshCount(prev => prev + 1);
-      }
-    }, 30000); // 30 seconds
-
-    setRefreshInterval(interval);
-
-    // Clean up interval on component unmount
-    return () => {
-      if (interval) {
-        clearInterval(interval);
-      }
-    };
-  }, [refreshContracts, loading]);
-
-  // Additional check for data consistency
-  useEffect(() => {
-    // Check if we need to trigger a refresh
-    const shouldRefresh = () => {
-      // If no contracts and not currently loading
-      if ((!propContracts || propContracts.length === 0) && !loading) {
-        return true;
-      }
-      
-      // If contracts exist but filtered contracts is empty when there should be data
-      if (propContracts && propContracts.length > 0 && filteredContracts.length === 0 && !searchTerm && statusFilter === 'all' && dateFilter === 'all') {
-        return true;
-      }
-      
-      return false;
-    };
-
-    if (shouldRefresh() && refreshContracts) {
-      console.log('Detected missing or inconsistent data, triggering refresh...');
-      
-      // Small delay to avoid rapid refreshes
-      const timer = setTimeout(() => {
-        refreshContracts();
-      }, 1500);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [propContracts, filteredContracts, loading, refreshContracts, searchTerm, statusFilter, dateFilter]);
+  };
 
   useEffect(() => {
-    // Log data state for debugging
-    console.log('ContractsListPage state:', {
-      propContractsCount: propContracts?.length || 0,
-      filteredCount: filteredContracts.length,
-      loading,
-      autoRefreshCount
-    });
-  }, [propContracts, filteredContracts, loading, autoRefreshCount]);
-
-  useEffect(() => {
-    if (propContracts.length > 0) {
-      filterContracts();
-      calculateMetrics();
-    }
-  }, [propContracts, searchTerm, statusFilter, dateFilter]);
-
-  useEffect(() => {
-    // Calculate metrics whenever filtered contracts change
-    calculateMetrics();
-  }, [filteredContracts]);
+    // Fetch fresh data from backend when component mounts
+    fetchContracts();
+  }, []); // Empty dependency array means this runs once on mount
 
   const normalizeContractData = (contract) => {
     if (!contract || typeof contract !== 'object') {
@@ -181,34 +146,29 @@ function ContractsListPage({ contracts: propContracts = [], user, refreshContrac
     return normalized;
   };
 
-  const filterContracts = () => {
-    console.log('DEBUG: All contracts found:', propContracts.length);
+  const applyFilters = (contractsList, search, status, date) => {
+    let filtered = [...contractsList];
     
-    let filtered = propContracts.map(normalizeContractData).filter(Boolean);
-    
-    // Store normalized contracts
-    setNormalizedContracts(filtered);
-    
-    if (searchTerm) {
+    if (search) {
       filtered = filtered.filter(contract => 
-        (contract.grant_name && contract.grant_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (contract.grantor && contract.grantor.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (contract.contract_number && contract.contract_number.toString().toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (contract.filename && contract.filename.toLowerCase().includes(searchTerm.toLowerCase()))
+        (contract.grant_name && contract.grant_name.toLowerCase().includes(search.toLowerCase())) ||
+        (contract.grantor && contract.grantor.toLowerCase().includes(search.toLowerCase())) ||
+        (contract.contract_number && contract.contract_number.toString().toLowerCase().includes(search.toLowerCase())) ||
+        (contract.filename && contract.filename.toLowerCase().includes(search.toLowerCase()))
       );
     }
 
-    if (statusFilter !== 'all') {
+    if (status !== 'all') {
       filtered = filtered.filter(contract => 
-        contract.status && contract.status.toLowerCase() === statusFilter
+        contract.status && contract.status.toLowerCase() === status
       );
     }
 
-    if (dateFilter !== 'all') {
+    if (date !== 'all') {
       const today = new Date();
       const thirtyDaysAgo = new Date(today.setDate(today.getDate() - 30));
       
-      switch (dateFilter) {
+      switch (date) {
         case 'last30':
           filtered = filtered.filter(contract => 
             contract.uploaded_at && new Date(contract.uploaded_at) > thirtyDaysAgo
@@ -231,12 +191,24 @@ function ContractsListPage({ contracts: propContracts = [], user, refreshContrac
       }
     }
 
-    console.log('DEBUG: Final filtered contracts:', filtered.length);
-    setFilteredContracts(filtered);
+    return filtered;
   };
 
+  // Update filters when search/filter changes
+  useEffect(() => {
+    if (normalizedContracts.length > 0) {
+      const filtered = applyFilters(normalizedContracts, searchTerm, statusFilter, dateFilter);
+      setFilteredContracts(filtered);
+    }
+  }, [searchTerm, statusFilter, dateFilter, normalizedContracts]);
+
+  // Calculate metrics whenever filtered contracts change
+  useEffect(() => {
+    calculateMetrics();
+  }, [filteredContracts]);
+
   const calculateMetrics = () => {
-    // Calculate metrics based on CURRENTLY FILTERED contracts, not all propContracts
+    // Calculate metrics based on CURRENTLY FILTERED contracts
     const totalValue = filteredContracts.reduce((sum, c) => sum + (c.total_amount || 0), 0);
     const totalContracts = filteredContracts.length;
     
@@ -648,7 +620,7 @@ function ContractsListPage({ contracts: propContracts = [], user, refreshContrac
           {/* Results Header */}
           <div className="clp-results-header">
             <span className="clp-results-count">
-              Showing {filteredContracts.length} of {propContracts.length} grants
+              Showing {filteredContracts.length} of {normalizedContracts.length} grants
             </span>
             <span className="clp-results-value">
               Total Value: {formatCurrency(metrics.totalValue)}
