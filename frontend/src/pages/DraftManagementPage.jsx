@@ -91,7 +91,7 @@ function DraftManagementPage({ user }) {
 
           if (response.ok) {
             const data = await response.json();
-            console.log('DEBUG: My drafts response:', data);
+            // console.log('DEBUG: My drafts response:', data);
             
             const myDrafts = data.filter(draft => {
               if (!draft) return false;
@@ -100,7 +100,7 @@ function DraftManagementPage({ user }) {
               return isCreator || isOldCreator;
             });
             
-            console.log('DEBUG: Filtered my drafts:', myDrafts);
+            // console.log('DEBUG: Filtered my drafts:', myDrafts);
             setDrafts(myDrafts || []);
             setAssignmentStats(null);
             setTabCounts(prev => ({
@@ -145,7 +145,7 @@ function DraftManagementPage({ user }) {
 
           if (response.ok) {
             const data = await response.json();
-            console.log('DEBUG: Assigned drafts response:', data);
+            // console.log('DEBUG: Assigned drafts response:', data);
             const assignedDrafts = data.drafts || [];
             setDrafts(assignedDrafts);
             setAssignmentStats(data.assignment_summary || null);
