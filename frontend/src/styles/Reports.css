@@ -1139,4 +1139,757 @@
 
 
 
+/* C:\saple.ai\POC\frontend\src\styles\Reports.css - Add these new styles at the end */
+
+/* Reports Tabs */
+.rpt-reports-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  background: white;
+  padding: 8px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.rpt-tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #64748b;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.rpt-tab-btn:hover {
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.rpt-tab-btn.rpt-active {
+  background: #0f172a;
+  color: white;
+}
+
+/* Report Sections */
+.rpt-reports-content {
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  padding: 24px;
+}
+
+.rpt-report-section {
+  margin-bottom: 32px;
+}
+
+.rpt-report-section:last-child {
+  margin-bottom: 0;
+}
+
+.rpt-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.rpt-section-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rpt-section-title svg {
+  color: #0f172a;
+}
+
+.rpt-section-title h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #0f172a;
+  margin: 0;
+}
+
+.rpt-section-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.rpt-btn-small {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  background: white;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.rpt-btn-small:hover:not(:disabled) {
+  background: #f8fafc;
+  border-color: #94a3b8;
+}
+
+.rpt-btn-small:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Report Tables */
+.rpt-table-responsive {
+  overflow-x: auto;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.rpt-report-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  min-width: 900px;
+}
+
+.rpt-report-table th {
+  background: #f8fafc;
+  padding: 12px 16px;
+  text-align: left;
+  font-weight: 600;
+  color: #475569;
+  font-size: 12px;
+  border-bottom: 2px solid #e2e8f0;
+  white-space: nowrap;
+}
+
+.rpt-report-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #1e293b;
+}
+
+.rpt-report-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.rpt-report-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.rpt-grant-name {
+  font-weight: 500;
+}
+
+.rpt-name-link {
+  color: #0f172a;
+  cursor: pointer;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.rpt-name-link:hover {
+  color: #2563eb;
+  text-decoration: underline;
+}
+
+.rpt-amount {
+  font-family: monospace;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.rpt-percentage {
+  white-space: nowrap;
+}
+
+.rpt-overdue {
+  color: #dc2626;
+  font-weight: 500;
+}
+
+.rpt-urgent {
+  color: #ea580c;
+  font-weight: 500;
+}
+
+/* Pending Approvals Groups */
+.rpt-pending-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.rpt-pending-group h4 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0 0 12px 0;
+}
+
+.rpt-count-badge {
+  background: #e2e8f0;
+  color: #475569;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  margin-left: 8px;
+}
+
+.rpt-pending-table {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.rpt-empty-sub {
+  padding: 24px;
+  text-align: center;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+/* Summary Metrics */
+.rpt-summary-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.rpt-metric-card {
+  background: #f8fafc;
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.rpt-metric-label {
+  display: block;
+  font-size: 12px;
+  color: #64748b;
+  margin-bottom: 4px;
+}
+
+.rpt-metric-value {
+  display: block;
+  font-size: 20px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 4px;
+}
+
+.rpt-metric-sub {
+  display: block;
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+/* Progress Bars */
+.rpt-progress-container {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 100px;
+}
+
+.rpt-progress-bar {
+  height: 4px;
+  background: #e2e8f0;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.rpt-progress-fill {
+  height: 100%;
+  background: #0f172a;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+/* Variance Indicators */
+.rpt-variance {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.rpt-positive {
+  color: #059669;
+}
+
+.rpt-negative {
+  color: #dc2626;
+}
+
+/* Health Dashboard */
+.rpt-health-summary {
+  margin-bottom: 24px;
+}
+
+.rpt-health-chart {
+  display: flex;
+  gap: 24px;
+  background: #f8fafc;
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.rpt-health-stat {
+  flex: 1;
+  text-align: center;
+}
+
+.rpt-stat-label {
+  display: block;
+  font-size: 13px;
+  color: #64748b;
+  margin-bottom: 8px;
+}
+
+.rpt-stat-value {
+  display: block;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.2;
+  margin-bottom: 4px;
+}
+
+.rpt-stat-value.rpt-success {
+  color: #059669;
+}
+
+.rpt-stat-value.rpt-warning {
+  color: #d97706;
+}
+
+.rpt-stat-value.rpt-danger {
+  color: #dc2626;
+}
+
+.rpt-stat-percent {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.rpt-health-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.rpt-health-good {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.rpt-health-warning {
+  background: #fed7aa;
+  color: #92400e;
+}
+
+.rpt-health-bad {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+/* Compliance Indicators */
+.rpt-compliance-indicator {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.rpt-progress-circle {
+  position: relative;
+  width: 48px;
+  height: 48px;
+}
+
+.rpt-circular-chart {
+  width: 100%;
+  height: 100%;
+}
+
+.rpt-circle-bg {
+  fill: none;
+  stroke: #e2e8f0;
+  stroke-width: 2.8;
+}
+
+.rpt-circle {
+  fill: none;
+  stroke-width: 2.8;
+  stroke-linecap: round;
+  stroke: #0f172a;
+  animation: progress 1s ease-out forwards;
+}
+
+@keyframes progress {
+  0% {
+    stroke-dasharray: 0, 100;
+  }
+}
+
+.rpt-circle-label {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 10px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+/* Milestone Bar */
+.rpt-milestone-bar {
+  width: 100px;
+  height: 8px;
+  background: #e2e8f0;
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+
+.rpt-milestone-progress {
+  height: 100%;
+  background: #0f172a;
+  border-radius: 4px;
+  font-size: 0;
+  line-height: 8px;
+  text-align: right;
+  padding-right: 4px;
+  color: white;
+  font-size: 8px;
+  font-weight: 600;
+}
+
+/* Risk Exposure */
+.rpt-risk-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.rpt-risk-stat {
+  background: #f8fafc;
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.rpt-risk-stat-label {
+  display: block;
+  font-size: 12px;
+  color: #64748b;
+  margin-bottom: 4px;
+}
+
+.rpt-risk-stat-value {
+  display: block;
+  font-size: 20px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.rpt-risk-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.rpt-risk-low {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.rpt-risk-medium {
+  background: #fed7aa;
+  color: #92400e;
+}
+
+.rpt-risk-high {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.rpt-risk-unknown {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.rpt-risk-row.rpt-risk-high td {
+  background: rgba(220, 38, 38, 0.02);
+}
+
+.rpt-action-tag {
+  background: #e2e8f0;
+  color: #475569;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+/* Executive Snapshot Grid */
+.rpt-executive-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.rpt-executive-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.rpt-executive-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.05);
+  border-color: #94a3b8;
+}
+
+.rpt-executive-card.rpt-selected {
+  border-color: #0f172a;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.1);
+}
+
+.rpt-executive-header {
+  margin-bottom: 16px;
+}
+
+.rpt-executive-header h4 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #0f172a;
+  margin: 0 0 4px 0;
+}
+
+.rpt-executive-grantor {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.rpt-executive-metrics {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding: 12px 0;
+  border-top: 1px solid #f1f5f9;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.rpt-executive-metric {
+  text-align: center;
+  flex: 1;
+}
+
+.rpt-executive-metric .rpt-metric-label {
+  font-size: 10px;
+  margin-bottom: 4px;
+}
+
+.rpt-executive-metric .rpt-metric-value {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.rpt-executive-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.rpt-executive-deadline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.rpt-executive-details {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.rpt-detail-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  padding: 4px 0;
+}
+
+.rpt-detail-row span:first-child {
+  color: #64748b;
+}
+
+.rpt-detail-row span:last-child {
+  color: #1e293b;
+  font-weight: 500;
+}
+
+/* Portfolio Dashboard */
+.rpt-dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+.rpt-dashboard-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.rpt-dashboard-card h4 {
+  font-size: 15px;
+  font-weight: 600;
+  color: #0f172a;
+  margin: 0 0 16px 0;
+}
+
+.rpt-dashboard-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.rpt-dashboard-stat .rpt-stat-label {
+  font-size: 11px;
+}
+
+.rpt-dashboard-stat .rpt-stat-number {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.rpt-deadline-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.rpt-deadline-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+}
+
+.rpt-deadline-name {
+  font-weight: 500;
+  color: #1e293b;
+}
+
+.rpt-deadline-date {
+  color: #64748b;
+}
+
+.rpt-deadline-days {
+  color: #94a3b8;
+  font-size: 10px;
+  margin-left: 4px;
+}
+
+.rpt-deadline-empty {
+  text-align: center;
+  color: #94a3b8;
+  font-style: italic;
+  padding: 20px 0;
+}
+
+/* Success Icon */
+.rpt-success-icon {
+  color: #059669;
+  margin-bottom: 12px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+  .rpt-dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .rpt-reports-tabs {
+    flex-direction: column;
+  }
+  
+  .rpt-tab-btn {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .rpt-summary-metrics {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .rpt-risk-summary {
+    grid-template-columns: 1fr;
+  }
+  
+  .rpt-executive-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .rpt-reports-content {
+    padding: 16px;
+  }
+  
+  .rpt-section-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  
+  .rpt-section-actions {
+    width: 100%;
+  }
+  
+  .rpt-btn-small {
+    flex: 1;
+    justify-content: center;
+  }
+  
+  .rpt-summary-metrics {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+
 

@@ -133,6 +133,6 @@ class UserNotification(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     read_at = Column(DateTime(timezone=True), nullable=True)
     
-    # Relationships
+    # Relationshipsscdscsd
     user = relationship("User", backref="notifications")
     contract = relationship("Contract", backref="notifications")    

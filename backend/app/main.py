@@ -1963,7 +1963,7 @@ async def submit_contract_for_review(
         # Remove duplicates
         assigned_program_managers = list(set(assigned_program_managers)) if assigned_program_managers else []
 
-        print(f"DEBUG: Contract {contract_id} has {len(assigned_program_managers)} assigned Program Managers: {assigned_program_managers}")
+        # print(f"DEBUG: Contract {contract_id} has {len(assigned_program_managers)} assigned Program Managers: {assigned_program_managers}")
 
         # Send notifications to ALL assigned Program Managers
         if assigned_program_managers:
@@ -1975,7 +1975,7 @@ async def submit_contract_for_review(
                 ).first()
                 
                 if pgm_user:
-                    print(f"DEBUG: Creating notification for Program Manager {pgm_user_id} ({pgm_user.username})")
+                    # print(f"DEBUG: Creating notification for Program Manager {pgm_user_id} ({pgm_user.username})")
                     
                     notification = UserNotification(
                         user_id=pgm_user_id,
@@ -3232,13 +3232,13 @@ async def get_contracts_under_review(
 ):
     """Get all contracts under review - Program Manager can see only contracts assigned to them"""
     print("\n" + "="*80)
-    print(f"🔍 DEBUG: get_contracts_under_review called")
-    print(f"🔍 DEBUG: Current user: ID={current_user.id}, Username={current_user.username}, Role={current_user.role}")
-    print(f"🔍 DEBUG: Request params: skip={skip}, limit={limit}")
+    # print(f"🔍 DEBUG: get_contracts_under_review called")
+    # print(f"🔍 DEBUG: Current user: ID={current_user.id}, Username={current_user.username}, Role={current_user.role}")
+    # print(f"🔍 DEBUG: Request params: skip={skip}, limit={limit}")
     print("="*80)
     
     if current_user.role != "program_manager":
-        print(f"❌ DEBUG: Access denied - User role is {current_user.role}, not program_manager")
+        # print(f"❌ DEBUG: Access denied - User role is {current_user.role}, not program_manager")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only Program Managers can view contracts under review"
@@ -3250,11 +3250,11 @@ async def get_contracts_under_review(
             models.Contract.status == "under_review"
         ).all()
         
-        print(f"\n📊 DEBUG: Found {len(all_under_review)} total contracts with status='under_review'")
+        # print(f"\n📊 DEBUG: Found {len(all_under_review)} total contracts with status='under_review'")
         
         if len(all_under_review) == 0:
-            print("⚠️ DEBUG: No contracts found with status 'under_review'")
-            print("📋 DEBUG: Available contract statuses in database:")
+            # print("⚠️ DEBUG: No contracts found with status 'under_review'")
+            # print("📋 DEBUG: Available contract statuses in database:")
             all_statuses = db.query(models.Contract.status).distinct().all()
             for status in all_statuses:
                 count = db.query(models.Contract).filter(models.Contract.status == status[0]).count()
@@ -3265,7 +3265,7 @@ async def get_contracts_under_review(
         
         for idx, contract in enumerate(all_under_review):
             print(f"\n{'─'*50}")
-            print(f"📄 DEBUG: Contract #{idx+1} - ID: {contract.id}")
+            # print(f"📄 DEBUG: Contract #{idx+1} - ID: {contract.id}")
             print(f"   Grant Name: {contract.grant_name}")
             print(f"   Filename: {contract.filename}")
             print(f"   Status: {contract.status}")
@@ -3452,8 +3452,8 @@ async def get_contracts_under_review(
             contracts_dict.append(contract_dict)
         
         # Log the response structure
-        print(f"\n📤 DEBUG: Returning {len(contracts_dict)} contracts in response")
-        print(f"📤 DEBUG: Response is {'ARRAY' if isinstance(contracts_dict, list) else 'OBJECT'}")
+        # print(f"\n📤 DEBUG: Returning {len(contracts_dict)} contracts in response")
+        # print(f"📤 DEBUG: Response is {'ARRAY' if isinstance(contracts_dict, list) else 'OBJECT'}")
         
         # Return as ARRAY, not wrapped in an object
         return contracts_dict
@@ -4232,15 +4232,15 @@ async def submit_contract_review(
         # CRITICAL FIX: Make sure status is updated in the database
         if review_data.overall_recommendation == "approve":
             contract.status = "reviewed"
-            print(f"DEBUG: Setting contract {contract_id} status to 'reviewed' for Director approval")
+            # print(f"DEBUG: Setting contract {contract_id} status to 'reviewed' for Director approval")
             
         elif review_data.overall_recommendation == "reject":
             contract.status = "rejected"
-            print(f"DEBUG: Setting contract {contract_id} status to 'rejected'")
+            # print(f"DEBUG: Setting contract {contract_id} status to 'rejected'")
             
         elif review_data.overall_recommendation == "modify":
             contract.status = "rejected"  # Set to rejected for modifications
-            print(f"DEBUG: Setting contract {contract_id} status to 'rejected' (modify)")
+            # print(f"DEBUG: Setting contract {contract_id} status to 'rejected' (modify)")
         
         # IMPORTANT: Also update review_comments field
         if not contract.review_comments:
@@ -4308,15 +4308,15 @@ async def submit_contract_review(
             contract.comprehensive_data["change_requests"] = review_data.change_requests
         
         # DEBUG: Print status change
-        print(f"DEBUG: Contract {contract_id} status changed from '{old_status}' to '{contract.status}'")
-        print(f"DEBUG: Review summary added: {len(review_summary_text)} characters")
+        # print(f"DEBUG: Contract {contract_id} status changed from '{old_status}' to '{contract.status}'")
+        # print(f"DEBUG: Review summary added: {len(review_summary_text)} characters")
         
         # Force commit and refresh
         db.commit()
         db.refresh(contract)
         
         # Verify the status was saved
-        print(f"DEBUG: After commit - Contract {contract_id} status: {contract.status}")
+        # print(f"DEBUG: After commit - Contract {contract_id} status: {contract.status}")
         
         # IMPORTANT: Add notification tracking for Director
         if review_data.overall_recommendation == "approve":
@@ -4348,7 +4348,7 @@ async def submit_contract_review(
             })
             
             db.commit()
-            print(f"DEBUG: Contract {contract_id} marked for Director approval")
+            # print(f"DEBUG: Contract {contract_id} marked for Director approval")
         
         # Log activity
         log_activity(
@@ -5461,7 +5461,7 @@ async def get_director_dashboard_contracts(
         )
     
     try:
-        print(f"DEBUG: Getting dashboard contracts for Director {current_user.id}")
+        # print(f"DEBUG: Getting dashboard contracts for Director {current_user.id}")
         
         # STRICT: Get ONLY contracts assigned to this director
         all_contracts = db.query(models.Contract).all()
@@ -5545,7 +5545,7 @@ async def get_director_dashboard_contracts(
                 
                 assigned_contracts.append(contract_dict)
         
-        print(f"DEBUG: Found {len(assigned_contracts)} contracts assigned to Director {current_user.id}")
+        # print(f"DEBUG: Found {len(assigned_contracts)} contracts assigned to Director {current_user.id}")
         
         # Apply ordering and pagination
         assigned_contracts.sort(key=lambda x: x["uploaded_at"] or "", reverse=True)
@@ -5600,7 +5600,7 @@ async def get_contracts_for_director_approval(
         )
     
     try:
-        print(f"DEBUG: Getting contracts for Director {current_user.id} ({current_user.username}) approval")
+        # print(f"DEBUG: Getting contracts for Director {current_user.id} ({current_user.username}) approval")
         
         # ✅ FIX: Get ONLY contracts that are BOTH:
         # 1. In 'reviewed' status (ready for director approval)
@@ -5610,7 +5610,7 @@ async def get_contracts_for_director_approval(
             models.Contract.status == "reviewed"
         ).all()
         
-        print(f"DEBUG: Found {len(all_reviewed_contracts)} contracts in 'reviewed' status")
+        # print(f"DEBUG: Found {len(all_reviewed_contracts)} contracts in 'reviewed' status")
         
         assigned_to_current_director = []
         
@@ -5697,7 +5697,7 @@ async def get_contracts_for_director_approval(
             else:
                 print(f"  ❌ Contract {contract.id} NOT assigned to Director {current_user.id}")
         
-        print(f"DEBUG: Total contracts assigned to Director {current_user.id}: {len(assigned_to_current_director)}")
+        # print(f"DEBUG: Total contracts assigned to Director {current_user.id}: {len(assigned_to_current_director)}")
         
         # Apply pagination
         paginated_contracts = assigned_to_current_director[skip:skip + limit]
@@ -6093,7 +6093,7 @@ async def get_assigned_drafts(
         )
     
     try:
-        print(f"DEBUG: Fetching assigned contracts for user {current_user.id} ({current_user.username})")
+        # print(f"DEBUG: Fetching assigned contracts for user {current_user.id} ({current_user.username})")
         
         # ✅ FIX: Get contracts based on user role
         if current_user.role == "project_manager":
@@ -6110,13 +6110,13 @@ async def get_assigned_drafts(
             models.Contract.status.in_(status_filter)
         ).all()
         
-        print(f"DEBUG: Found {len(all_contracts)} contracts with statuses {status_filter}")
+        # print(f"DEBUG: Found {len(all_contracts)} contracts with statuses {status_filter}")
         
         assigned_contracts = []
         
         for contract in all_contracts:
             # Debug info for each contract
-            print(f"DEBUG: Checking contract {contract.id} - {contract.grant_name} - Status: {contract.status}")
+            # print(f"DEBUG: Checking contract {contract.id} - {contract.grant_name} - Status: {contract.status}")
             
             # Check if user is in any of the assignment lists
             is_assigned = False
@@ -6343,7 +6343,7 @@ async def get_assigned_drafts(
             else:
                 print(f"  ❌ Contract {contract.id} NOT assigned to user")
         
-        print(f"DEBUG: Total assigned contracts: {len(assigned_contracts)}")
+        # print(f"DEBUG: Total assigned contracts: {len(assigned_contracts)}")
         
         # Apply pagination
         paginated_contracts = assigned_contracts[skip:skip + limit]
@@ -6444,14 +6444,14 @@ async def get_agreements_assigned_by_me(
         )
     
     try:
-        print(f"DEBUG: Fetching agreements assigned by user {current_user.id} ({current_user.username})")
+        # print(f"DEBUG: Fetching agreements assigned by user {current_user.id} ({current_user.username})")
         
         # Get ALL draft contracts
         all_drafts = db.query(models.Contract).filter(
             models.Contract.status == "draft"
         ).all()
         
-        print(f"DEBUG: Found {len(all_drafts)} total draft contracts")
+        # print(f"DEBUG: Found {len(all_drafts)} total draft contracts")
         
         assigned_by_me_drafts = []
         
@@ -6464,7 +6464,7 @@ async def get_agreements_assigned_by_me(
                 for entry in assignment_history:
                     if entry.get("assigned_by") == current_user.id:
                         # Found an assignment made by current user
-                        print(f"DEBUG: Found draft {draft.id} assigned by {current_user.id}")
+                        # print(f"DEBUG: Found draft {draft.id} assigned by {current_user.id}")
                         
                         # Get all assigned users information
                         all_assigned_users_info = []
@@ -6576,7 +6576,7 @@ async def get_agreements_assigned_by_me(
                         })
                         break  # Found this user's assignment, move to next draft
         
-        print(f"DEBUG: Total drafts assigned by user: {len(assigned_by_me_drafts)}")
+        # print(f"DEBUG: Total drafts assigned by user: {len(assigned_by_me_drafts)}")
         
         # Apply pagination
         paginated_drafts = assigned_by_me_drafts[skip:skip + limit]
