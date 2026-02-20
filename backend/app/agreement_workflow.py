@@ -42,7 +42,7 @@ async def get_draft_agreements(
         )
     
     try:
-        print(f"DEBUG: Fetching drafts for user {current_user.id}")
+        # print(f"DEBUG: Fetching drafts for user {current_user.id}")
         
         # ✅ FIX: Show drafts until approved (exclude "approved" and "published")
         drafts = db.query(Contract).filter(
@@ -50,7 +50,7 @@ async def get_draft_agreements(
             Contract.status.in_(["draft", "under_review", "reviewed", "rejected"])  # ✅ Changed this line
         ).order_by(Contract.uploaded_at.desc()).offset(skip).limit(limit).all()
         
-        print(f"DEBUG: Found {len(drafts)} drafts for user")
+        # print(f"DEBUG: Found {len(drafts)} drafts for user")
         
         return drafts
         
@@ -809,7 +809,7 @@ async def publish_agreement(
                         )
                         db.add(notification)
                 
-                print(f"DEBUG: Direct publish notifications sent to {len(all_assigned_users)} users")
+                # print(f"DEBUG: Direct publish notifications sent to {len(all_assigned_users)} users")
             
         elif publish_data.publish_to_review:
             # Original logic - publish to review (REMAINS UNCHANGED)
