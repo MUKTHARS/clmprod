@@ -297,6 +297,162 @@ useEffect(() => {
     }
   };
 
+
+
+const handleReviewWithAutoSave = async () => {
+  if (!contract?.id) return;
+  
+  setLoading(true);
+  try {
+    // First, automatically save the draft
+    const token = localStorage.getItem('token');
+    
+    // Prepare update data
+    const updateData = {};
+    
+    if (formData.grant_name !== undefined && formData.grant_name !== '') {
+      updateData.grant_name = formData.grant_name;
+    }
+    if (formData.contract_number !== undefined) {
+      updateData.contract_number = formData.contract_number;
+    }
+    if (formData.grantor !== undefined) {
+      updateData.grantor = formData.grantor;
+    }
+    if (formData.grantee !== undefined) {
+      updateData.grantee = formData.grantee;
+    }
+    if (formData.total_amount !== undefined && formData.total_amount !== '') {
+      updateData.total_amount = parseFloat(formData.total_amount);
+    }
+    if (formData.start_date !== undefined) {
+      updateData.start_date = formData.start_date;
+    }
+    if (formData.end_date !== undefined) {
+      updateData.end_date = formData.end_date;
+    }
+    if (formData.purpose !== undefined) {
+      updateData.purpose = formData.purpose;
+    }
+    if (formData.notes !== undefined) {
+      updateData.notes = formData.notes;
+    }
+    
+    // Include agreement metadata
+    const agreementMetadata = {};
+    let hasAgreementMetadata = false;
+    
+    if (formData.agreement_type !== undefined && formData.agreement_type !== '') {
+      agreementMetadata.agreement_type = formData.agreement_type;
+      hasAgreementMetadata = true;
+    }
+    if (formData.effective_date !== undefined && formData.effective_date !== '') {
+      agreementMetadata.effective_date = formData.effective_date;
+      hasAgreementMetadata = true;
+    }
+    if (formData.renewal_date !== undefined && formData.renewal_date !== '') {
+      agreementMetadata.renewal_date = formData.renewal_date;
+      hasAgreementMetadata = true;
+    }
+    if (formData.termination_date !== undefined && formData.termination_date !== '') {
+      agreementMetadata.termination_date = formData.termination_date;
+      hasAgreementMetadata = true;
+    }
+    if (formData.jurisdiction !== undefined && formData.jurisdiction !== '') {
+      agreementMetadata.jurisdiction = formData.jurisdiction;
+      hasAgreementMetadata = true;
+    }
+    if (formData.governing_law !== undefined && formData.governing_law !== '') {
+      agreementMetadata.governing_law = formData.governing_law;
+      hasAgreementMetadata = true;
+    }
+    if (formData.special_conditions !== undefined && formData.special_conditions !== '') {
+      agreementMetadata.special_conditions = formData.special_conditions;
+      hasAgreementMetadata = true;
+    }
+    
+    if (hasAgreementMetadata) {
+      updateData.agreement_metadata = agreementMetadata;
+    }
+    
+    // Include assigned users
+    const assignedUsers = {};
+    let hasAssignedUsers = false;
+    
+    if (selectedUsers.pm_users && selectedUsers.pm_users.length > 0) {
+      assignedUsers.pm_users = selectedUsers.pm_users;
+      hasAssignedUsers = true;
+    }
+    if (selectedUsers.pgm_users && selectedUsers.pgm_users.length > 0) {
+      assignedUsers.pgm_users = selectedUsers.pgm_users;
+      hasAssignedUsers = true;
+    }
+    if (selectedUsers.director_users && selectedUsers.director_users.length > 0) {
+      assignedUsers.director_users = selectedUsers.director_users;
+      hasAssignedUsers = true;
+    }
+    
+    if (hasAssignedUsers) {
+      updateData.assigned_users = assignedUsers;
+    }
+    
+    console.log('Auto-saving draft before review:', updateData);
+    
+    // Save the draft first
+    const saveResponse = await fetch(
+      `${API_CONFIG.BASE_URL}/api/agreements/drafts/${contract.id}/update`,
+      {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(updateData)
+      }
+    );
+
+    if (saveResponse.ok) {
+      const saveResult = await saveResponse.json();
+      console.log('Draft saved successfully:', saveResult);
+      
+      // After successful save, fetch the updated contract data
+      const updatedContractResponse = await fetch(
+        `${API_CONFIG.BASE_URL}/api/agreements/drafts/${contract.id}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (updatedContractResponse.ok) {
+        const updatedContractData = await updatedContractResponse.json();
+        console.log('Updated contract data:', updatedContractData);
+        
+        // Set the contract data for ProjectManagerActions
+        setContractData(updatedContractData.contract || updatedContractData);
+        
+        // Then open the ProjectManagerActions popup
+        setShowPMActions(true);
+      } else {
+        // If fetch fails, still try to open with existing contract data
+        setContractData(contract);
+        setShowPMActions(true);
+      }
+    } else {
+      const error = await saveResponse.json();
+      console.error('Auto-save failed:', error);
+      showPopup('Save Failed', 'Failed to save draft before review. Please try again.', 'error');
+    }
+  } catch (error) {
+    console.error('Error in auto-save:', error);
+    showPopup('Error', 'Failed to save draft. Please try again.', 'error');
+  } finally {
+    setLoading(false);
+  }
+};
+
 const handleUpdateDraft = async () => {
   if (!contract?.id) return;
   
@@ -891,79 +1047,97 @@ const handlePublishAgreement = async (publishToReview = true) => {
         )}
       </div>
 
-      {/* FIXED BUTTON CONTAINER - Properly positioned at bottom */}
-      <div className="ag-workflow-footer">
-        <div className="ag-workflow-buttons">
-          {activeStep > 1 && (
-            <button 
-              className="ag-btn ag-btn-secondary" 
-              onClick={prevStep} 
-              disabled={loading}
-            >
-              <ChevronLeft size={16} />
-              Previous
-            </button>
+<div className="ag-workflow-footer">
+  <div className="ag-workflow-buttons">
+    {activeStep > 1 && (
+      <button 
+        className="ag-btn ag-btn-secondary" 
+        onClick={prevStep} 
+        disabled={loading}
+      >
+        <ChevronLeft size={16} />
+        Previous
+      </button>
+    )}
+    
+    {activeStep < 4 ? (
+      <button 
+        className="ag-btn ag-btn-primary ag-btn-next" 
+        onClick={nextStep} 
+        disabled={loading}
+      >
+        Next
+        <ChevronRight size={16} />
+      </button>
+    ) : (
+      <>
+        <button 
+          className="ag-btn ag-btn-primary ag-btn-review" 
+          onClick={handleReviewWithAutoSave}
+          disabled={loading}
+        >
+          {loading ? <Loader2 size={16} className="ag-spinner" /> : (
+            <>
+              <Send size={16} />
+              Submit for Review
+            </>
           )}
-          
-{activeStep < 4 ? (
-  <button 
-    className="ag-btn ag-btn-primary ag-btn-next" 
-    onClick={nextStep} 
-    disabled={loading}
-  >
-    Next
-    <ChevronRight size={16} />
-  </button>
-) : (
-  <>
-    <button 
-      className="ag-btn ag-btn-secondary" 
-      onClick={handleUpdateDraft}
-      disabled={loading}
-    >
-      {loading ? <Loader2 size={16} className="ag-spinner" /> : 'Save Draft'}
-    </button>
-    <button 
-      className="ag-btn ag-btn-primary" 
-      onClick={() => setShowPMActions(true)} // This should open the popup
-      disabled={loading}
-    >
-      {loading ? <Loader2 size={16} className="ag-spinner" /> : 'Review'}
-    </button>
-    <button 
-      className="ag-btn ag-btn-primary" 
-      onClick={() => handlePublishAgreement(false)}
-      disabled={loading}
-    >
-      {loading ? <Loader2 size={16} className="ag-spinner" /> : 'Publish'}
-    </button>
-  </>
-)}
-        </div>
-      </div>
+        </button>
+        <button 
+          className="ag-btn ag-btn-secondary" 
+          onClick={() => handlePublishAgreement(false)}
+          disabled={loading}
+        >
+          {loading ? <Loader2 size={16} className="ag-spinner" /> : (
+            <>
+              <CheckCircle size={16} />
+              Publish Directly
+            </>
+          )}
+        </button>
+      </>
+    )}
+  </div>
+</div>
+
 {/* Project Manager Actions Popup */}
-{showPMActions && user && user.role === "project_manager" && contract && (
+{showPMActions && user && user.role === "project_manager" && contractData && (
   <div className="ag-popup-overlay">
-    <div className="ag-popup-content">
+    <div className="ag-popup-content ag-popup-content-large">
       <div className="ag-popup-header">
-        <h3>Project Manager Review</h3>
+        <h3>Submit Agreement for Review</h3>
         <button 
           className="ag-popup-close" 
-          onClick={() => setShowPMActions(false)}
+          onClick={() => {
+            setShowPMActions(false);
+            setContractData(null);
+          }}
         >
           ×
         </button>
       </div>
       <div className="ag-popup-body">
         <ProjectManagerActions 
-          contract={contract}
+          contract={contractData}
           user={user}
           onActionComplete={() => {
-            // Call onWorkflowComplete to refresh data in parent
+            // Refresh data in parent
             if (onWorkflowComplete) {
               onWorkflowComplete();
             }
-            setShowPMActions(false); // Close popup after action completes
+            // Close popup and clear contract data
+            setShowPMActions(false);
+            setContractData(null);
+            
+            // Show success message
+            showPopup('Success', 'Agreement submitted for review successfully! Program managers have been notified.', 'success');
+            
+            // Close the main workflow modal after successful submission
+            setTimeout(() => {
+              if (setShowWorkflow) {
+                setShowWorkflow(false);
+              }
+            }, 2000);
           }}
         />
       </div>
