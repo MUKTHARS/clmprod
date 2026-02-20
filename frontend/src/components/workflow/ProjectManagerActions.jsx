@@ -134,7 +134,7 @@ function ProjectManagerActions({ contract, user, onActionComplete }) {
     }
   };
 
-  const handleSubmitForReview = async () => {
+const handleSubmitForReview = async (contractId, notes) => {
     if (!formData.notes.trim()) {
       showPopup('Missing Information', 'Please provide notes for the submission', 'warning');
       return;
@@ -169,6 +169,11 @@ function ProjectManagerActions({ contract, user, onActionComplete }) {
     } finally {
       setLoading(false);
     }
+
+      if (response.ok) {
+    // Dispatch custom event to notify sidebar to refresh badge
+    window.dispatchEvent(new CustomEvent('contract-submitted'));
+  }
   };
 
   const handleFixMetadata = async () => {

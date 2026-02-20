@@ -314,14 +314,6 @@ const fetchApprovedContractsFallback = async () => {
           </p> */}
         </div>
         <div className="header-actions">
-          <button 
-            className="btn-secondary"
-            onClick={fetchDirectorDecisions}
-            disabled={loading}
-          >
-            <RefreshCw size={16} className={loading ? 'spinning' : ''} />
-            Refresh
-          </button>
         </div>
       </div>
 

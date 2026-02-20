@@ -25,7 +25,7 @@ function ProjectManagerDashboard({ user }) {
   const fetchMyContracts = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('https://grantapi.saple.ai/api/contracts/', {
+      const response = await fetch('http://localhost:4001/api/contracts/', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -117,8 +117,8 @@ function ProjectManagerDashboard({ user }) {
           ) : filteredContracts.length === 0 ? (
             <div className="empty-state">
               <FileText size={48} />
-              <h3>No contracts found</h3>
-              <p>{filter === 'all' ? 'Upload your first contract to get started' : 'No contracts match this filter'}</p>
+              <h3>No grants found</h3>
+              <p>{filter === 'all' ? 'Upload your grant to get started' : 'No grants match this filter'}</p>
             </div>
           ) : (
             <div className="contracts-grid">

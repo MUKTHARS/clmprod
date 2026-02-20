@@ -1,108 +1,93 @@
-.assigned-agreements-page {
-  padding: 24px;
-  background-color: #f8f9fa;
+/* AssignedAgreementsPage.css - All classes prefixed with aap- */
+
+/* Main container */
+.aap-assigned-agreements-page {
+  padding: 24px 24px 12px 24px;
+  max-width: 1400px;
+  margin: 0 auto;
   min-height: 100vh;
+  background: #f8f9fa;
+  transition: all 0.3s ease;
 }
 
-.agreements-header {
+/* Header section */
+.aap-agreements-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
 }
 
-.header-left {
+.aap-header-left {
   flex: 1;
+  min-width: 300px;
 }
 
-.header-left h1 {
-  font-size: 28px;
-  font-weight: 600;
-  color: #1a1f36;
-  margin: 8px 0;
-}
-
-.page-subtitle {
-  color: #6b7280;
-  font-size: 14px;
-  margin: 4px 0 16px 0;
-}
-
-.btn-back {
-  display: inline-flex;
+.aap-header-actions {
+  display: flex;
+  gap: 12px;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  background-color: #f3f4f6;
+  flex-shrink: 0;
+}
+
+/* Refresh button */
+.aap-btn-refresh {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: white;
   border: 1px solid #e5e7eb;
   border-radius: 6px;
-  color: #4b5563;
-  font-size: 14px;
+  color: #6b7280;
   cursor: pointer;
   transition: all 0.2s;
 }
 
-.btn-back:hover {
-  background-color: #e5e7eb;
+.aap-btn-refresh:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
 }
 
-.header-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.btn-secondary {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  background-color: #ffffff;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  color: #374151;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-secondary:hover:not(:disabled) {
-  background-color: #f9fafb;
-  border-color: #9ca3af;
-}
-
-.btn-secondary:disabled {
+.aap-btn-refresh:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-.spinning {
-  animation: spin 1s linear infinite;
+.aap-spinning {
+  animation: aap-spin 1s linear infinite;
 }
 
-@keyframes spin {
+@keyframes aap-spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
 
-.agreements-controls {
+/* Controls section */
+.aap-agreements-controls {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 24px;
-  background-color: #ffffff;
+  background: #ffffff;
   padding: 16px;
   border-radius: 8px;
   border: 1px solid #e5e7eb;
+  flex-wrap: wrap;
+  gap: 16px;
 }
 
-.search-container {
+.aap-search-container {
   position: relative;
   flex: 1;
+  min-width: 280px;
   max-width: 400px;
 }
 
-.search-icon {
+.aap-search-icon {
   position: absolute;
   left: 12px;
   top: 50%;
@@ -112,41 +97,42 @@
   height: 16px;
 }
 
-.search-input {
+.aap-search-input {
   width: 100%;
-  padding: 10px 12px 10px 36px;
+  padding: 10px 12px 10px 40px;
   border: 1px solid #d1d5db;
   border-radius: 6px;
   font-size: 14px;
   transition: all 0.2s;
 }
 
-.search-input:focus {
+.aap-search-input:focus {
   outline: none;
   border-color: #3b82f6;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
-.controls-right {
+.aap-controls-right {
   display: flex;
   gap: 12px;
   align-items: center;
+  flex-shrink: 0;
 }
 
-.view-toggle {
+.aap-view-toggle {
   display: flex;
   gap: 4px;
-  background-color: #f3f4f6;
+  background: #f3f4f6;
   padding: 4px;
   border-radius: 6px;
 }
 
-.view-btn {
+.aap-view-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border: none;
   background: none;
   border-radius: 4px;
@@ -155,24 +141,26 @@
   transition: all 0.2s;
 }
 
-.view-btn:hover {
-  background-color: #e5e7eb;
+.aap-view-btn:hover {
+  background: #e5e7eb;
 }
 
-.view-btn.active {
-  background-color: #ffffff;
+.aap-view-btn.aap-active {
+  background: #ffffff;
   color: #3b82f6;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.agreements-content {
-  background-color: #ffffff;
+/* Content area */
+.aap-agreements-content {
+  background: #ffffff;
   border-radius: 8px;
   border: 1px solid #e5e7eb;
   overflow: hidden;
 }
 
-.loading-state {
+/* Loading state */
+.aap-loading-state {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -181,17 +169,21 @@
   text-align: center;
 }
 
-.loading-state .spinner {
+.aap-spinner {
+  width: 48px;
+  height: 48px;
   color: #3b82f6;
+  animation: aap-spin 1s linear infinite;
   margin-bottom: 16px;
 }
 
-.loading-state p {
+.aap-loading-state p {
   color: #6b7280;
   font-size: 14px;
 }
 
-.empty-state {
+/* Empty state */
+.aap-empty-state {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -200,40 +192,50 @@
   text-align: center;
 }
 
-.empty-state h3 {
+.aap-empty-state svg {
+  color: #d1d5db;
+  margin-bottom: 20px;
+  width: 48px;
+  height: 48px;
+}
+
+.aap-empty-state h3 {
   font-size: 18px;
   font-weight: 600;
   color: #1f2937;
-  margin: 16px 0 8px 0;
+  margin: 0 0 8px 0;
 }
 
-.empty-state p {
+.aap-empty-state p {
   color: #6b7280;
   font-size: 14px;
   margin-bottom: 24px;
   max-width: 400px;
 }
 
-.results-header {
+/* Results header */
+.aap-results-header {
   padding: 16px 24px;
   border-bottom: 1px solid #e5e7eb;
 }
 
-.results-count {
+.aap-results-count {
   font-size: 14px;
   color: #6b7280;
 }
 
-.agreements-table-container {
+/* Table view */
+.aap-agreements-table-container {
   overflow-x: auto;
 }
 
-.agreements-table {
+.aap-agreements-table {
   width: 100%;
   border-collapse: collapse;
+  min-width: 900px;
 }
 
-.agreements-table th {
+.aap-agreements-table th {
   text-align: left;
   padding: 12px 16px;
   font-size: 12px;
@@ -242,66 +244,76 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
   border-bottom: 1px solid #e5e7eb;
-  background-color: #f9fafb;
+  background: #f9fafb;
+  white-space: nowrap;
 }
 
-.agreements-table td {
+.aap-agreements-table td {
   padding: 16px;
   border-bottom: 1px solid #f3f4f6;
 }
 
-.agreement-row:hover {
-  background-color: #f9fafb;
+.aap-agreement-row:hover {
+  background: #f9fafb;
 }
 
-.agreement-info-list {
+.aap-agreement-info-list {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  max-width: 300px;
 }
 
-.agreement-name-list {
+.aap-agreement-name-list {
   font-weight: 500;
   color: #1f2937;
+  font-size: 14px;
+  line-height: 1.4;
 }
 
-.assigned-by-info {
+.aap-assigned-by-info {
   display: flex;
   align-items: center;
   gap: 6px;
   font-size: 12px;
   color: #6b7280;
+  flex-wrap: wrap;
 }
 
-.assigned-by-text {
-  font-size: 12px;
+.aap-assigned-by-text {
+  font-weight: 500;
 }
 
-.assigned-date {
+.aap-assigned-date {
   color: #9ca3af;
   font-size: 11px;
 }
 
-.agreement-id-list {
+.aap-agreement-id-list {
   font-family: 'SF Mono', 'Roboto Mono', monospace;
-  font-size: 12px;
+  font-size: 13px;
   color: #6b7280;
 }
 
-.grantor-cell span,
-.amount-cell span,
-.date-cell span {
+.aap-grantor-cell span,
+.aap-amount-cell span,
+.aap-date-cell span {
   font-size: 14px;
   color: #374151;
 }
 
-.status-cell {
+.aap-amount-cell span {
+  font-weight: 500;
+}
+
+/* Status cell */
+.aap-status-cell {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.status-text {
+.aap-status-text {
   display: inline-block;
   padding: 4px 8px;
   border-radius: 4px;
@@ -309,103 +321,120 @@
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  width: fit-content;
 }
 
-.status-text.draft {
-  background-color: #fef3c7;
+.aap-status-text.draft {
+  background: #fef3c7;
   color: #92400e;
 }
 
-.status-text.under_review {
-  background-color: #dbeafe;
+.aap-status-text.under_review {
+  background: #dbeafe;
   color: #1e40af;
 }
 
-.status-text.reviewed {
-  background-color: #f0f9ff;
+.aap-status-text.reviewed {
+  background: #f0f9ff;
   color: #0369a1;
 }
 
-.status-text.approved {
-  background-color: #d1fae5;
+.aap-status-text.approved {
+  background: #d1fae5;
   color: #065f46;
 }
 
-.status-text.rejected {
-  background-color: #fee2e2;
+.aap-status-text.rejected {
+  background: #fee2e2;
   color: #991b1b;
 }
 
-.user-role-badge {
+.aap-user-role-badge {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   padding: 2px 6px;
-  background-color: #e0f2fe;
+  background: #e0f2fe;
   border-radius: 4px;
   font-size: 11px;
   color: #0369a1;
+  width: fit-content;
 }
 
-.action-buttons {
+.aap-role-text {
+  font-weight: 500;
+}
+
+/* Action buttons */
+.aap-action-buttons {
   display: flex;
   gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
 }
 
-.btn-action {
+.aap-btn-action {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border: 1px solid #e5e7eb;
-  background-color: #ffffff;
+  background: #ffffff;
   border-radius: 6px;
   color: #6b7280;
   cursor: pointer;
   transition: all 0.2s;
+  padding: 0;
 }
 
-.btn-action:hover {
-  background-color: #f9fafb;
+.aap-btn-action:hover {
+  background: #f9fafb;
   border-color: #d1d5db;
   color: #374151;
 }
 
-.agreements-grid {
+/* Grid view */
+.aap-agreements-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 24px;
   padding: 24px;
 }
 
-.agreement-card {
-  background-color: #ffffff;
+.aap-agreement-card {
+  background: #ffffff;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
   overflow: hidden;
   transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
 }
 
-.agreement-card:hover {
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+.aap-agreement-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   border-color: #d1d5db;
 }
 
-.card-header {
+.aap-card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 16px;
   border-bottom: 1px solid #f3f4f6;
-}
-
-.agreement-status {
-  display: flex;
+  background: #f9fafb;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
-.status-badge {
+.aap-agreement-status {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.aap-status-badge {
   padding: 4px 8px;
   border-radius: 4px;
   font-size: 11px;
@@ -414,59 +443,83 @@
   letter-spacing: 0.05em;
 }
 
-.status-badge.draft {
-  background-color: #fef3c7;
+.aap-status-badge.draft {
+  background: #fef3c7;
   color: #92400e;
 }
 
-.status-badge.assigned {
-  background-color: #e0f2fe;
+.aap-status-badge.under_review {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.aap-status-badge.reviewed {
+  background: #f0f9ff;
   color: #0369a1;
 }
 
-.card-actions {
+.aap-status-badge.approved {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.aap-status-badge.rejected {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.aap-status-badge.aap-assigned {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.aap-card-actions {
   display: flex;
   gap: 4px;
 }
 
-.card-content {
+.aap-card-content {
   padding: 20px;
+  flex: 1;
 }
 
-.agreement-icon {
+.aap-agreement-icon {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 48px;
   height: 48px;
-  background-color: #f0f9ff;
+  background: #f0f9ff;
   border-radius: 8px;
   margin-bottom: 16px;
   color: #0369a1;
 }
 
-.agreement-name {
+.aap-agreement-name {
   font-size: 16px;
   font-weight: 600;
   color: #1f2937;
   margin: 0 0 8px 0;
+  line-height: 1.4;
 }
 
-.agreement-id {
+.aap-agreement-id {
   font-size: 12px;
   color: #6b7280;
   margin: 0 0 16px 0;
   font-family: 'SF Mono', 'Roboto Mono', monospace;
 }
 
-.assigned-by-section {
+/* Assigned by section */
+.aap-assigned-by-section {
   margin-bottom: 16px;
   padding: 12px;
-  background-color: #f9fafb;
+  background: #f9fafb;
   border-radius: 6px;
+  border-left: 3px solid #3b82f6;
 }
 
-.assigned-by-header {
+.aap-assigned-by-header {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -476,33 +529,36 @@
   margin-bottom: 6px;
 }
 
-.assigned-by-details {
+.aap-assigned-by-details {
   font-size: 13px;
 }
 
-.assigner-name {
+.aap-assigner-name {
   font-weight: 500;
   color: #374151;
+  margin-bottom: 2px;
 }
 
-.assigner-role {
+.aap-assigner-role {
   color: #6b7280;
   font-size: 12px;
 }
 
-.assigner-date {
+.aap-assigner-date {
   color: #9ca3af;
   font-size: 11px;
+  font-style: italic;
 }
 
-.agreement-details {
+/* Agreement details */
+.aap-agreement-details {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 12px;
   margin: 16px 0;
 }
 
-.detail-item {
+.aap-detail-item {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -510,39 +566,40 @@
   color: #4b5563;
 }
 
-.detail-item svg {
+.aap-detail-item svg {
   color: #9ca3af;
   width: 14px;
   height: 14px;
+  flex-shrink: 0;
 }
 
-.agreement-purpose {
+.aap-agreement-purpose {
   margin-top: 16px;
   padding-top: 16px;
   border-top: 1px solid #f3f4f6;
 }
 
-.agreement-purpose p {
+.aap-agreement-purpose p {
   font-size: 13px;
   color: #6b7280;
   line-height: 1.5;
   margin: 0;
 }
 
-.card-footer {
+.aap-card-footer {
   padding: 16px;
   border-top: 1px solid #f3f4f6;
-  background-color: #f9fafb;
+  background: #f9fafb;
 }
 
-.btn-view {
+.aap-btn-view {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   width: 100%;
   padding: 10px 16px;
-  background-color: #3b82f6;
+  background: #3b82f6;
   color: #ffffff;
   border: none;
   border-radius: 6px;
@@ -552,6 +609,521 @@
   transition: all 0.2s;
 }
 
-.btn-view:hover {
-  background-color: #2563eb;
+.aap-btn-view:hover {
+  background: #2563eb;
+}
+
+/* ===== RESPONSIVE BREAKPOINTS ===== */
+
+/* Large Desktop (1200px+) */
+@media (min-width: 1200px) {
+  .aap-assigned-agreements-page {
+    padding: 28px 32px 16px 32px;
+  }
+}
+
+/* Desktop (992px - 1199px) */
+@media (min-width: 992px) and (max-width: 1199px) {
+  .aap-assigned-agreements-page {
+    padding: 24px 24px 12px 24px;
+  }
+}
+
+/* Small Desktop / Tablet Landscape (768px - 991px) */
+@media (min-width: 768px) and (max-width: 991px) {
+  .aap-assigned-agreements-page {
+    padding: 20px 20px 12px 20px;
+  }
+  
+  .aap-agreements-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .aap-search-container {
+    max-width: 100%;
+  }
+  
+  .aap-controls-right {
+    justify-content: flex-end;
+  }
+  
+  .aap-agreements-grid {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+  }
+}
+
+/* Tablet Portrait (576px - 767px) */
+@media (min-width: 576px) and (max-width: 767px) {
+  .aap-assigned-agreements-page {
+    padding: 16px 16px 12px 16px;
+  }
+  
+  .aap-agreements-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .aap-header-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  
+  .aap-agreements-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .aap-search-container {
+    max-width: 100%;
+  }
+  
+  .aap-controls-right {
+    justify-content: space-between;
+  }
+  
+  .aap-view-toggle {
+    margin-left: auto;
+  }
+  
+  .aap-agreements-table-container {
+    overflow-x: auto;
+  }
+  
+  .aap-agreements-table {
+    min-width: 800px;
+  }
+  
+  .aap-agreements-grid {
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 16px;
+    padding: 16px;
+  }
+  
+  .aap-table-header {
+    padding: 10px 12px;
+    font-size: 11px;
+  }
+  
+  .aap-agreements-table td {
+    padding: 12px;
+  }
+}
+
+/* Mobile (375px - 575px) */
+@media (min-width: 375px) and (max-width: 575px) {
+  .aap-assigned-agreements-page {
+    padding: 12px 12px 10px 12px;
+  }
+  
+  .aap-agreements-header {
+    flex-direction: column;
+    align-items: flex-start;
+    margin-bottom: 16px;
+  }
+  
+  .aap-header-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  
+  .aap-agreements-controls {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 12px;
+    margin-bottom: 16px;
+  }
+  
+  .aap-search-container {
+    max-width: 100%;
+  }
+  
+  .aap-search-input {
+    padding: 8px 12px 8px 36px;
+    font-size: 13px;
+  }
+  
+  .aap-search-icon {
+    width: 14px;
+    height: 14px;
+    left: 10px;
+  }
+  
+  .aap-controls-right {
+    justify-content: space-between;
+    gap: 8px;
+  }
+  
+  .aap-view-btn {
+    width: 32px;
+    height: 32px;
+  }
+  
+  .aap-view-btn svg {
+    width: 14px;
+    height: 14px;
+  }
+  
+  .aap-agreements-table-container {
+    overflow-x: auto;
+  }
+  
+  .aap-agreements-table {
+    min-width: 700px;
+  }
+  
+  .aap-table-header {
+    padding: 8px 10px;
+    font-size: 10px;
+  }
+  
+  .aap-agreements-table td {
+    padding: 10px;
+  }
+  
+  .aap-agreement-name-list {
+    font-size: 13px;
+  }
+  
+  .aap-assigned-by-info {
+    font-size: 11px;
+  }
+  
+  .aap-agreement-id-list,
+  .aap-grantor-cell span,
+  .aap-amount-cell span,
+  .aap-date-cell span {
+    font-size: 12px;
+  }
+  
+  .aap-status-text {
+    padding: 2px 6px;
+    font-size: 10px;
+  }
+  
+  .aap-user-role-badge {
+    padding: 1px 4px;
+    font-size: 10px;
+  }
+  
+  .aap-action-buttons {
+    gap: 4px;
+  }
+  
+  .aap-btn-action {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .aap-btn-action svg {
+    width: 14px;
+    height: 14px;
+  }
+  
+  .aap-agreements-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 12px;
+  }
+  
+  .aap-card-header {
+    padding: 12px;
+  }
+  
+  .aap-card-content {
+    padding: 16px;
+  }
+  
+  .aap-agreement-icon {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .aap-agreement-icon svg {
+    width: 20px;
+    height: 20px;
+  }
+  
+  .aap-agreement-name {
+    font-size: 15px;
+  }
+  
+  .aap-agreement-id {
+    font-size: 11px;
+  }
+  
+  .aap-assigned-by-section {
+    padding: 10px;
+  }
+  
+  .aap-assigned-by-header {
+    font-size: 11px;
+  }
+  
+  .aap-assigned-by-details {
+    font-size: 12px;
+  }
+  
+  .aap-agreement-details {
+    gap: 8px;
+  }
+  
+  .aap-detail-item {
+    font-size: 12px;
+  }
+  
+  .aap-detail-item svg {
+    width: 12px;
+    height: 12px;
+  }
+  
+  .aap-agreement-purpose p {
+    font-size: 12px;
+  }
+  
+  .aap-card-footer {
+    padding: 12px;
+  }
+  
+  .aap-btn-view {
+    padding: 8px;
+    font-size: 13px;
+  }
+  
+  .aap-results-header {
+    padding: 12px 16px;
+  }
+  
+  .aap-results-count {
+    font-size: 13px;
+  }
+  
+  .aap-empty-state {
+    padding: 40px 16px;
+  }
+  
+  .aap-empty-state svg {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .aap-empty-state h3 {
+    font-size: 16px;
+  }
+  
+  .aap-empty-state p {
+    font-size: 13px;
+  }
+  
+  .aap-btn-refresh {
+    width: 36px;
+    height: 36px;
+  }
+}
+
+/* Small Mobile (up to 374px) */
+@media (max-width: 374px) {
+  .aap-assigned-agreements-page {
+    padding: 10px 10px 8px 10px;
+  }
+  
+  .aap-search-input {
+    padding: 6px 12px 6px 32px;
+    font-size: 12px;
+  }
+  
+  .aap-search-icon {
+    width: 12px;
+    height: 12px;
+    left: 8px;
+  }
+  
+  .aap-view-btn {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .aap-view-btn svg {
+    width: 12px;
+    height: 12px;
+  }
+  
+  .aap-agreements-table {
+    min-width: 600px;
+  }
+  
+  .aap-table-header {
+    padding: 6px 8px;
+    font-size: 9px;
+  }
+  
+  .aap-agreements-table td {
+    padding: 8px;
+  }
+  
+  .aap-agreement-name-list {
+    font-size: 12px;
+  }
+  
+  .aap-agreement-id-list,
+  .aap-grantor-cell span,
+  .aap-amount-cell span,
+  .aap-date-cell span {
+    font-size: 11px;
+  }
+  
+  .aap-btn-action {
+    width: 24px;
+    height: 24px;
+  }
+  
+  .aap-btn-action svg {
+    width: 12px;
+    height: 12px;
+  }
+  
+  .aap-agreements-grid {
+    gap: 8px;
+    padding: 8px;
+  }
+  
+  .aap-card-header {
+    padding: 8px 10px;
+  }
+  
+  .aap-status-badge {
+    padding: 2px 6px;
+    font-size: 9px;
+  }
+  
+  .aap-card-content {
+    padding: 12px;
+  }
+  
+  .aap-agreement-icon {
+    width: 36px;
+    height: 36px;
+    margin-bottom: 12px;
+  }
+  
+  .aap-agreement-icon svg {
+    width: 18px;
+    height: 18px;
+  }
+  
+  .aap-agreement-name {
+    font-size: 14px;
+  }
+  
+  .aap-agreement-id {
+    font-size: 10px;
+    margin-bottom: 12px;
+  }
+  
+  .aap-assigned-by-section {
+    padding: 8px;
+  }
+  
+  .aap-assigned-by-header {
+    font-size: 10px;
+  }
+  
+  .aap-assigned-by-details {
+    font-size: 11px;
+  }
+  
+  .aap-agreement-details {
+    margin: 12px 0;
+    gap: 6px;
+  }
+  
+  .aap-detail-item {
+    font-size: 11px;
+  }
+  
+  .aap-detail-item svg {
+    width: 10px;
+    height: 10px;
+  }
+  
+  .aap-agreement-purpose p {
+    font-size: 11px;
+  }
+  
+  .aap-card-footer {
+    padding: 10px;
+  }
+  
+  .aap-btn-view {
+    padding: 6px;
+    font-size: 12px;
+  }
+  
+  .aap-results-header {
+    padding: 8px 12px;
+  }
+  
+  .aap-results-count {
+    font-size: 12px;
+  }
+  
+  .aap-btn-refresh {
+    width: 32px;
+    height: 32px;
+  }
+  
+  .aap-btn-refresh svg {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+/* Ensure proper touch targets on mobile */
+@media (max-width: 768px) {
+  .aap-btn-action,
+  .aap-view-btn,
+  .aap-btn-refresh {
+    min-height: 40px;
+  }
+}
+
+/* Handle landscape orientation on mobile */
+@media (max-height: 500px) and (orientation: landscape) {
+  .aap-agreements-table-container {
+    max-height: 70vh;
+    overflow-y: auto;
+  }
+  
+  .aap-agreements-grid {
+    max-height: 70vh;
+    overflow-y: auto;
+  }
+}
+
+/* Print styles */
+@media print {
+  .aap-assigned-agreements-page {
+    background: white;
+    padding: 0;
+  }
+  
+  .aap-agreements-header,
+  .aap-agreements-controls,
+  .aap-action-buttons,
+  .aap-card-actions,
+  .aap-btn-view,
+  .aap-header-actions {
+    display: none;
+  }
+  
+  .aap-agreements-table {
+    border: 1px solid #000;
+  }
+  
+  .aap-agreements-table th,
+  .aap-agreements-table td {
+    border: 1px solid #000;
+  }
 }

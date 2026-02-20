@@ -3,15 +3,12 @@
 /* ===== Main Container ===== */
 .auth-container {
   background:
+   
     linear-gradient(
-      rgba(0, 0, 0, 0.4), /* Lighter dark overlay */
-      rgba(0, 0, 0, 0.5)
-    ),
-    linear-gradient(
-      rgba(1, 68, 33, 0.3), /* Lighter green tint */
-      rgba(1, 68, 33, 0.4)
-    ),
-    url('../../assets/login_cover.webp') center/cover no-repeat fixed;
+    rgba(0, 0, 0, 0.2),  /* very light dark overlay */
+    rgba(0, 0, 0, 0.25)
+  ),
+    url('../../assets/login_cover2.jpeg') center/cover no-repeat fixed;
   background-blend-mode: overlay, normal;
 }
 

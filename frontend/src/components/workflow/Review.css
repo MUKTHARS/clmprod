@@ -1,5 +1,5 @@
-/* Review Page CSS - Program Manager Dashboard */
-.review-page {
+.review-page,
+.dashboard.review-dashboard {
   padding: 2rem;
   max-width: 100%;
   min-height: 100vh;
@@ -93,7 +93,8 @@
   color: #9ca3af;
 }
 
-.search-input {
+.dashboard .search-input,
+.review-page .search-input {
   width: 100%;
   padding: 0.75rem 1rem 0.75rem 3rem;
   border: 1px solid #d1d5db;
@@ -102,7 +103,8 @@
   transition: border-color 0.2s;
 }
 
-.search-input:focus {
+.dashboard .search-input:focus,
+.review-page .search-input:focus {
   outline: none;
   border-color: #3b82f6;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
@@ -328,7 +330,11 @@
   justify-content: flex-end;
 }
 
-.btn-view, .btn-review, .btn-download {
+.btn-view,
+.btn-review,
+.btn-download,
+.pgmreview-btn-view,
+.pgmreview-btn-review {
   padding: 0.5rem 1rem;
   border-radius: 6px;
   font-size: 0.875rem;
@@ -342,21 +348,25 @@
   text-decoration: none;
 }
 
-.btn-view {
+.btn-view,
+.pgmreview-btn-view {
   background: #f3f4f6;
   color: #374151;
 }
 
-.btn-view:hover {
+.btn-view:hover,
+.pgmreview-btn-view:hover {
   background: #e5e7eb;
 }
 
-.btn-review {
+.btn-review,
+.pgmreview-btn-review {
   background: #3b82f6;
   color: white;
 }
 
-.btn-review:hover {
+.btn-review:hover,
+.pgmreview-btn-review:hover {
   background: #2563eb;
 }
 
@@ -388,7 +398,8 @@
   gap: 1.5rem;
 }
 
-.spinning {
+.spinning,
+.spinner {
   animation: spin 1s linear infinite;
 }
 
@@ -429,82 +440,6 @@
   max-width: 400px;
   line-height: 1.5;
 }
-
-/* Responsive Design */
-@media (max-width: 1024px) {
-  .contracts-grid {
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  }
-}
-
-@media (max-width: 768px) {
-  .review-page {
-    padding: 1rem;
-  }
-  
-  .stats-overview {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  
-  .review-controls {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  
-  .search-container {
-    min-width: 100%;
-  }
-  
-  .status-filters {
-    width: 100%;
-    justify-content: center;
-  }
-  
-  .contracts-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .contract-card {
-    padding: 1.25rem;
-  }
-}
-
-@media (max-width: 640px) {
-  .stats-overview {
-    grid-template-columns: 1fr;
-  }
-  
-  .card-footer {
-    flex-direction: column;
-  }
-  
-  .btn-view, .btn-review, .btn-download {
-    width: 100%;
-    justify-content: center;
-  }
-}
-
-/* Ensure proper spacing */
-* {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
-}
-
-
-
 
 /* Review Status Filter Buttons */
 .review-status-toggle {
@@ -586,15 +521,424 @@ code {
   animation: spin 1s linear infinite;
 }
 
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
 /* Controls Layout */
 .review-controls-group {
   display: flex;
   align-items: center;
   gap: 1rem;
   flex-wrap: wrap;
+}
+
+/* ============ PGM REVIEW - COMPACT METRIC CARDS ============ */
+/* Centered alignment matching the reference design */
+.pgmreview-metrics-compact {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  margin-bottom: 32px;
+}
+
+.pgmreview-metric-card-compact {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+  border: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pgmreview-metric-card-compact:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  border-color: #d1d5db;
+}
+
+.pgmreview-metric-content-compact {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.pgmreview-metric-info-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  width: 100%;
+}
+
+.pgmreview-metric-value-compact {
+  font-size: 24px;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.pgmreview-metric-label-compact {
+  font-size: 13px;
+  font-weight: 500;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  text-align: center;
+}
+
+/* ============ PGM REVIEW CONTRACT CARDS ============ */
+.pgmreview-contracts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 24px;
+}
+
+.pgmreview-contract-card {
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  padding: 20px;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.pgmreview-contract-card:hover {
+  border-color: #d1d5db;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  transform: translateY(-2px);
+}
+
+.pgmreview-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.pgmreview-contract-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pgmreview-status-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.pgmreview-status-text {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.pgmreview-card-meta {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.pgmreview-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #6b7280;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 4px 8px;
+  background: #f3f4f6;
+  border-radius: 4px;
+}
+
+.pgmreview-meta-item.flagged {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.pgmreview-card-content {
+  flex: 1;
+}
+
+.pgmreview-contract-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: #eff6ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+  color: #3b82f6;
+}
+
+.pgmreview-contract-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0 0 8px 0;
+  line-height: 1.4;
+}
+
+.pgmreview-contract-id {
+  font-size: 13px;
+  color: #6b7280;
+  margin: 0 0 12px 0;
+}
+
+.pgmreview-contract-number {
+  color: #9ca3af;
+  margin-left: 4px;
+}
+
+.pgmreview-contract-meta {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.pgmreview-contract-meta .pgmreview-meta-item {
+  font-size: 12px;
+  background: #f9fafb;
+}
+
+.pgmreview-contract-purpose {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #f3f4f6;
+}
+
+.pgmreview-contract-purpose p {
+  font-size: 13px;
+  color: #4b5563;
+  line-height: 1.5;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.pgmreview-card-footer {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #f3f4f6;
+}
+
+/* ============ RESPONSIVE DESIGN ============ */
+@media (max-width: 1024px) {
+  .pgmreview-metrics-compact {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .pgmreview-contracts-grid,
+  .contracts-grid {
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .review-page,
+  .dashboard.review-dashboard {
+    padding: 1rem;
+  }
+  
+  .stats-overview {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .review-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .search-container {
+    min-width: 100%;
+  }
+  
+  .status-filters {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .pgmreview-contracts-grid,
+  .contracts-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .contract-card,
+  .pgmreview-contract-card {
+    padding: 1.25rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .pgmreview-metrics-compact {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .pgmreview-metric-value-compact {
+    font-size: 22px;
+  }
+  
+  .stats-overview {
+    grid-template-columns: 1fr;
+  }
+  
+  .card-footer,
+  .pgmreview-card-footer {
+    flex-direction: column;
+  }
+  
+  .btn-view,
+  .btn-review,
+  .btn-download,
+  .pgmreview-btn-view,
+  .pgmreview-btn-review {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* ============ GLOBAL STYLES ============ */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+
+
+/* Fixed Controls Layout */
+.section-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.search-box {
+  display: flex;
+  align-items: center;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 0 12px;
+  flex: 1;
+  min-width: 300px;
+  height: 42px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.search-box svg {
+  color: #9ca3af;
+  flex-shrink: 0;
+}
+
+.search-box input {
+  border: none;
+  padding: 8px 12px;
+  width: 100%;
+  font-size: 14px;
+  outline: none;
+  background: transparent;
+}
+
+.search-box input::placeholder {
+  color: #9ca3af;
+}
+
+.search-box:focus-within {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Fixed Status Toggle */
+.review-status-toggle {
+  display: flex;
+  gap: 8px;
+  background: #f3f4f6;
+  padding: 4px;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  flex-shrink: 0;
+}
+
+.review-status-btn {
+  padding: 8px 20px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #6b7280;
+  white-space: nowrap;
+}
+
+.review-status-btn:hover {
+  background: rgba(255, 255, 255, 0.8);
+  color: #374151;
+}
+
+.review-status-btn.active {
+  background: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  font-weight: 600;
+  color: #2563eb;
+}
+
+/* Remove the old controls-right and review-controls-group if they exist */
+.controls-right,
+.review-controls-group {
+  display: contents;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .section-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .search-box {
+    min-width: 100%;
+  }
+  
+  .review-status-toggle {
+    width: 100%;
+    justify-content: stretch;
+  }
+  
+  .review-status-btn {
+    flex: 1;
+    text-align: center;
+    padding: 8px 12px;
+  }
 }

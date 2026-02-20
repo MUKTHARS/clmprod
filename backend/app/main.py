@@ -1,15 +1,21 @@
+from asyncio import events
 import os
 import sys
 from app.notification_service import NotificationService
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from typing import Optional, List, Dict, Any
 from fastapi import Query, Response, Form
-from fastapi.responses import RedirectResponse, JSONResponse
+from fastapi.responses import RedirectResponse, JSONResponse, FileResponse
 from app.auth_models import User, UserSession, ActivityLog, ContractPermission, ReviewComment, UserNotification
 from app.s3_service import s3_service
 from app.deliverable_models import ContractDeliverable
 from app.admin_routes import router as admin_router
 from app.agreement_workflow import router as agreement_router
+from app.dashboard_services import get_dashboard_metrics
+
+
+today = date.today()
+
 # from app.deliverable_routes import router as deliverable_router
 # Remove all proxy environment variables
 proxy_vars = [
@@ -71,6 +77,7 @@ from app.config import settings
 from app import models, schemas
 from app.auth_models import User, ActivityLog, ContractPermission
 from app.auth_schemas import UserCreate, UserResponse, LoginRequest, Token, ChangePasswordRequest
+from app.models import ReportingSchedule
 
 
 # Create tables and setup relationships
@@ -82,8 +89,8 @@ app.include_router(agreement_router)
 # CORS
 app.add_middleware(
     CORSMiddleware,
+
     allow_origins=["http://localhost:5173", "http://localhost:4001","http://localhost:4000", "https://grantapi.saple.ai","https://demo.saple.ai", "https://bot.saple.ai"],
-    #  allow_origins=["https://grantapi.saple.ai","https://demo.saple.ai", "https://bot.saple.ai"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -839,6 +846,150 @@ async def upload_deliverable_file(
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to upload file: {str(e)}")
 
+# ================================
+# Reporting Event Upload Endpoint
+# ================================
+
+from fastapi import UploadFile, File, Form, Depends
+from sqlalchemy.orm import Session
+from app.database import get_db
+from app.models import ReportingEvent
+from datetime import datetime
+import shutil
+import os
+
+@app.post("/api/reporting-events/{event_id}/upload")
+async def upload_reporting_event_file(
+    event_id: int,
+    file: UploadFile = File(...),
+    upload_date: str = Form(...),
+    db: Session = Depends(get_db)
+):
+    event = db.query(models.ReportingEvent).filter(models.ReportingEvent.id == event_id).first()
+
+    if not event:
+        raise HTTPException(status_code=404, detail="Reporting event not found")
+
+    # Create uploads folder if not exists
+    upload_dir = "uploads/reporting_events"
+    os.makedirs(upload_dir, exist_ok=True)
+
+    file_path = os.path.join(upload_dir, file.filename)
+
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    # Update event record
+    event.uploaded_file_name = file.filename
+    event.uploaded_file_path = file_path
+    event.uploaded_at = datetime.utcnow()
+    event.status = "submitted"
+    event.submitted_at = datetime.utcnow()
+
+    db.commit()
+    db.refresh(event)
+
+    return {
+        "id": event.id,
+        "status": event.status,
+        "file_name": event.uploaded_file_name
+    }
+# ================================
+# Director Approval
+# ================================
+
+@app.post("/api/reporting-events/{event_id}/approve-director")
+async def approve_reporting_event_director(
+    event_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if current_user.role != "director":
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    event = db.query(models.ReportingEvent).filter(
+        models.ReportingEvent.id == event_id
+    ).first()
+
+    if not event:
+        raise HTTPException(status_code=404, detail="Reporting event not found")
+
+    if event.status != "pgm_approved":
+        raise HTTPException(
+            status_code=400,
+            detail="Program Manager approval required first"
+        )
+
+    event.status = "fully_approved"
+    event.director_approved = True
+    event.director_approved_at = datetime.utcnow()
+
+    db.commit()
+    db.refresh(event)
+
+    return {
+        "id": event.id,
+        "status": event.status,
+        "director_approved_at": event.director_approved_at
+    }
+
+
+@app.get("/api/reporting-events/{event_id}/file")
+def get_reporting_event_file(event_id: int, db: Session = Depends(get_db)):
+    event = db.query(models.ReportingEvent).filter(
+        models.ReportingEvent.id == event_id
+    ).first()
+
+    if not event or not event.uploaded_file_path:
+        raise HTTPException(status_code=404, detail="File not found")
+
+    return FileResponse(
+        path=event.uploaded_file_path,
+        filename=event.uploaded_file_name
+    )
+
+# ============================================
+# Program Manager Approval Endpoint
+# ============================================
+
+@app.post("/api/reporting-events/{event_id}/approve-pgm")
+async def approve_reporting_event_pgm(
+    event_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    # Role check
+    if current_user.role != "program_manager":
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    event = db.query(models.ReportingEvent).filter(
+        models.ReportingEvent.id == event_id
+    ).first()
+
+    if not event:
+        raise HTTPException(status_code=404, detail="Reporting event not found")
+
+    # Only allow approval if submitted
+    if event.status != "submitted":
+        raise HTTPException(
+            status_code=400,
+            detail="Only submitted reports can be approved"
+        )
+
+    # Update status
+    event.status = "pgm_approved"
+    event.pgm_approved_at = datetime.utcnow()
+    event.pgm_approved_by = current_user.id
+
+    db.commit()
+    db.refresh(event)
+
+    return {
+        "id": event.id,
+        "status": event.status,
+        "pgm_approved_at": event.pgm_approved_at,
+        "pgm_approved_by": event.pgm_approved_by
+    }
 
 # Add this endpoint to get deliverables for a contract
 @app.get("/api/deliverables/contract/{contract_id}")
@@ -874,6 +1025,59 @@ async def get_contract_deliverables(
         print(f"❌ Error fetching deliverables: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to fetch deliverables: {str(e)}")
 
+@app.get("/api/contracts/{contract_id}/reporting")
+async def get_contract_reporting_schedule(
+    contract_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    # Check contract exists
+    contract = db.query(models.Contract).filter(
+        models.Contract.id == contract_id
+    ).first()
+
+    if not contract:
+        raise HTTPException(status_code=404, detail="Contract not found")
+
+    # Optional: Permission check
+    if contract.created_by != current_user.id and current_user.role != "director":
+        raise HTTPException(
+            status_code=403,
+            detail="Not authorized to view this contract"
+        )
+
+    # Fetch reporting schedules
+    schedules = db.query(ReportingSchedule).filter(
+        ReportingSchedule.contract_id == contract_id
+    ).all()
+
+    return {
+        "contract_id": contract_id,
+        "reporting_schedules": [
+            {
+                "id": r.id,
+                "frequency": r.frequency,
+                "report_types": r.report_types,
+                "due_dates": r.due_dates,
+                "due_dates": [
+                    {
+                        "date": d,
+                        "status": (
+                            "overdue" if datetime.strptime(d, "%Y-%m-%d").date() < today
+                            else "due_soon" if (datetime.strptime(d, "%Y-%m-%d").date() - today).days <= 30
+                            else "upcoming"
+                        )
+                    }
+                    for d in (r.due_dates or [])
+                ],
+                "format_requirements": r.format_requirements,
+                "submission_method": r.submission_method,
+                "recipients": r.recipients,
+                "created_at": r.created_at.isoformat() if r.created_at else None
+            }
+            for r in schedules
+        ]
+    }
 
 @app.get("/api/admin/users")
 async def get_admin_users(
@@ -1098,7 +1302,67 @@ async def upload_contract(
         db.add(db_contract)
         db.commit()
         db.refresh(db_contract)
-        
+        # -----------------------------
+        # SAVE REPORTING SCHEDULE DATA
+        # -----------------------------
+        try:
+            deliverables_data = comprehensive_data.get("deliverables", {})
+            reporting_data = deliverables_data.get("reporting_requirements", {})
+
+            if reporting_data:
+                # Create structured reporting schedule entries
+                reporting_entry = models.ReportingSchedule(
+                    contract_id=db_contract.id,
+                    frequency=reporting_data.get("frequency"),
+                    report_types=reporting_data.get("report_types", []),
+                    due_dates=reporting_data.get("due_dates", []),
+                    format_requirements=reporting_data.get("format_requirements"),
+                    submission_method=reporting_data.get("submission_method"),
+                    recipients=reporting_data.get("recipients", [])
+                )
+
+                db.add(reporting_entry)
+                db.commit()
+                db.refresh(reporting_entry)
+
+                print(f"✅ Reporting schedule saved for contract {db_contract.id}")
+
+        except Exception as e:
+            print(f"⚠️ Failed to save reporting schedule: {e}")
+
+        # ---------------------------------
+        # CREATE REPORTING EVENTS
+        # ---------------------------------
+        try:
+            report_types = reporting_data.get("report_types", [])
+            due_dates = reporting_data.get("due_dates", [])
+
+            # Basic mapping logic (improve later if needed)
+            for i, due_date_str in enumerate(due_dates):
+                due_date_obj = datetime.strptime(due_date_str, "%Y-%m-%d").date()
+
+                # If multiple progress + one final
+                if "Final Report" in report_types and i == len(due_dates) - 1:
+                    report_type = "Final Report"
+                else:
+                    report_type = "Progress Report"
+
+                event = models.ReportingEvent(
+                    contract_id=db_contract.id,
+                    report_type=report_type,
+                    due_date=due_date_obj,
+                    status="pending"
+                )
+
+                db.add(event)
+
+            db.commit()
+            print(f"✅ Reporting events created for contract {db_contract.id}")
+
+        except Exception as e:
+            print(f"⚠️ Failed creating reporting events: {e}")
+
+
         # ✅ CRITICAL: Store ONLY the original PDF in S3 for AI Copilot
         try:
             # Store original PDF directly in S3 bucket
@@ -1245,6 +1509,51 @@ async def get_assignment_details(
         "comprehensive_data_has_history": "assignment_history" in (contract.comprehensive_data or {})
     }
 
+@app.get("/api/contracts/{contract_id}/reporting-events")
+async def get_reporting_events(
+    contract_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    contract = db.query(models.Contract).filter(
+        models.Contract.id == contract_id
+    ).first()
+
+    if not contract:
+        raise HTTPException(status_code=404, detail="Contract not found")
+
+    events = db.query(models.ReportingEvent).filter(
+        models.ReportingEvent.contract_id == contract_id
+    ).order_by(models.ReportingEvent.due_date.asc()).all()
+
+    today = datetime.utcnow().date()
+
+    result = []
+
+    for e in events:
+
+        # 🔒 If already approved at any level → preserve DB status
+        if e.status in ["submitted", "pgm_approved", "fully_approved"]:
+            computed_status = e.status
+
+        elif e.due_date < today:
+            computed_status = "overdue"
+
+        elif (e.due_date - today).days <= 30:
+            computed_status = "due_soon"
+
+        else:
+            computed_status = "upcoming"
+
+        result.append({
+            "id": e.id,
+            "report_type": e.report_type,
+            "due_date": e.due_date.isoformat(),
+            "status": computed_status,
+            "submitted_at": e.submitted_at.isoformat() if e.submitted_at else None
+        })
+
+    return result
 
 
 @app.delete("/api/contracts/{contract_id}")
@@ -1588,7 +1897,7 @@ async def submit_contract_for_review(
                 contract_id=contract_id,
                 user_id=current_user.id,
                 comment_type="project_manager_submission",
-                comment=f"Project Manager submission notes: {submit_data.notes}",
+                comment=submit_data.notes.strip(),
                 flagged_risk=False,
                 flagged_issue=False,
                 recommendation=None,
@@ -1654,7 +1963,7 @@ async def submit_contract_for_review(
         # Remove duplicates
         assigned_program_managers = list(set(assigned_program_managers)) if assigned_program_managers else []
 
-        print(f"DEBUG: Contract {contract_id} has {len(assigned_program_managers)} assigned Program Managers: {assigned_program_managers}")
+        # print(f"DEBUG: Contract {contract_id} has {len(assigned_program_managers)} assigned Program Managers: {assigned_program_managers}")
 
         # Send notifications to ALL assigned Program Managers
         if assigned_program_managers:
@@ -1666,7 +1975,7 @@ async def submit_contract_for_review(
                 ).first()
                 
                 if pgm_user:
-                    print(f"DEBUG: Creating notification for Program Manager {pgm_user_id} ({pgm_user.username})")
+                    # print(f"DEBUG: Creating notification for Program Manager {pgm_user_id} ({pgm_user.username})")
                     
                     notification = UserNotification(
                         user_id=pgm_user_id,
@@ -2322,8 +2631,6 @@ async def debug_user_assignments(
         "assigned_contracts": assigned_contracts
     }
 
-
-
 @app.get("/api/contracts/{contract_id}/program-manager-reviews")
 async def get_program_manager_reviews_for_pm(
     contract_id: int,
@@ -2924,7 +3231,14 @@ async def get_contracts_under_review(
     db: Session = Depends(get_db)
 ):
     """Get all contracts under review - Program Manager can see only contracts assigned to them"""
+    print("\n" + "="*80)
+    # print(f"🔍 DEBUG: get_contracts_under_review called")
+    # print(f"🔍 DEBUG: Current user: ID={current_user.id}, Username={current_user.username}, Role={current_user.role}")
+    # print(f"🔍 DEBUG: Request params: skip={skip}, limit={limit}")
+    print("="*80)
+    
     if current_user.role != "program_manager":
+        # print(f"❌ DEBUG: Access denied - User role is {current_user.role}, not program_manager")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only Program Managers can view contracts under review"
@@ -2936,59 +3250,153 @@ async def get_contracts_under_review(
             models.Contract.status == "under_review"
         ).all()
         
-        print(f"DEBUG: Found {len(all_under_review)} total contracts under review")
+        # print(f"\n📊 DEBUG: Found {len(all_under_review)} total contracts with status='under_review'")
+        
+        if len(all_under_review) == 0:
+            # print("⚠️ DEBUG: No contracts found with status 'under_review'")
+            # print("📋 DEBUG: Available contract statuses in database:")
+            all_statuses = db.query(models.Contract.status).distinct().all()
+            for status in all_statuses:
+                count = db.query(models.Contract).filter(models.Contract.status == status[0]).count()
+                print(f"   - {status[0]}: {count} contracts")
         
         # Filter to only show contracts assigned to this Program Manager
         assigned_contracts = []
         
-        for contract in all_under_review:
-            is_assigned = False
+        for idx, contract in enumerate(all_under_review):
+            print(f"\n{'─'*50}")
+            # print(f"📄 DEBUG: Contract #{idx+1} - ID: {contract.id}")
+            print(f"   Grant Name: {contract.grant_name}")
+            print(f"   Filename: {contract.filename}")
+            print(f"   Status: {contract.status}")
+            print(f"   Created By: {contract.created_by}")
             
             # Check if this Program Manager is assigned to this contract
+            is_assigned = False
+            assignment_source = "Not assigned"
+            
+            # ============ CHECK assigned_pgm_users FIELD ============
             if contract.assigned_pgm_users:
+                print(f"\n   📌 assigned_pgm_users field:")
+                print(f"      Value: {contract.assigned_pgm_users}")
+                print(f"      Type: {type(contract.assigned_pgm_users).__name__}")
+                
                 try:
                     if isinstance(contract.assigned_pgm_users, list):
+                        print(f"      List contents: {contract.assigned_pgm_users}")
                         if current_user.id in contract.assigned_pgm_users:
                             is_assigned = True
-                            print(f"DEBUG: Contract {contract.id} - User {current_user.id} found in assigned_pgm_users list")
+                            assignment_source = "assigned_pgm_users (list)"
+                            print(f"      ✅ User {current_user.id} FOUND in list!")
+                        else:
+                            print(f"      ❌ User {current_user.id} NOT in list: {contract.assigned_pgm_users}")
+                    
                     elif isinstance(contract.assigned_pgm_users, str):
+                        print(f"      String value: '{contract.assigned_pgm_users}'")
+                        
+                        # Try to parse as JSON
                         import json
                         try:
                             pgm_list = json.loads(contract.assigned_pgm_users)
-                            if isinstance(pgm_list, list) and current_user.id in pgm_list:
-                                is_assigned = True
-                                print(f"DEBUG: Contract {contract.id} - User {current_user.id} found in assigned_pgm_users JSON string")
-                        except:
+                            print(f"      Parsed as JSON: {pgm_list} (type: {type(pgm_list).__name__})")
+                            if isinstance(pgm_list, list):
+                                if current_user.id in pgm_list:
+                                    is_assigned = True
+                                    assignment_source = "assigned_pgm_users (JSON string)"
+                                    print(f"      ✅ User {current_user.id} FOUND in JSON list!")
+                                else:
+                                    print(f"      ❌ User {current_user.id} NOT in JSON list: {pgm_list}")
+                            else:
+                                print(f"      ⚠️ Parsed JSON is not a list: {pgm_list}")
+                        except json.JSONDecodeError as e:
+                            print(f"      ⚠️ Not valid JSON: {e}")
+                            
                             # Try comma-separated
-                            pgm_ids = [int(id_str.strip()) for id_str in contract.assigned_pgm_users.split(',') if id_str.strip().isdigit()]
-                            if current_user.id in pgm_ids:
-                                is_assigned = True
-                                print(f"DEBUG: Contract {contract.id} - User {current_user.id} found in assigned_pgm_users comma-separated")
+                            try:
+                                pgm_ids = [int(id_str.strip()) for id_str in contract.assigned_pgm_users.split(',') if id_str.strip().isdigit()]
+                                print(f"      Parsed as comma-separated: {pgm_ids}")
+                                if current_user.id in pgm_ids:
+                                    is_assigned = True
+                                    assignment_source = "assigned_pgm_users (comma-separated)"
+                                    print(f"      ✅ User {current_user.id} FOUND in comma-separated list!")
+                                else:
+                                    print(f"      ❌ User {current_user.id} NOT in comma-separated list: {pgm_ids}")
+                            except Exception as e2:
+                                print(f"      ⚠️ Failed to parse as comma-separated: {e2}")
                 except Exception as e:
-                    print(f"ERROR checking assignment for contract {contract.id}: {e}")
+                    print(f"      ❌ Error checking assigned_pgm_users: {e}")
+            else:
+                print(f"\n   📌 assigned_pgm_users field: None/Empty")
             
-            # Also check comprehensive_data for assignments
-            if not is_assigned and contract.comprehensive_data:
-                # Check assigned_users
+            # ============ CHECK COMPREHENSIVE DATA ============
+            if contract.comprehensive_data:
+                print(f"\n   📌 comprehensive_data present:")
+                
+                # Check assigned_users.pgm_users
                 if "assigned_users" in contract.comprehensive_data:
                     assigned_users = contract.comprehensive_data["assigned_users"]
+                    print(f"      assigned_users: {assigned_users}")
+                    
                     if assigned_users and "pgm_users" in assigned_users:
-                        if current_user.id in assigned_users["pgm_users"]:
-                            is_assigned = True
-                            print(f"DEBUG: Contract {contract.id} - User {current_user.id} found in comprehensive_data.assigned_users.pgm_users")
+                        pgm_users = assigned_users["pgm_users"]
+                        print(f"      pgm_users: {pgm_users} (type: {type(pgm_users).__name__})")
+                        
+                        if isinstance(pgm_users, list):
+                            if current_user.id in pgm_users:
+                                is_assigned = True
+                                assignment_source = "comprehensive_data.assigned_users.pgm_users"
+                                print(f"      ✅ User {current_user.id} FOUND in comprehensive_data.assigned_users.pgm_users!")
+                            else:
+                                print(f"      ❌ User {current_user.id} NOT in pgm_users list: {pgm_users}")
                 
-                # Check agreement_metadata
-                elif "agreement_metadata" in contract.comprehensive_data:
+                # Check agreement_metadata.assigned_pgm_users
+                if "agreement_metadata" in contract.comprehensive_data:
                     metadata = contract.comprehensive_data["agreement_metadata"]
+                    print(f"      agreement_metadata: {metadata}")
+                    
                     if metadata and "assigned_pgm_users" in metadata:
-                        if current_user.id in metadata["assigned_pgm_users"]:
-                            is_assigned = True
-                            print(f"DEBUG: Contract {contract.id} - User {current_user.id} found in comprehensive_data.agreement_metadata.assigned_pgm_users")
+                        pgm_users = metadata["assigned_pgm_users"]
+                        print(f"      assigned_pgm_users: {pgm_users} (type: {type(pgm_users).__name__})")
+                        
+                        if isinstance(pgm_users, list):
+                            if current_user.id in pgm_users:
+                                is_assigned = True
+                                assignment_source = "comprehensive_data.agreement_metadata.assigned_pgm_users"
+                                print(f"      ✅ User {current_user.id} FOUND in comprehensive_data.agreement_metadata.assigned_pgm_users!")
+                            else:
+                                print(f"      ❌ User {current_user.id} NOT in assigned_pgm_users list: {pgm_users}")
+            else:
+                print(f"\n   📌 comprehensive_data: None")
+            
+            # ============ CHECK ASSIGNMENT HISTORY ============
+            if not is_assigned and contract.comprehensive_data and "assignment_history" in contract.comprehensive_data:
+                print(f"\n   📌 Checking assignment_history:")
+                assignment_history = contract.comprehensive_data["assignment_history"]
+                print(f"      History entries: {len(assignment_history)}")
+                
+                for entry_idx, entry in enumerate(assignment_history):
+                    if "assigned_users" in entry:
+                        assigned_users = entry["assigned_users"]
+                        print(f"      Entry {entry_idx}: assigned_users = {assigned_users}")
+                        
+                        if isinstance(assigned_users, list):
+                            if current_user.id in assigned_users:
+                                is_assigned = True
+                                assignment_source = f"assignment_history[{entry_idx}]"
+                                print(f"      ✅ User {current_user.id} FOUND in assignment_history!")
+                                print(f"         Assigned by: {entry.get('assigned_by_name', 'Unknown')}")
+                                print(f"         Assigned at: {entry.get('assigned_at', 'Unknown')}")
             
             if is_assigned:
+                print(f"\n   ✅ FINAL: Contract {contract.id} IS assigned to user {current_user.id}")
+                print(f"      Assignment source: {assignment_source}")
                 assigned_contracts.append(contract)
+            else:
+                print(f"\n   ❌ FINAL: Contract {contract.id} IS NOT assigned to user {current_user.id}")
         
-        print(f"DEBUG: User {current_user.id} has {len(assigned_contracts)} assigned contracts under review")
+        print(f"\n{'='*50}")
+        print(f"📊 DEBUG FINAL: User {current_user.id} has {len(assigned_contracts)} assigned contracts under review")
+        print(f"{'='*50}\n")
         
         # Apply pagination
         contracts = assigned_contracts[skip:skip + limit]
@@ -3025,6 +3433,7 @@ async def get_contracts_under_review(
                 "chroma_id": contract.chroma_id,
                 "created_by": contract.created_by,
                 "version": contract.version or 1,
+                "assigned_pgm_users": contract.assigned_pgm_users,  # Include this for debugging
                 "basic_data": {
                     "id": contract.id,
                     "contract_number": contract.contract_number,
@@ -3042,16 +3451,167 @@ async def get_contracts_under_review(
             }
             contracts_dict.append(contract_dict)
         
+        # Log the response structure
+        # print(f"\n📤 DEBUG: Returning {len(contracts_dict)} contracts in response")
+        # print(f"📤 DEBUG: Response is {'ARRAY' if isinstance(contracts_dict, list) else 'OBJECT'}")
+        
+        # Return as ARRAY, not wrapped in an object
         return contracts_dict
         
     except Exception as e:
-        print(f"ERROR in get_contracts_under_review: {str(e)}")
+        print(f"\n❌ ERROR in get_contracts_under_review: {str(e)}")
         import traceback
         traceback.print_exc()
+        # Return empty array on error
         return []
 
+@app.get("/api/debug/check-program-manager-assignments/{program_manager_id}")
+async def debug_check_program_manager_assignments(
+    program_manager_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Debug endpoint to check all assignments for a specific program manager"""
+    
+    # Only directors or the program manager themselves can access
+    if current_user.role != "director" and current_user.id != program_manager_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized"
+        )
+    
+    # Get the program manager
+    program_manager = db.query(User).filter(User.id == program_manager_id).first()
+    if not program_manager:
+        raise HTTPException(status_code=404, detail="Program Manager not found")
+    
+    # Get all contracts under review
+    under_review_contracts = db.query(models.Contract).filter(
+        models.Contract.status == "under_review"
+    ).all()
+    
+    result = {
+        "program_manager": {
+            "id": program_manager.id,
+            "username": program_manager.username,
+            "full_name": program_manager.full_name,
+            "email": program_manager.email,
+            "role": program_manager.role
+        },
+        "total_contracts_under_review": len(under_review_contracts),
+        "assigned_contracts": [],
+        "assignment_details": []
+    }
+    
+    for contract in under_review_contracts:
+        is_assigned = False
+        assignment_methods = []
+        
+        # Check assigned_pgm_users
+        if contract.assigned_pgm_users:
+            if isinstance(contract.assigned_pgm_users, list):
+                if program_manager_id in contract.assigned_pgm_users:
+                    is_assigned = True
+                    assignment_methods.append("assigned_pgm_users (list)")
+            elif isinstance(contract.assigned_pgm_users, str):
+                try:
+                    import json
+                    pgm_list = json.loads(contract.assigned_pgm_users)
+                    if isinstance(pgm_list, list) and program_manager_id in pgm_list:
+                        is_assigned = True
+                        assignment_methods.append("assigned_pgm_users (JSON string)")
+                except:
+                    pgm_ids = [int(id_str.strip()) for id_str in contract.assigned_pgm_users.split(',') if id_str.strip().isdigit()]
+                    if program_manager_id in pgm_ids:
+                        is_assigned = True
+                        assignment_methods.append("assigned_pgm_users (comma-separated)")
+        
+        # Check comprehensive data
+        if contract.comprehensive_data:
+            if "assigned_users" in contract.comprehensive_data:
+                assigned_users = contract.comprehensive_data["assigned_users"]
+                if assigned_users and "pgm_users" in assigned_users:
+                    if program_manager_id in assigned_users["pgm_users"]:
+                        is_assigned = True
+                        assignment_methods.append("comprehensive_data.assigned_users.pgm_users")
+            
+            if "agreement_metadata" in contract.comprehensive_data:
+                metadata = contract.comprehensive_data["agreement_metadata"]
+                if metadata and "assigned_pgm_users" in metadata:
+                    if program_manager_id in metadata["assigned_pgm_users"]:
+                        is_assigned = True
+                        assignment_methods.append("comprehensive_data.agreement_metadata.assigned_pgm_users")
+        
+        result["assignment_details"].append({
+            "contract_id": contract.id,
+            "grant_name": contract.grant_name,
+            "filename": contract.filename,
+            "status": contract.status,
+            "is_assigned": is_assigned,
+            "assignment_methods": assignment_methods,
+            "assigned_pgm_users_raw": contract.assigned_pgm_users,
+            "assigned_pgm_users_type": type(contract.assigned_pgm_users).__name__ if contract.assigned_pgm_users else None,
+            "created_by": contract.created_by
+        })
+        
+        if is_assigned:
+            result["assigned_contracts"].append({
+                "contract_id": contract.id,
+                "grant_name": contract.grant_name,
+                "assignment_methods": assignment_methods
+            })
+    
+    return result
 
 
+
+@app.get("/api/test/program-manager-badge/{program_manager_id}")
+async def test_program_manager_badge(
+    program_manager_id: int,
+    db: Session = Depends(get_db)
+):
+    """Test endpoint to verify what the badge count should be"""
+    
+    program_manager = db.query(User).filter(User.id == program_manager_id).first()
+    if not program_manager:
+        return {"error": "Program Manager not found"}
+    
+    under_review_contracts = db.query(models.Contract).filter(
+        models.Contract.status == "under_review"
+    ).all()
+    
+    assigned_count = 0
+    for contract in under_review_contracts:
+        is_assigned = False
+        
+        if contract.assigned_pgm_users:
+            if isinstance(contract.assigned_pgm_users, list):
+                if program_manager_id in contract.assigned_pgm_users:
+                    is_assigned = True
+            elif isinstance(contract.assigned_pgm_users, str):
+                try:
+                    import json
+                    pgm_list = json.loads(contract.assigned_pgm_users)
+                    if isinstance(pgm_list, list) and program_manager_id in pgm_list:
+                        is_assigned = True
+                except:
+                    pgm_ids = [int(id_str.strip()) for id_str in contract.assigned_pgm_users.split(',') if id_str.strip().isdigit()]
+                    if program_manager_id in pgm_ids:
+                        is_assigned = True
+        
+        if is_assigned:
+            assigned_count += 1
+    
+    return {
+        "program_manager_id": program_manager_id,
+        "program_manager_name": program_manager.full_name or program_manager.username,
+        "total_contracts_under_review": len(under_review_contracts),
+        "assigned_contracts_count": assigned_count,
+        "should_show_badge": assigned_count > 0,
+        "badge_number": assigned_count
+    }
+
+    
 @app.get("/api/contracts/status/{status}")
 async def get_contracts_by_status(
     status: str,
@@ -3672,15 +4232,15 @@ async def submit_contract_review(
         # CRITICAL FIX: Make sure status is updated in the database
         if review_data.overall_recommendation == "approve":
             contract.status = "reviewed"
-            print(f"DEBUG: Setting contract {contract_id} status to 'reviewed' for Director approval")
+            # print(f"DEBUG: Setting contract {contract_id} status to 'reviewed' for Director approval")
             
         elif review_data.overall_recommendation == "reject":
             contract.status = "rejected"
-            print(f"DEBUG: Setting contract {contract_id} status to 'rejected'")
+            # print(f"DEBUG: Setting contract {contract_id} status to 'rejected'")
             
         elif review_data.overall_recommendation == "modify":
             contract.status = "rejected"  # Set to rejected for modifications
-            print(f"DEBUG: Setting contract {contract_id} status to 'rejected' (modify)")
+            # print(f"DEBUG: Setting contract {contract_id} status to 'rejected' (modify)")
         
         # IMPORTANT: Also update review_comments field
         if not contract.review_comments:
@@ -3748,15 +4308,15 @@ async def submit_contract_review(
             contract.comprehensive_data["change_requests"] = review_data.change_requests
         
         # DEBUG: Print status change
-        print(f"DEBUG: Contract {contract_id} status changed from '{old_status}' to '{contract.status}'")
-        print(f"DEBUG: Review summary added: {len(review_summary_text)} characters")
+        # print(f"DEBUG: Contract {contract_id} status changed from '{old_status}' to '{contract.status}'")
+        # print(f"DEBUG: Review summary added: {len(review_summary_text)} characters")
         
         # Force commit and refresh
         db.commit()
         db.refresh(contract)
         
         # Verify the status was saved
-        print(f"DEBUG: After commit - Contract {contract_id} status: {contract.status}")
+        # print(f"DEBUG: After commit - Contract {contract_id} status: {contract.status}")
         
         # IMPORTANT: Add notification tracking for Director
         if review_data.overall_recommendation == "approve":
@@ -3788,7 +4348,7 @@ async def submit_contract_review(
             })
             
             db.commit()
-            print(f"DEBUG: Contract {contract_id} marked for Director approval")
+            # print(f"DEBUG: Contract {contract_id} marked for Director approval")
         
         # Log activity
         log_activity(
@@ -4901,7 +5461,7 @@ async def get_director_dashboard_contracts(
         )
     
     try:
-        print(f"DEBUG: Getting dashboard contracts for Director {current_user.id}")
+        # print(f"DEBUG: Getting dashboard contracts for Director {current_user.id}")
         
         # STRICT: Get ONLY contracts assigned to this director
         all_contracts = db.query(models.Contract).all()
@@ -4985,7 +5545,7 @@ async def get_director_dashboard_contracts(
                 
                 assigned_contracts.append(contract_dict)
         
-        print(f"DEBUG: Found {len(assigned_contracts)} contracts assigned to Director {current_user.id}")
+        # print(f"DEBUG: Found {len(assigned_contracts)} contracts assigned to Director {current_user.id}")
         
         # Apply ordering and pagination
         assigned_contracts.sort(key=lambda x: x["uploaded_at"] or "", reverse=True)
@@ -5040,7 +5600,7 @@ async def get_contracts_for_director_approval(
         )
     
     try:
-        print(f"DEBUG: Getting contracts for Director {current_user.id} ({current_user.username}) approval")
+        # print(f"DEBUG: Getting contracts for Director {current_user.id} ({current_user.username}) approval")
         
         # ✅ FIX: Get ONLY contracts that are BOTH:
         # 1. In 'reviewed' status (ready for director approval)
@@ -5050,7 +5610,7 @@ async def get_contracts_for_director_approval(
             models.Contract.status == "reviewed"
         ).all()
         
-        print(f"DEBUG: Found {len(all_reviewed_contracts)} contracts in 'reviewed' status")
+        # print(f"DEBUG: Found {len(all_reviewed_contracts)} contracts in 'reviewed' status")
         
         assigned_to_current_director = []
         
@@ -5137,7 +5697,7 @@ async def get_contracts_for_director_approval(
             else:
                 print(f"  ❌ Contract {contract.id} NOT assigned to Director {current_user.id}")
         
-        print(f"DEBUG: Total contracts assigned to Director {current_user.id}: {len(assigned_to_current_director)}")
+        # print(f"DEBUG: Total contracts assigned to Director {current_user.id}: {len(assigned_to_current_director)}")
         
         # Apply pagination
         paginated_contracts = assigned_to_current_director[skip:skip + limit]
@@ -5533,7 +6093,7 @@ async def get_assigned_drafts(
         )
     
     try:
-        print(f"DEBUG: Fetching assigned contracts for user {current_user.id} ({current_user.username})")
+        # print(f"DEBUG: Fetching assigned contracts for user {current_user.id} ({current_user.username})")
         
         # ✅ FIX: Get contracts based on user role
         if current_user.role == "project_manager":
@@ -5550,13 +6110,13 @@ async def get_assigned_drafts(
             models.Contract.status.in_(status_filter)
         ).all()
         
-        print(f"DEBUG: Found {len(all_contracts)} contracts with statuses {status_filter}")
+        # print(f"DEBUG: Found {len(all_contracts)} contracts with statuses {status_filter}")
         
         assigned_contracts = []
         
         for contract in all_contracts:
             # Debug info for each contract
-            print(f"DEBUG: Checking contract {contract.id} - {contract.grant_name} - Status: {contract.status}")
+            # print(f"DEBUG: Checking contract {contract.id} - {contract.grant_name} - Status: {contract.status}")
             
             # Check if user is in any of the assignment lists
             is_assigned = False
@@ -5783,7 +6343,7 @@ async def get_assigned_drafts(
             else:
                 print(f"  ❌ Contract {contract.id} NOT assigned to user")
         
-        print(f"DEBUG: Total assigned contracts: {len(assigned_contracts)}")
+        # print(f"DEBUG: Total assigned contracts: {len(assigned_contracts)}")
         
         # Apply pagination
         paginated_contracts = assigned_contracts[skip:skip + limit]
@@ -5884,14 +6444,14 @@ async def get_agreements_assigned_by_me(
         )
     
     try:
-        print(f"DEBUG: Fetching agreements assigned by user {current_user.id} ({current_user.username})")
+        # print(f"DEBUG: Fetching agreements assigned by user {current_user.id} ({current_user.username})")
         
         # Get ALL draft contracts
         all_drafts = db.query(models.Contract).filter(
             models.Contract.status == "draft"
         ).all()
         
-        print(f"DEBUG: Found {len(all_drafts)} total draft contracts")
+        # print(f"DEBUG: Found {len(all_drafts)} total draft contracts")
         
         assigned_by_me_drafts = []
         
@@ -5904,7 +6464,7 @@ async def get_agreements_assigned_by_me(
                 for entry in assignment_history:
                     if entry.get("assigned_by") == current_user.id:
                         # Found an assignment made by current user
-                        print(f"DEBUG: Found draft {draft.id} assigned by {current_user.id}")
+                        # print(f"DEBUG: Found draft {draft.id} assigned by {current_user.id}")
                         
                         # Get all assigned users information
                         all_assigned_users_info = []
@@ -6016,7 +6576,7 @@ async def get_agreements_assigned_by_me(
                         })
                         break  # Found this user's assignment, move to next draft
         
-        print(f"DEBUG: Total drafts assigned by user: {len(assigned_by_me_drafts)}")
+        # print(f"DEBUG: Total drafts assigned by user: {len(assigned_by_me_drafts)}")
         
         # Apply pagination
         paginated_drafts = assigned_by_me_drafts[skip:skip + limit]
@@ -6186,6 +6746,14 @@ async def fix_contract_assignments(
         db.rollback()
         print(f"ERROR in fix_contract_assignments: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to fix assignments: {str(e)}")        
+
+@app.get("/api/dashboard/metrics")
+def dashboard_metrics(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return get_dashboard_metrics(db, current_user)
+
 
 
 if __name__ == "__main__":

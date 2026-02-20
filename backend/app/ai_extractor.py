@@ -517,7 +517,7 @@ Contract text (first 12000 characters):
         """Extract deliverables from contract text using multiple methods - FIXED FOR CONSISTENCY"""
         deliverables = []
         
-        print("DEBUG: Starting CONSISTENT deliverables extraction from text...")
+        # print("DEBUG: Starting CONSISTENT deliverables extraction from text...")
         
         # Method 1: Look for explicit deliverables sections
         deliverable_patterns = [
@@ -566,7 +566,7 @@ Contract text (first 12000 characters):
         
         # Method 3: Extract from scope/objectives if still not enough
         if len(deliverables) < 2:
-            print("DEBUG: Extracting from objectives for consistency...")
+            # print("DEBUG: Extracting from objectives for consistency...")
             
             # Extract objectives from text
             objectives = re.findall(r'(?:Objective|Goal|Aim)\s*\d*[:\-\s]+(.+?)(?=\n|Objective|Goal|Aim|\.)', text, re.IGNORECASE)
@@ -583,7 +583,7 @@ Contract text (first 12000 characters):
         
         # Method 4: Create standard generic deliverables if still none found
         if len(deliverables) == 0:
-            print("DEBUG: Creating STANDARD generic deliverables...")
+            # print("DEBUG: Creating STANDARD generic deliverables...")
             # Always create the SAME generic deliverables for consistency
             deliverables = [
                 {
@@ -609,7 +609,7 @@ Contract text (first 12000 characters):
             )
         )[:10]  # Limit to 10 deliverables
         
-        print(f"DEBUG: Extracted {len(deliverables)} CONSISTENT deliverables")
+        # print(f"DEBUG: Extracted {len(deliverables)} CONSISTENT deliverables")
         return deliverables
 
     # REST OF THE METHODS REMAIN THE SAME (except for consistency fixes)
@@ -1285,7 +1285,12 @@ Contract text (first 12000 characters):
                 "deliverables_extracted_count": len(default_deliverables)
             }
         }
-    
+    def extract_reporting_schedule(pdf_text: str) -> list:
+        """
+        Extract reporting schedules, deliverables, milestones and payment schedules
+        from the contract text using LLM structured output.
+        """
+  
     def get_embedding(self, text: str) -> List[float]:
         """Get vector embedding for text"""
         try:

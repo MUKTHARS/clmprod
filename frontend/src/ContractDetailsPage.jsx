@@ -60,12 +60,14 @@ function ContractDetailsPage({ user = null }) {
   const [activeTab, setActiveTab] = useState('analysis');
   const location = useLocation();
   const [isFromDrafts, setIsFromDrafts] = useState(false);
+
   const [expandedSections, setExpandedSections] = useState({
   
     contractDetails: true,
     financial: true,
     parties: true,
-    deliverables: true,
+  //  deliverables: true,
+    reporting: true,
     terms: true,
     compliance: true,
     executiveSummary: true
@@ -108,7 +110,23 @@ const handleBack = () => {
   const [uploadDate, setUploadDate] = useState('');
   const [uploading, setUploading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState({}); // Track uploaded files per deliverable
-  
+  // Reporting Schedule State
+  const [reportingEvents, setReportingEvents] = useState([]);
+  const [reportingLoading, setReportingLoading] = useState(false);
+
+  // Reporting upload state
+  const [selectedReport, setSelectedReport] = useState(null);
+  const [showReportUploadModal, setShowReportUploadModal] = useState(false);
+  const [reportUploadDate, setReportUploadDate] = useState('');
+  const [reportUploading, setReportUploading] = useState(false);
+
+  const handleUploadReport = (event) => {
+    console.log("Upload clicked:", event);   // 👈 ADD THIS LINE
+    setSelectedReport(event);
+    setReportUploadDate('');
+    setShowReportUploadModal(true);
+  };
+
   const handleViewPDF = async () => {
     if (!contractData?.contract_id) return;
     
@@ -140,6 +158,34 @@ const handleBack = () => {
       setLoadingPDF(false);
     }
   };
+
+
+    // Reporting Upload Modal - File input change handler
+  useEffect(() => {
+    const fileInput = document.getElementById('cdp-report-file-input');
+    const fileInfo = document.getElementById('cdp-selected-file-info');
+    const fileNameSpan = document.getElementById('cdp-selected-file-name');
+    
+    if (fileInput && fileInfo && fileNameSpan) {
+      const handleFileChange = function() {
+        if (this.files && this.files[0]) {
+          const file = this.files[0];
+          const fileSizeMB = (file.size / 1024 / 1024).toFixed(2);
+          fileNameSpan.textContent = `${file.name} (${fileSizeMB} MB)`;
+          fileInfo.style.display = 'flex';
+        } else {
+          fileInfo.style.display = 'none';
+        }
+      };
+      
+      fileInput.addEventListener('change', handleFileChange);
+      
+      return () => {
+        fileInput.removeEventListener('change', handleFileChange);
+      };
+    }
+  }, [showReportUploadModal]); // Run when modal opens/closes
+
 useEffect(() => {
   if (contractData) {
     setIsDraft(contractData.status === 'draft');
@@ -403,6 +449,183 @@ const loadUploadedFiles = async () => {
   }
 };
 
+const handleSubmitReportUpload = async () => {
+  if (!selectedReport || !reportUploadDate) {
+    alert("Please select submission date");
+    return;
+  }
+
+  // FIX: Changed from "report-file-input" to "cdp-report-file-input"
+  const fileInput = document.getElementById("cdp-report-file-input");
+  if (!fileInput?.files?.length) {
+    alert("Please select a file");
+    return;
+  }
+
+  const file = fileInput.files[0];
+
+  setReportUploading(true);
+
+  try {
+    const token = localStorage.getItem("token");
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("upload_date", reportUploadDate);
+
+    const response = await fetch(
+      `${API_CONFIG.BASE_URL}/api/reporting-events/${selectedReport.id}/upload`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Upload failed");
+    }
+
+    alert("Report uploaded successfully");
+    await fetchReportingEvents();
+
+    setShowReportUploadModal(false);
+    setSelectedReport(null);
+    setReportUploadDate('');
+    
+    // Clear the file input
+    if (fileInput) fileInput.value = '';
+    
+    // Hide the selected file info
+    const fileInfo = document.getElementById('cdp-selected-file-info');
+    if (fileInfo) fileInfo.style.display = 'none';
+
+  } catch (error) {
+    console.error(error);
+    alert("Upload failed");
+  } finally {
+    setReportUploading(false);
+  }
+};
+
+const handlePgmApprove = async (eventId) => {
+  try {
+    const token = localStorage.getItem("token");
+
+    const response = await fetch(
+      `${API_CONFIG.BASE_URL}/api/reporting-events/${eventId}/approve-pgm`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Approval failed");
+    }
+
+    alert("Report approved by Program Manager");
+
+    fetchReportingEvents(); // Refresh table
+
+  } catch (error) {
+    console.error(error);
+    alert("Approval failed");
+  }
+};
+
+const handleDirectorApprove = async (eventId) => {
+  try {
+    const token = localStorage.getItem("token");
+
+    const response = await fetch(
+      `${API_CONFIG.BASE_URL}/api/reporting-events/${eventId}/approve-director`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Approval failed");
+    }
+
+    alert("Report fully approved by Director");
+
+    fetchReportingEvents(); // Refresh table
+
+  } catch (error) {
+    console.error(error);
+    alert("Approval failed");
+  }
+};
+
+const handleViewReport = async (eventId) => {
+  try {
+    const token = localStorage.getItem("token");
+
+    const response = await fetch(
+      `${API_CONFIG.BASE_URL}/api/reporting-events/${eventId}/file`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch report file");
+    }
+
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+
+    setPdfUrl(url);
+    setPdfFilename("Report File");
+    setShowPDFViewer(true);
+
+  } catch (error) {
+    console.error(error);
+    alert("Failed to load report file");
+  }
+};
+
+const fetchReportingEvents = async () => {
+  if (!contractData?.contract_id) return;
+
+  try {
+    setReportingLoading(true);
+    const token = localStorage.getItem('token');
+
+    const response = await fetch(
+      `${API_CONFIG.BASE_URL}/api/contracts/${contractData.contract_id}/reporting-events`,
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    if (response.ok) {
+      const data = await response.json();
+      setReportingEvents(data);
+    } else {
+      console.error("Failed to load reporting events");
+      setReportingEvents([]);
+    }
+  } catch (error) {
+    console.error("Error fetching reporting events:", error);
+  } finally {
+    setReportingLoading(false);
+  }
+};
+
 const refreshUploadedFiles = async () => {
   console.log('Manually refreshing uploaded files...');
   await loadUploadedFiles();
@@ -414,7 +637,7 @@ useEffect(() => {
     console.log('Contract data loaded, fetching deliverables for all users');
     // Load uploaded files for ALL users (Project Manager, Program Manager, Director)
     loadUploadedFiles();
-    
+    fetchReportingEvents();
     // Only load comments for project managers
     if (user?.role === "project_manager") {
       fetchReviewComments();
@@ -921,7 +1144,8 @@ const hasDeliverableBeenUploaded = (index) => {
       contractDetails: true,
       financial: true,
       parties: true,
-      deliverables: true,
+    //  deliverables: true,
+      reporting: true,
       terms: true,
       compliance: true,
       executiveSummary: true
@@ -934,6 +1158,7 @@ const hasDeliverableBeenUploaded = (index) => {
       financial: false,
       parties: false,
       deliverables: false,
+      reporting: false, 
       terms: false,
       compliance: false,
       executiveSummary: false
@@ -1087,7 +1312,8 @@ const hasDeliverableBeenUploaded = (index) => {
   const totalAmount = contractData.total_amount || financial?.total_grant_amount || 0;
   const daysRemaining = getDaysRemaining(contractDetails.end_date || contractData.end_date);
   const installmentsCount = financial?.payment_schedule?.installments?.length || 0;
-  const deliverablesCount = deliverables?.items?.length || 0;
+  //const deliverablesCount = deliverables?.items?.length || 0;
+  const deliverablesCount = reportingEvents?.length || 0;
   const duration = contractDetails.duration || 'N/A';
   
   // Determine risk level based on days remaining
@@ -1462,8 +1688,8 @@ const hasDeliverableBeenUploaded = (index) => {
               </div>
             )}
           </div>
-
-          {/* Deliverables */}
+ {/* 
+          {/* Deliverables 
           <div className="expandable-section">
             <div 
               className="section-title expandable-header"
@@ -1473,8 +1699,9 @@ const hasDeliverableBeenUploaded = (index) => {
                 {expandedSections.deliverables ? <Minus size={18} /> : <Plus size={18} />}
               </div>
               <Target size={20} />
-              <h4>Deliverables & Reporting</h4>
+              <h4>Project Deliverables</h4>
             </div>
+
             {expandedSections.deliverables && (
               <div className="expandable-content">
                 {deliverables?.items && deliverables.items.length > 0 ? (
@@ -1512,7 +1739,7 @@ const hasDeliverableBeenUploaded = (index) => {
           {hasUploaded ? 'Submitted' : (del.status || 'Pending')}
         </span>
       </td>
-      {/* ✅ SHOW VIEW BUTTON FOR ALL USERS WHEN FILE IS UPLOADED */}
+      {/* ✅ SHOW VIEW BUTTON FOR ALL USERS WHEN FILE IS UPLOADED 
       <td className="actions-cell">
         {hasUploaded ? (
           <button
@@ -1563,9 +1790,113 @@ const hasDeliverableBeenUploaded = (index) => {
               </div>
             )}
           </div>
+*/}
 
-        </div>
+        {/* Reporting Schedule */}
+          <div className="expandable-section">
+            <div
+              className="section-title expandable-header"
+              onClick={() => toggleSection('reporting')}
+            >
+              <div className="expand-icon">
+                {expandedSections.reporting ? <Minus size={18} /> : <Plus size={18} />}
+              </div>
+              <Calendar size={20} />
+              <h4>Reporting Schedule</h4>
+            </div>
 
+            {expandedSections.reporting && (
+              <div className="expandable-content">
+                {reportingLoading ? (
+                  <div className="loading-state">
+                    <Loader2 className="spinner" size={20} />
+                    <span>Loading reporting schedule...</span>
+                  </div>
+                ) : reportingEvents.length > 0 ? (
+                  <div className="data-table">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Report Type</th>
+                          <th>Due Date</th>
+                          <th>Status</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {reportingEvents.map((event) => (
+                          <tr key={event.id}>
+                            <td>{event.report_type}</td>
+                            <td>{formatDate(event.due_date)}</td>
+
+                            <td>
+                              <span className={`status-badge ${event.status.replace("_", "-")}`}>
+                                {event.status.replace("_", " ").toUpperCase()}
+                              </span>
+                            </td>
+
+                            <td>
+
+                              {/* View always available after submission */}
+                              {["submitted", "pgm_approved", "fully_approved"].includes(event.status) && (
+                                <button
+                                  className="view-btn"
+                                  onClick={() => handleViewReport(event.id)}
+                                >
+                                  View
+                                </button>
+                              )}
+
+                              {/* Program Manager Approval */}
+                              {user?.role === "program_manager" && event.status === "submitted" && (
+                                <button
+                                  className="approve-btn"
+                                  onClick={() => handlePgmApprove(event.id)}
+                                >
+                                  Approve
+                                </button>
+                              )}
+
+                              {/* Director Approval */}
+                              {user?.role === "director" && event.status === "pgm_approved" && (
+                                <button
+                                  className="approve-btn"
+                                  onClick={() => handleDirectorApprove(event.id)}
+                                >
+                                  Final Approve
+                                </button>
+                              )}
+
+                              {/* Project Manager Upload */}
+                              {user?.role === "project_manager" && ["upcoming", "due_soon", "overdue"].includes(event.status) && (
+                                <button
+                                  className="upload-btn"
+                                  onClick={() => handleUploadReport(event)}
+                                >
+                                  <FileUp size={12} />
+                                  <span>Upload</span>
+                                </button>
+                              )}
+
+                            </td>
+
+                          </tr>
+                        ))}
+                      </tbody>
+
+                    </table>
+                  </div>
+                ) : (
+                  <div className="empty-state">
+                    <Calendar size={48} />
+                    <p>No reporting schedule available</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+        </div>  {/* CLOSE section-card */}
 {/* Project Manager Actions Section - For ALL project manager contracts */}
 {user && user.role === "project_manager" && contractData && (
  <ProjectManagerActions 
@@ -1753,6 +2084,113 @@ const hasDeliverableBeenUploaded = (index) => {
         </div>
       )}
 
+       {/* Reporting Upload Modal - FIXED with isolated classnames */}
+      {showReportUploadModal && selectedReport && (
+        <div className="cdp-modal-overlay">
+          <div className="cdp-modal-content">
+            <div className="cdp-modal-header">
+              <h3>Upload Report</h3>
+              <button
+                className="cdp-modal-close"
+                onClick={() => setShowReportUploadModal(false)}
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="cdp-modal-body">
+              <div className="cdp-report-info">
+                <p><strong>Report Type:</strong> {selectedReport.report_type}</p>
+                <p><strong>Due Date:</strong> {formatDate(selectedReport.due_date)}</p>
+              </div>
+
+              <div className="cdp-form-group">
+                <label htmlFor="cdp-report-upload-date">Submission Date *</label>
+                <input
+                  type="date"
+                  id="cdp-report-upload-date"
+                  className="cdp-date-picker"
+                  value={reportUploadDate}
+                  onChange={(e) => setReportUploadDate(e.target.value)}
+                />
+              </div>
+
+              <div className="cdp-form-group">
+                <label>Select File *</label>
+                <div 
+                  className="cdp-file-upload-area"
+                  onClick={() => document.getElementById('cdp-report-file-input').click()}
+                >
+                  <FileUp size={24} />
+                  <p>Click to select file</p>
+                  <p className="cdp-file-hint">or drag and drop here</p>
+                  <p className="cdp-file-types">Supported: PDF, DOC, XLS, PPT</p>
+                  <p className="cdp-file-size">Max file size: 10MB</p>
+                </div>
+                
+                <input
+                  type="file"
+                  id="cdp-report-file-input"
+                  className="cdp-file-input-hidden"
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
+                  onChange={(e) => {
+                    const fileInfo = document.getElementById('cdp-selected-file-info');
+                    const fileNameSpan = document.getElementById('cdp-selected-file-name');
+                    if (e.target.files && e.target.files[0]) {
+                      const file = e.target.files[0];
+                      const fileSizeMB = (file.size / 1024 / 1024).toFixed(2);
+                      fileNameSpan.textContent = `${file.name} (${fileSizeMB} MB)`;
+                      fileInfo.style.display = 'flex';
+                    } else {
+                      fileInfo.style.display = 'none';
+                    }
+                  }}
+                />
+                
+                <div id="cdp-selected-file-info" className="cdp-selected-file-info" style={{ display: 'none' }}>
+                  <strong>Selected:</strong>
+                  <span id="cdp-selected-file-name" className="cdp-selected-file-name">No file selected</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="cdp-modal-actions">
+              <button
+                className="cdp-btn-secondary"
+                onClick={() => {
+                  setShowReportUploadModal(false);
+                  setSelectedReport(null);
+                  setReportUploadDate('');
+                  const fileInput = document.getElementById('cdp-report-file-input');
+                  if (fileInput) fileInput.value = '';
+                  const fileInfo = document.getElementById('cdp-selected-file-info');
+                  if (fileInfo) fileInfo.style.display = 'none';
+                }}
+                disabled={reportUploading}
+              >
+                Cancel
+              </button>
+
+              <button
+                className="cdp-btn-primary"
+                onClick={handleSubmitReportUpload}
+                disabled={!reportUploadDate || reportUploading}
+              >
+                {reportUploading ? (
+                  <>
+                    <Loader2 size={16} className="cdp-spinning" />
+                    Uploading...
+                  </>
+                ) : (
+                  'Upload Report'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+
       {/* PDF Viewer Modal - This should be at the root level */}
       {showPDFViewer && (
         <PDFViewer
@@ -1770,5 +2208,6 @@ const hasDeliverableBeenUploaded = (index) => {
     </div>
   );
 }
+
 
 export default ContractDetailsPage;
