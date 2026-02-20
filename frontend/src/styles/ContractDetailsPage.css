@@ -2601,4 +2601,307 @@
 }
 
 
+/* FIX: Parties section - Grantor and Grantee side by side */
+.parties-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr !important; /* Force two columns */
+  gap: 16px;
+  align-items: start;
+}
 
+.parties-grid.single-column {
+  display: grid !important; /* Override single-column class */
+  grid-template-columns: 1fr 1fr !important;
+  gap: 16px;
+}
+
+/* Party cards styling */
+.party-card {
+  background: white;
+  border-radius: 6px;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  height: fit-content;
+}
+
+/* Responsive: Stack on mobile */
+@media (max-width: 768px) {
+  .parties-grid,
+  .parties-grid.single-column {
+    grid-template-columns: 1fr !important;
+    gap: 12px;
+  }
+}
+
+/* ====== CDP REPORTING UPLOAD MODAL FIX ====== */
+/* Completely isolated modal styles with cdp- prefix */
+
+.cdp-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999; /* Extremely high z-index */
+  backdrop-filter: blur(2px);
+}
+
+.cdp-modal-content {
+  background: white;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  animation: cdp-modal-fade-in 0.2s ease;
+  border: 1px solid #e2e8f0;
+  z-index: 100000;
+}
+
+@keyframes cdp-modal-fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.cdp-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e2e8f0;
+  background: white;
+  border-radius: 12px 12px 0 0;
+}
+
+.cdp-modal-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.cdp-modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  color: #64748b;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.cdp-modal-close:hover {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.cdp-modal-body {
+  padding: 24px;
+}
+
+.cdp-report-info {
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 24px;
+  border-left: 4px solid #3b82f6;
+}
+
+.cdp-report-info p {
+  margin: 8px 0;
+  color: #475569;
+  font-size: 14px;
+}
+
+.cdp-report-info p:first-child {
+  margin-top: 0;
+}
+
+.cdp-report-info p:last-child {
+  margin-bottom: 0;
+}
+
+.cdp-report-info strong {
+  color: #1e293b;
+  font-weight: 600;
+}
+
+.cdp-form-group {
+  margin-bottom: 24px;
+}
+
+.cdp-form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #1e293b;
+  font-size: 14px;
+}
+
+.cdp-date-picker {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  background: white;
+}
+
+.cdp-date-picker:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.cdp-file-upload-area {
+  border: 2px dashed #cbd5e1;
+  border-radius: 8px;
+  padding: 32px 16px;
+  text-align: center;
+  background: #f8fafc;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  margin-top: 8px;
+}
+
+.cdp-file-upload-area:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+.cdp-file-upload-area svg {
+  color: #64748b;
+  margin-bottom: 12px;
+  width: 24px;
+  height: 24px;
+}
+
+.cdp-file-upload-area p {
+  margin: 4px 0;
+  color: #475569;
+  font-size: 14px;
+}
+
+.cdp-file-hint {
+  font-size: 14px;
+  color: #94a3b8;
+}
+
+.cdp-file-types, .cdp-file-size {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.cdp-selected-file-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 6px;
+  margin-top: 12px;
+}
+
+.cdp-selected-file-info strong {
+  color: #0369a1;
+  font-size: 13px;
+}
+
+.cdp-selected-file-name {
+  color: #0c4a6e;
+  font-weight: 500;
+  font-size: 13px;
+  word-break: break-all;
+}
+
+.cdp-file-input-hidden {
+  display: none;
+}
+
+.cdp-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 20px 24px;
+  border-top: 1px solid #e2e8f0;
+  background: white;
+  border-radius: 0 0 12px 12px;
+}
+
+.cdp-btn-secondary {
+  padding: 10px 20px;
+  background-color: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  color: #475569;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cdp-btn-secondary:hover {
+  background-color: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.cdp-btn-primary {
+  padding: 10px 20px;
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cdp-btn-primary:hover {
+  background-color: #2563eb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
+}
+
+.cdp-btn-primary:disabled {
+  background-color: #94a3b8;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.cdp-btn-primary .cdp-spinning {
+  animation: cdp-spin 1s linear infinite;
+}
+
+@keyframes cdp-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Ensure the reporting upload modal appears above everything */
+.cdp-modal-overlay:has(.cdp-modal-content) {
+  z-index: 99999;
+}

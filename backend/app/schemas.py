@@ -1,7 +1,7 @@
 # app/schemas.py - Add new schemas for project manager actions
 from pydantic import BaseModel
 from typing import Optional, Dict, Any, List
-from datetime import datetime
+from datetime import date, datetime
 
 class ContractBase(BaseModel):
     filename: str
@@ -112,6 +112,22 @@ class ReviewCommentSchema(BaseModel):
     class Config:
         from_attributes = True
 
+class ReportingScheduleCreate(BaseModel):
+    grant_id: str
+    title: str
+    category: str  # report | milestone | payment
+    period_start: Optional[date] = None
+    period_end: Optional[date] = None
+    due_date: Optional[date] = None
+    payment_date: Optional[date] = None
+    payment_amount: Optional[float] = None
+    currency: Optional[str] = None
+    trigger_condition: Optional[str] = None
+    source_page: Optional[int] = None
+    raw_text: Optional[str] = None
+
+class ReportingScheduleResponse(ReportingScheduleCreate):
+    id: str
 
 # Add these schemas after existing ones
 
