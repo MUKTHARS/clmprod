@@ -272,7 +272,7 @@ const Sidebar = ({ user, onLogout }) => {
       ...prev,
       ...newBadgeCounts
     }));
-  }, [user, badgeCounts]);
+  }, [user]);
 
   // =============================================
   // FIX: Add event listeners for real-time updates
