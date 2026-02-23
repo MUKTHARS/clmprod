@@ -1,0 +1,298 @@
+.ump-container {
+  padding: 32px;
+  max-width: 1100px;
+}
+
+.ump-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 28px;
+}
+
+.ump-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #1e293b;
+}
+
+.ump-title-row h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.ump-header-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.ump-refresh-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+  color: #64748b;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.ump-refresh-btn:hover { background: #f8fafc; }
+
+.ump-invite-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 18px;
+  border: none;
+  border-radius: 8px;
+  background: #6366f1;
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.ump-invite-btn:hover { background: #4f46e5; }
+
+@keyframes ump-spin { to { transform: rotate(360deg); } }
+.ump-spin { animation: ump-spin 0.7s linear infinite; }
+
+/* Invite panel */
+.ump-invite-panel {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 28px;
+}
+
+.ump-invite-panel h3 {
+  margin: 0 0 16px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.ump-invite-success {
+  background: #ecfdf5;
+  border: 1px solid #6ee7b7;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  font-size: 0.875rem;
+  color: #065f46;
+}
+.ump-invite-note { margin: 4px 0 0; color: #047857; font-size: 0.8rem; }
+
+.ump-invite-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  font-size: 0.875rem;
+  color: #b91c1c;
+}
+
+.ump-invite-form { display: flex; flex-direction: column; gap: 16px; }
+
+.ump-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+}
+
+.ump-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ump-form-group label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.ump-form-group input,
+.ump-form-group select {
+  padding: 9px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  background: #fff;
+  color: #1e293b;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.ump-form-group input:focus,
+.ump-form-group select:focus { border-color: #6366f1; }
+
+.ump-invite-submit {
+  align-self: flex-start;
+  padding: 9px 22px;
+  background: #6366f1;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.ump-invite-submit:hover { background: #4f46e5; }
+.ump-invite-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* Sections */
+.ump-section { margin-bottom: 36px; }
+
+.ump-section-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #334155;
+  margin: 0 0 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.ump-count {
+  background: #e0e7ff;
+  color: #4338ca;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 9999px;
+}
+
+/* Table */
+.ump-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  font-size: 0.875rem;
+}
+
+.ump-table thead tr {
+  background: #f8fafc;
+}
+.ump-table th {
+  padding: 12px 16px;
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  border-bottom: 1px solid #e2e8f0;
+}
+.ump-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #1e293b;
+}
+.ump-table tbody tr:last-child td { border-bottom: none; }
+.ump-table tbody tr:hover { background: #fafbff; }
+
+.ump-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.ump-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #6366f1;
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.ump-email { color: #64748b; }
+.ump-muted { color: #94a3b8; }
+
+/* Role badges */
+.ump-role-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.ump-role-director       { background: #ede9fe; color: #5b21b6; }
+.ump-role-program_manager { background: #dbeafe; color: #1d4ed8; }
+.ump-role-project_manager { background: #dcfce7; color: #15803d; }
+.ump-role-super_admin    { background: #fef3c7; color: #92400e; }
+
+/* Status */
+.ump-status {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.ump-status-active  { background: #dcfce7; color: #15803d; }
+.ump-status-pending { background: #fef9c3; color: #854d0e; }
+
+/* Remove button */
+.ump-remove-btn {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  transition: color 0.15s, background 0.15s;
+  display: flex;
+  align-items: center;
+}
+.ump-remove-btn:hover { color: #ef4444; background: #fef2f2; }
+.ump-remove-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.ump-empty {
+  text-align: center;
+  color: #94a3b8;
+  padding: 32px !important;
+  font-style: italic;
+}
+
+.ump-loading {
+  text-align: center;
+  color: #94a3b8;
+  padding: 48px;
+  font-size: 0.9rem;
+}
+
+.ump-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  font-size: 0.875rem;
+  color: #b91c1c;
+}
+
+@media (max-width: 700px) {
+  .ump-container { padding: 16px; }
+  .ump-form-row { grid-template-columns: 1fr; }
+  .ump-header { flex-direction: column; align-items: flex-start; gap: 12px; }
+}

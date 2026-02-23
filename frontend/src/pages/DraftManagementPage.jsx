@@ -91,47 +91,32 @@ function DraftManagementPage({ user }) {
 
           if (response.ok) {
             const data = await response.json();
-            // console.log('DEBUG: My drafts response:', data);
-            
-            const myDrafts = data.filter(draft => {
-              if (!draft) return false;
-              const isCreator = draft.created_by === user?.id;
-              const isOldCreator = draft.userId === user?.id;
-              return isCreator || isOldCreator;
-            });
-            
-            // console.log('DEBUG: Filtered my drafts:', myDrafts);
-            setDrafts(myDrafts || []);
+            // Backend already filters by created_by == current_user, no client-side filter needed
+            setDrafts(data || []);
             setAssignmentStats(null);
             setTabCounts(prev => ({
               ...prev,
-              'my-drafts': myDrafts.length
+              'my-drafts': (data || []).length
             }));
           } else {
             const error = await response.json();
             console.error('Failed to fetch my drafts:', error);
-            
+
             const savedDrafts = JSON.parse(localStorage.getItem('user_drafts') || '[]');
-            const myDrafts = savedDrafts.filter(draft => 
-              draft.created_by === user?.id || draft.userId === user?.id
-            );
-            setDrafts(myDrafts);
+            setDrafts(savedDrafts);
             setTabCounts(prev => ({
               ...prev,
-              'my-drafts': myDrafts.length
+              'my-drafts': savedDrafts.length
             }));
           }
         } catch (myDraftsError) {
           console.error('Error fetching my drafts:', myDraftsError);
-          
+
           const savedDrafts = JSON.parse(localStorage.getItem('user_drafts') || '[]');
-          const myDrafts = savedDrafts.filter(draft => 
-            draft.created_by === user?.id || draft.userId === user?.id
-          );
-          setDrafts(myDrafts);
+          setDrafts(savedDrafts);
           setTabCounts(prev => ({
             ...prev,
-            'my-drafts': myDrafts.length
+            'my-drafts': savedDrafts.length
           }));
         }
       } else {
@@ -479,11 +464,11 @@ function DraftManagementPage({ user }) {
   };
 
   const handleViewContract = (draftId) => {
-    navigate(`/contracts/${draftId}?from=drafts&source=mydrafts`);
+    navigate(`/app/contracts/${draftId}?from=drafts&source=mydrafts`);
   };
 
   const handleEditContract = (draftId) => {
-    navigate(`/contracts/${draftId}?edit=true`);
+    navigate(`/app/contracts/${draftId}?edit=true`);
   };
 
   const filteredDrafts = drafts.filter(draft => {
@@ -807,7 +792,7 @@ function DraftManagementPage({ user }) {
       <div className="dmp-draft-tabs">
         <button
           className={`dmp-tab-btn ${activeTab === 'my-drafts' ? 'dmp-active' : ''}`}
-          onClick={() => navigate('/drafts/my')}
+          onClick={() => navigate('/app/drafts/my')}
         >
           <FolderOpen size={18} />
           My Drafts
@@ -817,7 +802,7 @@ function DraftManagementPage({ user }) {
         </button>
         <button
           className={`dmp-tab-btn ${activeTab === 'assigned-drafts' ? 'dmp-active' : ''}`}
-          onClick={() => navigate('/drafts/assigned')}
+          onClick={() => navigate('/app/drafts/assigned')}
         >
           <UserCheck size={18} />
           Assigned to Me
@@ -956,7 +941,7 @@ function DraftManagementPage({ user }) {
             {activeTab === 'my-drafts' && (
               <button 
                 className="dmp-btn-primary"
-                onClick={() => navigate('/upload')}
+                onClick={() => navigate('/app/upload')}
               >
                 <Plus size={16} />
                 Upload First Draft

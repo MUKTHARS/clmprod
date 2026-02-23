@@ -101,7 +101,7 @@ const handleBack = () => {
       navigate('/drafts/my'); // Default fallback
     }
   } else {
-    navigate('/contracts');
+    navigate('/app/contracts');
   }
 };
   // State for deliverables upload
@@ -1250,7 +1250,7 @@ const hasDeliverableBeenUploaded = (index) => {
           <AlertCircle className="error-icon" size={48} />
           <h2>Contract ID Missing</h2>
           <p>No contract ID was provided in the URL.</p>
-          {/* <button className="btn-primary" onClick={() => navigate('/contracts')}>
+          {/* <button className="btn-primary" onClick={() => navigate('/app/contracts')}>
             <ArrowLeft size={16} />
             Back to Contracts
           </button> */}
@@ -1267,7 +1267,7 @@ const hasDeliverableBeenUploaded = (index) => {
           <AlertCircle className="error-icon" size={48} />
           <h2>Invalid Contract ID</h2>
           <p>The contract ID "{id}" is not valid.</p>
-          {/* <button className="btn-primary" onClick={() => navigate('/contracts')}>
+          {/* <button className="btn-primary" onClick={() => navigate('/app/contracts')}>
             <ArrowLeft size={16} />
             Back to Contracts
           </button> */}
@@ -1284,7 +1284,7 @@ const hasDeliverableBeenUploaded = (index) => {
           <h2>Contract Not Found</h2>
           <p>The contract with ID {contractId} could not be found.</p>
           <div className="error-actions">
-            {/* <button className="btn-primary" onClick={() => navigate('/contracts')}>
+            {/* <button className="btn-primary" onClick={() => navigate('/app/contracts')}>
               <ArrowLeft size={16} />
               Back to Contracts
             </button> */}
@@ -1335,7 +1335,7 @@ const hasDeliverableBeenUploaded = (index) => {
       {/* Header Section */}
       <div className="contract-header">
         <div className="header-top">
-          {/* <button className="btn-back" onClick={() => navigate('/contracts')}>
+          {/* <button className="btn-back" onClick={() => navigate('/app/contracts')}>
             <ArrowLeft size={20} />
             <span>Back to Contracts</span>
           </button> */}

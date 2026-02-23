@@ -300,17 +300,17 @@ function Review() {
                   </div>
 
                   <div className="pgmreview-card-footer">
-                    <button 
+                    <button
                       className="pgmreview-btn-view"
-                      onClick={() => navigate(`/contracts/${contract.id}`)}
+                      onClick={() => navigate(`/app/contracts/${contract.id}`)}
                     >
                       <Eye size={14} />
                       View Details
                     </button>
                     {contract.status === 'under_review' && (
-                      <button 
+                      <button
                         className="pgmreview-btn-review"
-                        onClick={() => navigate(`/review-contract/${contract.id}`)}
+                        onClick={() => navigate(`/app/review-contract/${contract.id}`)}
                       >
                         Start Review
                         <ChevronRight size={14} />

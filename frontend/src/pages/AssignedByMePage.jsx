@@ -474,7 +474,7 @@ function AssignedByMePage({ user }) {
             </p>
             <button 
               className="abm-btn-primary"
-              onClick={() => navigate('/contracts')}
+              onClick={() => navigate('/app/contracts')}
             >
               View All Agreements
             </button>

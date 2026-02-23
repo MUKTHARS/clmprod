@@ -152,7 +152,7 @@ function AssignedAgreementsPage({ user }) {
   };
 
   const handleViewAgreement = (agreementId) => {
-    navigate(`/contracts/${agreementId}`);
+    navigate(`/app/contracts/${agreementId}`);
   };
 
   const filteredAgreements = agreements.filter(agreement => {

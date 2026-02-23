@@ -1,12 +1,30 @@
 # app/models.py - Update with ContractVersion model
 from sqlalchemy import Boolean, Column, Integer, String, DateTime, Text, Float, ForeignKey, UniqueConstraint, JSON, Date
 from sqlalchemy.sql import func
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import relationship
 from app.database import Base
 from datetime import datetime
+from uuid import uuid4 
+class Tenant(Base):
+    __tablename__ = "tenants"
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    name = Column(String)
+    domain = Column(String, unique=True)
+    setup_completed = Column(Boolean, default=False)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    workflow_config = Column(JSONB, nullable=True)
+    ai_config = Column(JSONB, nullable=True)
+class TenantModule(Base):
+    __tablename__ = "tenant_modules"
 
-
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False)
+    module_key = Column(String(100), nullable=False)
+    is_enabled = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+        
 class Contract(Base):
     __tablename__ = "contracts"
     

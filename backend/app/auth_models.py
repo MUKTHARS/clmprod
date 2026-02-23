@@ -2,7 +2,7 @@
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, ForeignKey, UniqueConstraint
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from app.database import Base
 
 class User(Base):
@@ -20,6 +20,7 @@ class User(Base):
     phone = Column(String, nullable=True)
     department = Column(String, nullable=True)
     user_type = Column(String, default="internal")  # internal, external
+    tenant_id = Column(UUID(as_uuid=True), ForeignKey("tenants.id"), nullable=True)
     
     # Backward compatible fields - keep existing
     full_name = Column(String, nullable=True)  # Keep for backward compatibility
@@ -27,6 +28,7 @@ class User(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     last_login = Column(DateTime(timezone=True))
     is_active = Column(Boolean, default=True)
+    invitation_status = Column(String(20), default='active')  # 'pending' | 'active'
 
 class UserSession(Base):
     __tablename__ = "user_sessions"
