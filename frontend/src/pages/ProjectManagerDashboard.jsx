@@ -25,7 +25,7 @@ function ProjectManagerDashboard({ user }) {
   const fetchMyContracts = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:4001/api/contracts/', {
+      const response = await fetch('https://grantapi.saple.ai/api/contracts/', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
