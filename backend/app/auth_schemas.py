@@ -31,10 +31,13 @@ class UserUpdate(BaseModel):
 
 class UserResponse(UserBase):
     id: int
+    full_name: Optional[str] = None
+    tenant_id: Optional[str] = None
+    setup_completed: bool = False
     is_active: bool
     created_at: datetime
     last_login: Optional[datetime] = None
-    
+
     class Config:
         from_attributes = True
 

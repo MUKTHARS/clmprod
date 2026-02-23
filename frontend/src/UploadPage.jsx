@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import './styles/UploadPage.css';
 
-function UploadPage({ setLoading, onUploadComplete }) {
+function UploadPage({ user, setLoading = () => {}, onUploadComplete }) {
   const [file, setFile] = useState(null);
   const [uploadStatus, setUploadStatus] = useState('');
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -196,7 +196,7 @@ function UploadPage({ setLoading, onUploadComplete }) {
           errorMessage = 'Authentication failed. Please log in again.';
           localStorage.removeItem('token');
           localStorage.removeItem('user');
-          setTimeout(() => navigate('/login'), 2000);
+          setTimeout(() => navigate('/app/login'), 2000);
         } else if (error.response.data && error.response.data.detail) {
           errorMessage = `Error: ${error.response.data.detail}`;
         } else {
@@ -224,7 +224,7 @@ function UploadPage({ setLoading, onUploadComplete }) {
 
   const handleViewContract = () => {
     if (extractionDetails?.id) {
-      navigate(`/contracts/${extractionDetails.id}`);
+      navigate(`/app/contracts/${extractionDetails.id}`);
     }
   };
 
@@ -243,7 +243,7 @@ function UploadPage({ setLoading, onUploadComplete }) {
   };
 
   const handleViewInDrafts = () => {
-    navigate('/drafts/my');
+    navigate('/app/drafts/my');
   };
 
   const formatCurrency = (amount) => {

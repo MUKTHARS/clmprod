@@ -388,7 +388,7 @@ function DirectorApproval() {
             className="da-view-btn"
             onClick={(e) => {
               e.stopPropagation();
-              navigate(`/contracts/${contract.id}`);
+              navigate(`/app/contracts/${contract.id}`);
             }}
           >
             <Eye size={14} />

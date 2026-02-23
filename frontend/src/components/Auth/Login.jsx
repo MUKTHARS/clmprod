@@ -39,7 +39,12 @@ function Login({ onLogin }) {  // Add onLogin prop
           localStorage.setItem('token', data.access_token);
           localStorage.setItem('user', JSON.stringify(data.user));
         }
-        
+          // ✅ Redirect based on role AND route structure
+        if (data.user.role === 'platform_admin') {
+          navigate('/platform/dashboard');
+        } else {
+          navigate('/app/dashboard');
+        }
         // Redirect based on role
         switch(data.user.role) {
           case 'project_manager':

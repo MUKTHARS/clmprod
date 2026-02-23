@@ -149,7 +149,7 @@
 .clp-filter-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 8px; /* Same as Dashboard */
 }
 
 .clp-btn-filter {
@@ -678,6 +678,78 @@
   justify-content: center;
 }
 
+/* Loading & Empty States - Same as Dashboard */
+.loading-state {
+  padding: 40px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.loading-state .spinner {
+  width: 32px;
+  height: 32px;
+  color: #475569;
+  animation: spin 1s linear infinite;
+  margin-bottom: 12px;
+}
+
+.loading-state p {
+  color: #64748b;
+  margin: 0;
+  font-size: 13px;
+}
+
+.empty-state {
+  padding: 40px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.empty-state svg {
+  color: #cbd5e1;
+  margin-bottom: 16px;
+  width: 40px;
+  height: 40px;
+}
+
+.empty-state h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0 0 6px 0;
+}
+
+.empty-state p {
+  color: #64748b;
+  margin: 0 0 16px 0;
+  font-size: 13px;
+}
+
+.btn-upload-main {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-upload-main:hover {
+  background: #1d4ed8;
+}
+
 /* ===== LOADING & EMPTY STATES ===== */
 .clp-loading-state {
   padding: 40px 0;
@@ -1118,7 +1190,6 @@
   
   .clp-filter-option {
     padding: 6px 8px;
-    font-size: 11px;
   }
   
   .clp-results-header {

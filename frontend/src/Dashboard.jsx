@@ -559,7 +559,7 @@ const getTileVariantClass = (variant) => {
           <div className="action-buttons">
             <button 
               className="btn-action"
-              onClick={() => navigate(`/contracts/${contract.id}`)}
+              onClick={() => navigate(`/app/contracts/${contract.id}`)}
               title="View details"
             >
               <Eye size={16} />
@@ -647,7 +647,7 @@ const getTileVariantClass = (variant) => {
           <div className="action-buttons">
             <button 
               className="btn-action"
-              onClick={() => navigate(`/contracts/${contract.id}`)}
+              onClick={() => navigate(`/app/contracts/${contract.id}`)}
               title="View details"
             >
               <Eye size={16} />
@@ -689,7 +689,7 @@ const getTileVariantClass = (variant) => {
 
               <button 
                 className="btn-view-all"
-                onClick={() => navigate('/contracts')}
+                onClick={() => navigate('/app/contracts')}
               >
                 View All
               </button>
@@ -740,7 +740,7 @@ const getTileVariantClass = (variant) => {
                 {!searchTerm && (
                   <button 
                     className="btn-upload-main"
-                    onClick={() => navigate('/upload')}
+                    onClick={() => navigate('/app/upload')}
                   >
                     <Upload size={16} strokeWidth={2} />
                     Upload Grant
@@ -860,7 +860,7 @@ const getTileVariantClass = (variant) => {
                         </span>
                         <button 
                           className="btn-action-small"
-                          onClick={() => navigate(`/contracts/${contract.id}`)}
+                          onClick={() => navigate(`/app/contracts/${contract.id}`)}
                         >
                           <ChevronRight size={16} />
                         </button>
@@ -877,7 +877,7 @@ const getTileVariantClass = (variant) => {
             {normalizedContracts.filter(c => c.end_date && !getDaysRemaining(c.end_date).includes('Expired')).length > 0 && (
               <button 
                 className="btn-view-more"
-                onClick={() => navigate('/contracts')}
+                onClick={() => navigate('/app/contracts')}
               >
                 <span>View All Deadlines</span>
                 <ArrowRight size={16} />
@@ -1432,7 +1432,7 @@ export default Dashboard;
 //           <div className="action-buttons">
 //             <button 
 //               className="btn-action"
-//               onClick={() => navigate(`/contracts/${contract.id}`)}
+//               onClick={() => navigate(`/app/contracts/${contract.id}`)}
 //               title="View details"
 //             >
 //               <Eye size={16} />
@@ -1520,7 +1520,7 @@ export default Dashboard;
 //           <div className="action-buttons">
 //             <button 
 //               className="btn-action"
-//               onClick={() => navigate(`/contracts/${contract.id}`)}
+//               onClick={() => navigate(`/app/contracts/${contract.id}`)}
 //               title="View details"
 //             >
 //               <Eye size={16} />
@@ -1562,7 +1562,7 @@ export default Dashboard;
 
 //               <button 
 //                 className="btn-view-all"
-//                 onClick={() => navigate('/contracts')}
+//                 onClick={() => navigate('/app/contracts')}
 //               >
 //                 View All
 //               </button>
@@ -1613,7 +1613,7 @@ export default Dashboard;
 //                 {!searchTerm && (
 //                   <button 
 //                     className="btn-upload-main"
-//                     onClick={() => navigate('/upload')}
+//                     onClick={() => navigate('/app/upload')}
 //                   >
 //                     <Upload size={16} strokeWidth={2} />
 //                     Upload Grant
@@ -1733,7 +1733,7 @@ export default Dashboard;
 //                         </span>
 //                         <button 
 //                           className="btn-action-small"
-//                           onClick={() => navigate(`/contracts/${contract.id}`)}
+//                           onClick={() => navigate(`/app/contracts/${contract.id}`)}
 //                         >
 //                           <ChevronRight size={16} />
 //                         </button>
@@ -1750,7 +1750,7 @@ export default Dashboard;
 //             {normalizedContracts.filter(c => c.end_date && !getDaysRemaining(c.end_date).includes('Expired')).length > 0 && (
 //               <button 
 //                 className="btn-view-more"
-//                 onClick={() => navigate('/contracts')}
+//                 onClick={() => navigate('/app/contracts')}
 //               >
 //                 <span>View All Deadlines</span>
 //                 <ArrowRight size={16} />

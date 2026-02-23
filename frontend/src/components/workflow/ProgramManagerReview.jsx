@@ -246,7 +246,7 @@ function ProgramManagerReview() {
         showNotificationMessage('success', 'Review Submitted', result.message);
         setShowReviewModal(false);
         setTimeout(() => {
-          navigate('/review');
+          navigate('/app/review');
         }, 2000);
       } else {
         const error = await response.json();

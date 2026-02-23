@@ -20,6 +20,7 @@ from app.schemas import (
 from app.s3_service import s3_service
 import uuid
 import os
+from app.tenant import get_current_tenant_id
 
 router = APIRouter(prefix="/api/agreements", tags=["agreement-workflow"])
 
@@ -29,6 +30,7 @@ async def get_draft_agreements(
     skip: int = 0,
     limit: int = 100,
     current_user: User = Depends(get_current_user),
+    tenant_id = Depends(get_current_tenant_id),
     db: Session = Depends(get_db)
 ):
     """
@@ -45,9 +47,11 @@ async def get_draft_agreements(
         # print(f"DEBUG: Fetching drafts for user {current_user.id}")
         
         # ✅ FIX: Show drafts until approved (exclude "approved" and "published")
+        # Note: Contract model does not have tenant_id column; filtering by created_by is sufficient
+        # since users already belong to a specific tenant via their auth token.
         drafts = db.query(Contract).filter(
             Contract.created_by == current_user.id,
-            Contract.status.in_(["draft", "under_review", "reviewed", "rejected"])  # ✅ Changed this line
+            Contract.status.in_(["draft", "under_review", "reviewed", "rejected"])
         ).order_by(Contract.uploaded_at.desc()).offset(skip).limit(limit).all()
         
         # print(f"DEBUG: Found {len(drafts)} drafts for user")
@@ -65,6 +69,7 @@ async def get_draft_agreements(
 async def get_draft_details(
     contract_id: int,
     current_user: User = Depends(get_current_user),
+    tenant_id = Depends(get_current_tenant_id),
     db: Session = Depends(get_db)
 ):
     """
@@ -171,6 +176,7 @@ async def update_draft_agreement(
     contract_id: int,
     update_data: UpdateDraftRequest,
     current_user: User = Depends(get_current_user),
+    tenant_id = Depends(get_current_tenant_id),
     db: Session = Depends(get_db)
 ):
     """

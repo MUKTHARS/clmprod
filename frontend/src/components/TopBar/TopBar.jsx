@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Bot,
@@ -22,14 +22,20 @@ import {
   PieChart,
   BookOpen,
   HelpCircle,
-  Upload, 
-  FileCheck, 
-  Key, 
+  Upload,
+  FileCheck,
+  Key,
   FolderOpen,
-  Archive, 
-  UserCheck 
+  Archive,
+  UserCheck,
+  Clock,
+  UserPlus,
+  ThumbsUp,
+  ThumbsDown,
+  Eye
 } from 'lucide-react';
 import './TopBar.css';
+import API_CONFIG from '../../config';
 
 const TopBar = ({ user = null }) => {
   const navigate = useNavigate();
@@ -38,6 +44,10 @@ const TopBar = ({ user = null }) => {
   const [showProfile, setShowProfile] = useState(false);
   const [pageTitle, setPageTitle] = useState('Dashboard');
   const [pageIcon, setPageIcon] = useState(<Home size={20} />);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [notifLoading, setNotifLoading] = useState(false);
+  const pollIntervalRef = useRef(null);
 
   const getPageTitle = (pathname) => {
     const routes = {
@@ -84,6 +94,89 @@ const TopBar = ({ user = null }) => {
     return { title: 'Dashboard', icon: <Home size={20} /> };
   };
 
+  const getNotificationIcon = (type) => {
+    switch (type) {
+      case 'grant_uploaded':        return <Upload size={16} />;
+      case 'pgm_assigned':
+      case 'director_assigned':     return <UserPlus size={16} />;
+      case 'agreement_published':   return <Eye size={16} />;
+      case 'status_under_review':   return <Clock size={16} />;
+      case 'status_reviewed':       return <FileCheck size={16} />;
+      case 'status_approved':       return <ThumbsUp size={16} />;
+      case 'status_rejected':       return <ThumbsDown size={16} />;
+      default:                      return <Bell size={16} />;
+    }
+  };
+
+  const getTimeAgo = (dateString) => {
+    if (!dateString) return '';
+    const now = new Date();
+    const date = new Date(dateString);
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    return `${diffDays}d ago`;
+  };
+
+  const fetchNotifications = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    try {
+      const res = await fetch(`${API_CONFIG.BASE_URL}/api/notifications`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setNotifications(data.slice(0, 10));
+        setUnreadCount(data.filter(n => !n.is_read).length);
+      }
+    } catch (e) {
+      // silent fail - notifications are non-critical
+    }
+  };
+
+  const handleMarkAsRead = async (notifId, contractId) => {
+    const token = localStorage.getItem('token');
+    try {
+      await fetch(`${API_CONFIG.BASE_URL}/api/notifications/${notifId}/read`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+    } catch (e) { /* ignore */ }
+    setNotifications(prev =>
+      prev.map(n => n.id === notifId ? { ...n, is_read: true } : n)
+    );
+    setUnreadCount(prev => Math.max(0, prev - 1));
+    setShowNotifications(false);
+    if (contractId) {
+      navigate(`/app/contracts/${contractId}`);
+    }
+  };
+
+  const handleMarkAllRead = async () => {
+    const token = localStorage.getItem('token');
+    try {
+      await fetch(`${API_CONFIG.BASE_URL}/api/notifications/mark-all-read`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+    } catch (e) { /* ignore */ }
+    setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+    setUnreadCount(0);
+  };
+
+  // Fetch notifications on mount and poll every 30 seconds
+  useEffect(() => {
+    if (!user) return;
+    fetchNotifications();
+    pollIntervalRef.current = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(pollIntervalRef.current);
+  }, [user]);
+
   // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -101,7 +194,9 @@ const TopBar = ({ user = null }) => {
 
   // Update page title when route changes
   useEffect(() => {
-    const pageInfo = getPageTitle(location.pathname);
+    // Strip the /app prefix so the route map keys match
+    const normalizedPath = location.pathname.replace(/^\/app/, '') || '/dashboard';
+    const pageInfo = getPageTitle(normalizedPath);
     setPageTitle(pageInfo.title);
     setPageIcon(pageInfo.icon);
   }, [location.pathname]);
@@ -134,7 +229,7 @@ const TopBar = ({ user = null }) => {
           {/* Copilot Assistant - Simple navigation */}
           <button 
             className="tb-ai-assistant-btn"
-            onClick={() => navigate('/copilot')}
+            onClick={() => navigate('/app/copilot')}
           >
             <span className="tb-ai-icon">
               <Sparkles size={20} />
@@ -144,53 +239,54 @@ const TopBar = ({ user = null }) => {
 
           {/* Notifications */}
           <div className="tb-alert-container">
-            <button 
+            <button
               className="tb-alert-btn"
               onClick={() => setShowNotifications(!showNotifications)}
             >
               <span className="tb-alert-icon">
-                <BellRing size={20} />
+                {unreadCount > 0 ? <BellRing size={20} /> : <Bell size={20} />}
               </span>
-              <span className="tb-alert-badge">3</span>
+              {unreadCount > 0 && (
+                <span className="tb-alert-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>
+              )}
             </button>
-            
+
             {showNotifications && (
               <div className="tb-alert-dropdown">
                 <div className="tb-dropdown-header">
                   <h4>Notifications</h4>
-                  <button className="tb-mark-read">Mark all as read</button>
+                  {unreadCount > 0 && (
+                    <button className="tb-mark-read" onClick={handleMarkAllRead}>
+                      Mark all as read
+                    </button>
+                  )}
                 </div>
                 <div className="tb-notification-list">
-                  <div className="tb-notification-item tb-unread">
-                    <div className="tb-notification-icon">
-                      <Calendar size={18} />
+                  {notifications.length === 0 ? (
+                    <div className="tb-notification-empty">
+                      <Bell size={32} />
+                      <p>No notifications yet</p>
                     </div>
-                    <div className="tb-notification-content">
-                      <p className="tb-notification-title">Contract Expiring</p>
-                      <p className="tb-notification-desc">Grant #123 expires in 5 days</p>
-                      <span className="tb-notification-time">2 hours ago</span>
-                    </div>
-                  </div>
-                  <div className="tb-notification-item tb-unread">
-                    <div className="tb-notification-icon">
-                      <CheckCircle size={18} />
-                    </div>
-                    <div className="tb-notification-content">
-                      <p className="tb-notification-title">Upload Complete</p>
-                      <p className="tb-notification-desc">New contract processed successfully</p>
-                      <span className="tb-notification-time">1 day ago</span>
-                    </div>
-                  </div>
-                  <div className="tb-notification-item">
-                    <div className="tb-notification-icon">
-                      <AlertCircle size={18} />
-                    </div>
-                    <div className="tb-notification-content">
-                      <p className="tb-notification-title">Analysis Complete</p>
-                      <p className="tb-notification-desc">Risk assessment ready for review</p>
-                      <span className="tb-notification-time">2 days ago</span>
-                    </div>
-                  </div>
+                  ) : (
+                    notifications.map(notif => (
+                      <div
+                        key={notif.id}
+                        className={`tb-notification-item${!notif.is_read ? ' tb-unread' : ''}`}
+                        onClick={() => handleMarkAsRead(notif.id, notif.contract_id)}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <div className="tb-notification-icon">
+                          {getNotificationIcon(notif.notification_type)}
+                        </div>
+                        <div className="tb-notification-content">
+                          <p className="tb-notification-title">{notif.title}</p>
+                          <p className="tb-notification-desc">{notif.message}</p>
+                          <span className="tb-notification-time">{getTimeAgo(notif.created_at)}</span>
+                        </div>
+                        {!notif.is_read && <div className="tb-unread-dot" />}
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             )}

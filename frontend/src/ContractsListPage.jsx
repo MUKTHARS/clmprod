@@ -670,7 +670,7 @@ function ContractsListPage({ contracts: propContracts = [], user, refreshContrac
                 {!searchTerm && (
                   <button 
                     className="clp-btn-upload-main"
-                    onClick={() => navigate('/upload')}
+                    onClick={() => navigate('/app/upload')}
                   >
                     <Upload size={20} />
                     Upload First Contract

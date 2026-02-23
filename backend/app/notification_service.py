@@ -78,10 +78,20 @@ class NotificationService:
             UserNotification.id == notification_id,
             UserNotification.user_id == user_id
         ).first()
-        
+
         if notification:
             notification.is_read = True
             notification.read_at = datetime.utcnow()
             db.commit()
-        
+
         return notification
+
+    @staticmethod
+    def mark_all_as_read(db: Session, user_id: int):
+        """Mark all notifications as read for a user"""
+        now = datetime.utcnow()
+        db.query(UserNotification).filter(
+            UserNotification.user_id == user_id,
+            UserNotification.is_read == False
+        ).update({"is_read": True, "read_at": now})
+        db.commit()

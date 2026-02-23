@@ -183,7 +183,7 @@ const getStatusBadge = (status) => {
         <AlertCircle size={48} />
         <h2>Access Denied</h2>
         <p>Only Project Managers can access draft agreements.</p>
-        {/* <button onClick={() => navigate('/contracts')} className="btn-primary">
+        {/* <button onClick={() => navigate('/app/contracts')} className="btn-primary">
           Back to Contracts
         </button> */}
       </div>
@@ -198,7 +198,7 @@ const getStatusBadge = (status) => {
           <p className="subtitle">Manage and edit your draft agreements</p>
         </div>
         <div className="header-right">
-          <button className="btn-primary" onClick={() => navigate('/upload')}>
+          <button className="btn-primary" onClick={() => navigate('/app/upload')}>
             <Plus size={16} />
             Upload New
           </button>
@@ -251,7 +251,7 @@ const getStatusBadge = (status) => {
             <FileText size={48} />
             <h3>No Drafts Found</h3>
             <p>{searchTerm || filterStatus !== 'all' ? 'Try changing your search or filter criteria.' : 'You don\'t have any draft agreements yet.'}</p>
-            <button className="btn-primary" onClick={() => navigate('/upload')}>
+            <button className="btn-primary" onClick={() => navigate('/app/upload')}>
               <Plus size={16} />
               Upload Your First Agreement
             </button>

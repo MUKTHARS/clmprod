@@ -12,8 +12,9 @@ from app.deliverable_models import ContractDeliverable
 from app.admin_routes import router as admin_router
 from app.agreement_workflow import router as agreement_router
 from app.dashboard_services import get_dashboard_metrics
-
-
+from app.tenant_routes import router as tenant_router
+from app.module_routes import router as module_router
+from app.models import Tenant 
 today = date.today()
 
 # from app.deliverable_routes import router as deliverable_router
@@ -86,6 +87,8 @@ setup_database()
 app = FastAPI(title=settings.APP_NAME)
 app.include_router(admin_router)
 app.include_router(agreement_router)
+app.include_router(tenant_router)
+app.include_router(module_router)
 # CORS
 app.add_middleware(
     CORSMiddleware,
@@ -259,106 +262,7 @@ def check_permission(user: User, contract_id: int, required_permission: str, db:
     ).first()
     
     return permission is not None
-    
-# def check_permission(user: User, contract_id: int, required_permission: str, db: Session) -> bool:
-#     """Check if user has required permission for a contract"""
-#     # Get the contract first
-#     contract = db.query(models.Contract).filter(models.Contract.id == contract_id).first()
-#     if not contract:
-#         return False
-    
-#     # Admin/Director has all permissions for all contracts
-#     if user.role == "director":
-#         return True
-    
-#     # Program Manager permissions
-#     if user.role == "program_manager":
-#         # Program Managers can:
-#         # 1. View contracts under review, reviewed, approved, or draft
-#         if required_permission == "view":
-#             return contract.status in ["under_review", "reviewed", "approved", "draft"]
-#         # 2. Review contracts that are under review
-#         elif required_permission == "review":
-#             return contract.status == "under_review"
-#         else:
-#             return False
-    
-#     # Project Manager permissions
-#     if user.role == "project_manager":
-#         # Check if this user created the contract
-#         is_creator = contract.created_by == user.id
-        
-#         if not is_creator:
-#             # Non-creator Project Managers can only view if explicitly granted
-#             if required_permission == "view":
-#                 permission = db.query(ContractPermission).filter(
-#                     ContractPermission.contract_id == contract_id,
-#                     ContractPermission.user_id == user.id,
-#                     ContractPermission.permission_type == "view"
-#                 ).first()
-#                 return permission is not None
-#             return False
-        
-#         # Project Manager (Creator/Owner/Admin) permissions based on status
-        
-#         # 1. ALWAYS ALLOWED PERMISSIONS (regardless of status):
-#         # - View: Can always view their own contracts
-#         # - Upload: Can upload/initiate processing (this is handled at contract creation)
-#         if required_permission in ["view", "upload"]:
-#             return True
-        
-#         # 2. DRAFT STATUS PERMISSIONS:
-#         # Contract is in draft or being created
-#         if contract.status == "draft":
-#             # Can edit, fix metadata, submit for review
-#             if required_permission in ["edit", "fix_metadata", "submit_review"]:
-#                 return True
-        
-#         # 3. REJECTED STATUS PERMISSIONS:
-#         # Contract was rejected by Program Manager
-#         elif contract.status == "rejected":
-#             # Can edit, fix metadata, respond to comments, resubmit for review
-#             if required_permission in ["edit", "fix_metadata", "respond_to_comments", "submit_review"]:
-#                 return True
-        
-#         # 4. UNDER_REVIEW STATUS PERMISSIONS:
-#         # Contract is being reviewed by Program Manager
-#         elif contract.status == "under_review":
-#             # Can only view and respond to comments (cannot edit while under review)
-#             if required_permission in ["respond_to_comments"]:
-#                 return True
-        
-#         # 5. REVIEWED STATUS PERMISSIONS:
-#         # Contract reviewed by Program Manager, waiting for Director approval
-#         elif contract.status == "reviewed":
-#             # Can only view (no changes allowed)
-#             if required_permission == "view":
-#                 return True
-        
-#         # 6. APPROVED STATUS PERMISSIONS:
-#         # Contract approved by Director
-#         elif contract.status == "approved":
-#             # Can only view (contract is finalized)
-#             if required_permission == "view":
-#                 return True
-        
-#         # Check explicit permissions for any other permissions
-#         permission = db.query(ContractPermission).filter(
-#             ContractPermission.contract_id == contract_id,
-#             ContractPermission.user_id == user.id,
-#             ContractPermission.permission_type == required_permission
-#         ).first()
-        
-#         return permission is not None
-    
-#     # Other users (if any) - check explicit permissions only
-#     permission = db.query(ContractPermission).filter(
-#         ContractPermission.contract_id == contract_id,
-#         ContractPermission.user_id == user.id,
-#         ContractPermission.permission_type == required_permission
-#     ).first()
-    
-#     return permission is not None
+
 
 def get_user_ids_from_field(user_field):
     """Safely extract user IDs from a field that could be list, string, or other format"""
@@ -1149,7 +1053,13 @@ async def login(
         details={"method": "password"}, 
         request=request
     )
-    
+    # ✅ Get setup_completed from the tenant
+    setup_completed = False
+    if user.tenant_id:
+        tenant = db.query(Tenant).filter(Tenant.id == user.tenant_id).first()
+        if tenant:
+            setup_completed = tenant.setup_completed or False
+               
     # Create JWT token with user role
     access_token = create_access_token(data={
         "sub": user.username,
@@ -1177,7 +1087,18 @@ async def login(
     return {
         "access_token": access_token,
         "token_type": "bearer",
-        "user": user_response
+        "user": {
+            "id": user.id,
+            "username": user.username,
+            "email": user.email,
+            "full_name": user.full_name,
+            "role": user.role,
+            "tenant_id": str(user.tenant_id) if user.tenant_id else None,
+            "is_active": user.is_active,
+            "setup_completed": setup_completed,  # ✅ Critical
+            "created_at": user.created_at,
+            "last_login": user.last_login
+        }
     }
 
 @app.post("/auth/logout")
@@ -1302,6 +1223,24 @@ async def upload_contract(
         db.add(db_contract)
         db.commit()
         db.refresh(db_contract)
+
+        # ── Upload notification for the uploader ─────────────────────────────
+        try:
+            upload_notif = UserNotification(
+                user_id=current_user.id,
+                notification_type="grant_uploaded",
+                title="Grant Saved as Draft",
+                message=f"'{db_contract.grant_name or db_contract.filename}' has been uploaded and saved as a draft",
+                contract_id=db_contract.id,
+                is_read=False,
+                created_at=datetime.utcnow()
+            )
+            db.add(upload_notif)
+            db.commit()
+        except Exception as _notif_err:
+            print(f"Warning: could not create upload notification: {_notif_err}")
+        # ────────────────────────────────────────────────────────────────────
+
         # -----------------------------
         # SAVE REPORTING SCHEDULE DATA
         # -----------------------------
@@ -3199,23 +3138,101 @@ async def update_contract_status_endpoint(
     })
     
     contract.comprehensive_data["status_history"] = status_history
-    
+
     db.commit()
-    
+
+    # ── Status-change notifications ──────────────────────────────────────────
+    try:
+        contract_name = contract.grant_name or contract.filename or f"Contract #{contract_id}"
+        actor_name = current_user.full_name or current_user.username
+        new_notifs = []
+
+        if status == "under_review":
+            # Notify assigned PGMs
+            for uid in (contract.assigned_pgm_users or []):
+                new_notifs.append(UserNotification(
+                    user_id=uid, notification_type="status_under_review",
+                    title="Grant Submitted for Review",
+                    message=f"'{contract_name}' has been submitted for your review by {actor_name}",
+                    contract_id=contract_id, is_read=False, created_at=datetime.utcnow()
+                ))
+            # Notify assigned directors
+            for uid in (contract.assigned_director_users or []):
+                new_notifs.append(UserNotification(
+                    user_id=uid, notification_type="status_under_review",
+                    title="Grant Pending Review",
+                    message=f"'{contract_name}' has been submitted for review by {actor_name}",
+                    contract_id=contract_id, is_read=False, created_at=datetime.utcnow()
+                ))
+
+        elif status == "reviewed":
+            # Notify the PM who created the grant
+            if contract.created_by:
+                new_notifs.append(UserNotification(
+                    user_id=contract.created_by, notification_type="status_reviewed",
+                    title="Grant Reviewed",
+                    message=f"'{contract_name}' has been reviewed by {actor_name} and is pending director approval",
+                    contract_id=contract_id, is_read=False, created_at=datetime.utcnow()
+                ))
+            # Notify assigned directors
+            for uid in (contract.assigned_director_users or []):
+                new_notifs.append(UserNotification(
+                    user_id=uid, notification_type="status_reviewed",
+                    title="Grant Awaiting Your Approval",
+                    message=f"'{contract_name}' has been reviewed and is awaiting your final approval",
+                    contract_id=contract_id, is_read=False, created_at=datetime.utcnow()
+                ))
+
+        elif status == "approved":
+            # Notify PM
+            if contract.created_by:
+                new_notifs.append(UserNotification(
+                    user_id=contract.created_by, notification_type="status_approved",
+                    title="Grant Approved",
+                    message=f"'{contract_name}' has been approved by {actor_name}",
+                    contract_id=contract_id, is_read=False, created_at=datetime.utcnow()
+                ))
+            # Notify assigned PGMs
+            for uid in (contract.assigned_pgm_users or []):
+                new_notifs.append(UserNotification(
+                    user_id=uid, notification_type="status_approved",
+                    title="Grant Approved",
+                    message=f"'{contract_name}' has been approved by {actor_name}",
+                    contract_id=contract_id, is_read=False, created_at=datetime.utcnow()
+                ))
+
+        elif status == "rejected":
+            # Notify PM
+            if contract.created_by:
+                new_notifs.append(UserNotification(
+                    user_id=contract.created_by, notification_type="status_rejected",
+                    title="Grant Rejected",
+                    message=f"'{contract_name}' has been rejected by {actor_name}",
+                    contract_id=contract_id, is_read=False, created_at=datetime.utcnow()
+                ))
+
+        for n in new_notifs:
+            db.add(n)
+        if new_notifs:
+            db.commit()
+    except Exception as _notif_err:
+        print(f"Warning: could not create status-change notifications: {_notif_err}")
+    # ────────────────────────────────────────────────────────────────────────
+
     # Log activity
     log_activity(
-        db, 
-        current_user.id, 
-        "status_change", 
-        contract_id=contract_id, 
+        db,
+        current_user.id,
+        "status_change",
+        contract_id=contract_id,
         details={
             "old_status": old_status,
             "new_status": status,
             "comments": comments
-        }, 
+        },
         request=request
     )
-    
+
     return {
         "message": f"Contract status updated from {old_status} to {status}",
         "contract_id": contract_id,
@@ -5918,6 +5935,233 @@ def get_file_url(self, file_key: str, expires_in: int = 3600):
         return None
 
 
+# ── Schema description of all DB views exposed to the copilot analytics mode ──
+_VIEWS_SCHEMA = """
+You have access to the following PostgreSQL views (READ-ONLY). Use ONLY these views.
+
+1. active_reports_tracker
+   Columns: grant_name, report_type, due_date (date), days_remaining (int),
+            status, responsible_person, pgm_approved (bool), director_approved (bool)
+   Description: All non-approved reporting events across all grants.
+
+2. executive_grant_snapshot
+   Columns: grant_name, grantor, total_amount (float), balance_remaining (float),
+            reporting_status (text)
+   Description: Executive summary per grant — financials + health status.
+
+3. grant_financial_summary
+   Columns: id (int), grant_name, total_amount (float), amount_received (numeric),
+            balance_remaining (float)
+   Description: Financial tracking per grant — received vs remaining.
+
+4. grant_risk_exposure
+   Columns: grant_name, risk_type (text), financial_exposure (float)
+   Description: Grants with overdue reporting and the financial amount at risk.
+
+5. overdue_reports
+   Columns: grant_name, report_type, due_date (date), days_overdue (int), status
+   Description: All reports past their due date and not yet approved.
+
+6. portfolio_financial_overview
+   Columns: total_grants (int), total_value (float)
+   Description: Single aggregated row — total number of grants and total portfolio value.
+
+7. portfolio_health
+   Columns: grant_name, reporting_status ('On Track' or 'At Risk')
+   Description: Per-grant health status based on reporting compliance.
+
+8. upcoming_reports_30_days
+   Columns: grant_name, report_type, due_date (date), days_remaining (int),
+            status, responsible_person, pgm_approved (bool), director_approved (bool)
+   Description: Reports due within the next 30 days.
+"""
+
+_ANALYTICS_SYSTEM = (
+    "You are a smart grant management AI assistant for GrantOS. "
+    "You help program managers and directors understand their grant portfolio. "
+    "Be concise, use bullet points or simple tables when presenting lists of data. "
+    "Always add a brief insight or recommendation where relevant."
+)
+
+_ALLOWED_VIEWS = {
+    "active_reports_tracker", "executive_grant_snapshot", "grant_financial_summary",
+    "grant_risk_exposure", "overdue_reports", "portfolio_financial_overview",
+    "portfolio_health", "upcoming_reports_30_days",
+}
+
+
+def _is_safe_sql(sql: str) -> bool:
+    """Only allow plain SELECT queries against whitelisted views."""
+    from sqlalchemy import text as sa_text
+    s = sql.strip().upper()
+    if not s.startswith("SELECT"):
+        return False
+    forbidden = ["INSERT", "UPDATE", "DELETE", "DROP", "ALTER", "CREATE",
+                 "TRUNCATE", "GRANT", "REVOKE", "EXECUTE", "CALL", "--", ";"]
+    return not any(kw in s for kw in forbidden)
+
+
+@app.post("/api/copilot/chat")
+async def copilot_chat(
+    request: schemas.CopilotChatRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Dual-mode copilot:
+      - contract_id provided → Document RAG (answer from the PDF text)
+      - contract_id absent   → Portfolio Analytics (Text-to-SQL over DB views)
+    """
+    from app.models import Contract
+    from sqlalchemy import text as sa_text
+
+    if not ai_extractor or not ai_extractor.client:
+        raise HTTPException(status_code=503, detail="AI service not available")
+
+    # ─────────────────────────────────────────────────────────────
+    # MODE 1 — Document RAG
+    # ─────────────────────────────────────────────────────────────
+    if request.contract_id is not None:
+        contract = db.query(Contract).filter(Contract.id == request.contract_id).first()
+        if not contract:
+            raise HTTPException(status_code=404, detail="Contract not found")
+
+        MAX_CHARS = 60000
+        full_text = (contract.full_text or "")[:MAX_CHARS]
+
+        structured_summary = ""
+        if contract.comprehensive_data:
+            try:
+                summary_fields = {
+                    k: contract.comprehensive_data[k]
+                    for k in ["parties", "contract_details", "financial_details",
+                               "deliverables", "reporting_requirements"]
+                    if k in contract.comprehensive_data
+                }
+                structured_summary = json.dumps(summary_fields, indent=2)[:8000]
+            except Exception:
+                pass
+
+        context_block = ""
+        if full_text:
+            context_block += f"\n\n--- CONTRACT FULL TEXT ---\n{full_text}"
+        if structured_summary:
+            context_block += f"\n\n--- STRUCTURED EXTRACTION ---\n{structured_summary}"
+
+        contract_name = contract.grant_name or contract.filename or f"Contract #{contract.id}"
+
+        system_prompt = (
+            f"You are a helpful AI assistant specializing in grant contract analysis.\n"
+            f"You are answering questions about: \"{contract_name}\".\n"
+            f"Answer ONLY based on the contract content below. "
+            f"If information is not found, say so clearly. "
+            f"Cite specific sections or clauses when possible."
+            f"{context_block}"
+        )
+
+        messages = [{"role": "system", "content": system_prompt}]
+        for msg in request.chat_history:
+            messages.append({"role": msg.role, "content": msg.content})
+        messages.append({"role": "user", "content": request.message})
+
+        try:
+            completion = ai_extractor.client.chat.completions.create(
+                model="gpt-4o", messages=messages, temperature=0.3, max_tokens=1200,
+            )
+            return {
+                "response": completion.choices[0].message.content,
+                "mode": "document",
+                "contract_id": contract.id,
+                "contract_name": contract_name,
+            }
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"AI error: {str(e)}")
+
+    # ─────────────────────────────────────────────────────────────
+    # MODE 2 — Portfolio Analytics (Text-to-SQL)
+    # ─────────────────────────────────────────────────────────────
+
+    # Stage 1: ask GPT-4o to generate SQL from the question
+    sql_gen_messages = [
+        {
+            "role": "system",
+            "content": (
+                "You are a PostgreSQL expert for a grant management system.\n"
+                + _VIEWS_SCHEMA
+                + "\nRules:\n"
+                "- Generate ONE valid PostgreSQL SELECT query.\n"
+                "- Use ONLY the views listed above.\n"
+                "- Do NOT use semicolons, CTEs with write operations, or subqueries on other tables.\n"
+                "- Return ONLY the raw SQL — no explanation, no markdown, no backticks.\n"
+                "- If the question cannot be answered with these views, reply exactly: CANNOT_ANSWER"
+            ),
+        },
+        {"role": "user", "content": request.message},
+    ]
+
+    try:
+        sql_resp = ai_extractor.client.chat.completions.create(
+            model="gpt-4o", messages=sql_gen_messages, temperature=0, max_tokens=300,
+        )
+        raw_sql = sql_resp.choices[0].message.content.strip()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"AI error: {str(e)}")
+
+    if raw_sql == "CANNOT_ANSWER":
+        return {
+            "response": (
+                "I can answer questions about your grant portfolio using live data — "
+                "such as financial summaries, overdue reports, risk exposure, and upcoming deadlines. "
+                "Could you rephrase your question?"
+            ),
+            "mode": "analytics",
+        }
+
+    # Strip any accidental markdown fences
+    raw_sql = raw_sql.replace("```sql", "").replace("```", "").strip()
+
+    if not _is_safe_sql(raw_sql):
+        raise HTTPException(status_code=400, detail="Generated query failed safety check.")
+
+    # Stage 2: execute the query
+    try:
+        result = db.execute(sa_text(raw_sql + " LIMIT 200"))
+        columns = list(result.keys())
+        rows = [dict(zip(columns, row)) for row in result.fetchall()]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Query execution failed: {str(e)}")
+
+    # Stage 3: format results as natural language
+    data_str = json.dumps(rows, indent=2, default=str)[:8000]
+    format_messages = [
+        {"role": "system", "content": _ANALYTICS_SYSTEM},
+    ]
+    for msg in request.chat_history:
+        format_messages.append({"role": msg.role, "content": msg.content})
+    format_messages.append({
+        "role": "user",
+        "content": (
+            f"Question: {request.message}\n\n"
+            f"Live data from the database ({len(rows)} row{'s' if len(rows) != 1 else ''}):\n"
+            f"{data_str}\n\n"
+            f"Provide a clear, human-readable answer with insights where useful. "
+            f"If the result is empty, explain what that means in context."
+        ),
+    })
+
+    try:
+        fmt_resp = ai_extractor.client.chat.completions.create(
+            model="gpt-4o", messages=format_messages, temperature=0.3, max_tokens=1200,
+        )
+        return {
+            "response": fmt_resp.choices[0].message.content,
+            "mode": "analytics",
+            "rows_returned": len(rows),
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"AI error: {str(e)}")
+
+
 @app.get("/api/debug/deliverables/{contract_id}")
 async def debug_contract_deliverables(
     contract_id: int,
@@ -5966,6 +6210,15 @@ async def get_notifications(
         for n in notifications
     ]
 
+@app.post("/api/notifications/mark-all-read")
+async def mark_all_notifications_read(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Mark all notifications as read for the current user"""
+    NotificationService.mark_all_as_read(db, current_user.id)
+    return {"message": "All notifications marked as read"}
+
 @app.post("/api/notifications/{notification_id}/read")
 async def mark_notification_read(
     notification_id: int,
@@ -5974,10 +6227,10 @@ async def mark_notification_read(
 ):
     """Mark notification as read"""
     notification = NotificationService.mark_as_read(db, notification_id, current_user.id)
-    
+
     if not notification:
         raise HTTPException(status_code=404, detail="Notification not found")
-    
+
     return {"message": "Notification marked as read", "notification_id": notification_id}
 
 @app.get("/api/notifications/unread-count")

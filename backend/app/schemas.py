@@ -1,7 +1,20 @@
 # app/schemas.py - Add new schemas for project manager actions
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr, Field
 from typing import Optional, Dict, Any, List
 from datetime import date, datetime
+
+class CreateTenantRequest(BaseModel):
+    organization_name: str
+    domain: str
+    admin_name: str
+    admin_email: EmailStr
+    password: str = Field(min_length=8, description="Password must be at least 8 characters long")
+    admin_phone: str | None = None
+
+class InviteUserRequest(BaseModel):
+    email: EmailStr
+    role: str
+    full_name: Optional[str] = None
 
 class ContractBase(BaseModel):
     filename: str
@@ -208,6 +221,17 @@ class ArchiveResponse(BaseModel):
     status: str
     archived_at: Optional[str] = None
     version_number: Optional[int] = None
-    
+
     class Config:
         from_attributes = True
+
+
+class CopilotMessage(BaseModel):
+    role: str  # "user" or "assistant"
+    content: str
+
+
+class CopilotChatRequest(BaseModel):
+    message: str
+    contract_id: Optional[int] = None  # None = analytics/portfolio mode
+    chat_history: List[CopilotMessage] = []
