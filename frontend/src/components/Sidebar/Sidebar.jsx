@@ -275,10 +275,6 @@ const Sidebar = ({ user, onLogout }) => {
       ...newBadgeCounts
     }));
   }, [user]);
-
-  // =============================================
-  // FIX: Add event listeners for real-time updates
-  // =============================================
   useEffect(() => {
     if (!user) return;
 

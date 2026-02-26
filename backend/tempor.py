@@ -5,7 +5,7 @@ from app.auth_utils import get_password_hash
 
 db = next(get_db())
 admin = User(
-    username="platformadmin",
+    username="platformadmin2",
     email="admin@saple.ai",
     password_hash=get_password_hash("Admin@123"),
     role="platform_admin",
