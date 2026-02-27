@@ -24,3 +24,7 @@ python-multipart==0.0.6
 boto3==1.34.28
 botocore==1.34.28
 python-multipart>=0.0.6
+
+# Add to your existing requirements.txt
+msal>=1.24.0
+requests>=2.31.0

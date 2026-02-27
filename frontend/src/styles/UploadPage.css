@@ -1,3 +1,5 @@
+/* C:\saple.ai\POC\frontend\src\styles\UploadPage.css */
+
 .upload-page {
   padding: 16px;
   max-width: 900px;
@@ -13,6 +15,46 @@
   border: 1px solid #e0e0e0;
   overflow: hidden;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+/* ===== TABS STYLES ===== */
+.upload-tabs {
+  display: flex;
+  gap: 2px;
+  background: #f5f5f5;
+  border-bottom: 1px solid #e0e0e0;
+  padding: 0 16px;
+}
+
+.tab-btn {
+  padding: 16px 24px;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  font-size: 14px;
+  font-weight: 600;
+  color: #666;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+.tab-btn:hover {
+  color: #000;
+  background: #f0f0f0;
+}
+
+.tab-btn.active {
+  color: #000;
+  border-bottom-color: #000;
+  background: white;
+}
+
+.tab-btn svg {
+  width: 18px;
+  height: 18px;
 }
 
 /* Upload Area */
@@ -166,7 +208,7 @@
   padding: 12px 28px;
   background: #ffffff;
   color: rgb(0, 0, 0);
-  border: none;
+  border: 1px solid #000;
   border-radius: 8px;
   font-size: 14px;
   font-weight: 600;
@@ -175,13 +217,14 @@
   min-width: 180px;
 }
 
-.btn-upload-main:hover:not(:disabled) {
-  background: #333;
+.btn-upload-mains:hover:not(:disabled) {
+  background: #000;
+  color: white;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-.btn-upload-main:disabled {
+.btn-upload-mains:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
@@ -589,122 +632,6 @@
   transform: translateY(-1px);
 }
 
-/* Responsive */
-@media (max-width: 768px) {
-  .upload-page {
-    padding: 12px;
-  }
-  
-  .upload-area-section {
-    padding: 24px;
-  }
-  
-  .upload-dropzone {
-    padding: 40px 24px;
-  }
-  
-  .dropzone-icon {
-    width: 40px;
-    height: 40px;
-  }
-  
-  .dropzone-text h3 {
-    font-size: 18px;
-  }
-  
-  .dropzone-text p {
-    font-size: 13px;
-  }
-  
-  .file-info {
-    padding: 20px;
-  }
-  
-  .upload-actions {
-    padding: 20px;
-  }
-  
-  .btn-upload-main {
-    width: 100%;
-    justify-content: center;
-  }
-  
-  .extraction-stages {
-    flex-direction: column;
-  }
-  
-  .error-section {
-    flex-direction: column;
-    text-align: center;
-    gap: 16px;
-  }
-  
-  .error-message {
-    flex-direction: column;
-    text-align: center;
-  }
-  
-  .btn-retry {
-    width: 100%;
-  }
-  
-  .processing-section,
-  .extraction-results-section {
-    padding: 24px;
-  }
-  
-  .extraction-grid {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 16px;
-  }
-  
-  .extraction-actions {
-    flex-direction: column;
-    gap: 10px;
-  }
-  
-  .btn-upload-another,
-  .btn-view-contract,
-  .btn-view-drafts {
-    width: 100%;
-    min-width: auto;
-  }
-}
-
-@media (max-width: 480px) {
-  .upload-page {
-    padding: 8px;
-  }
-  
-  .upload-area-section {
-    padding: 20px;
-  }
-  
-  .upload-dropzone {
-    padding: 32px 20px;
-  }
-  
-  .dropzone-text h3 {
-    font-size: 16px;
-  }
-  
-  .btn-upload-main {
-    font-size: 13px;
-    padding: 12px 20px;
-  }
-  
-  .extraction-grid {
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
-  
-  .processing-section,
-  .extraction-results-section,
-  .error-section {
-    padding: 20px;
-  }
-}
-
 /* Confirmation Popup */
 .confirmation-overlay {
   position: fixed;
@@ -847,6 +774,732 @@
   }
 }
 
+/* ===== SHAREPOINT INTEGRATION STYLES ===== */
+.sharepoint-integration {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.sharepoint-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.sharepoint-header h1 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.8rem;
+  color: #2c3e50;
+  margin: 0;
+}
+
+.header-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.sharepoint-tabs {
+  display: flex;
+  gap: 1rem;
+  border-bottom: 2px solid #e2e8f0;
+  margin-bottom: 2rem;
+}
+
+.tab-btn {
+  padding: 0.75rem 1.5rem;
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  font-size: 1rem;
+  font-weight: 500;
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s;
+}
+
+.tab-btn:hover {
+  color: #3b82f6;
+}
+
+.tab-btn.active {
+  color: #3b82f6;
+  border-bottom-color: #3b82f6;
+}
+
+.tab-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.connections-list {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.connection-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.connection-header {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.connection-icon {
+  width: 48px;
+  height: 48px;
+  background: #e6f0ff;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #3b82f6;
+}
+
+.connection-info {
+  flex: 1;
+}
+
+.connection-info h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.2rem;
+  color: #2c3e50;
+}
+
+.connection-info .site-url {
+  color: #64748b;
+  font-size: 0.9rem;
+  margin: 0.25rem 0;
+}
+
+.connection-info .library {
+  color: #3b82f6;
+  font-size: 0.9rem;
+  margin: 0.25rem 0;
+}
+
+.connection-info .last-sync {
+  color: #10b981;
+  font-size: 0.9rem;
+  margin: 0.25rem 0;
+}
+
+.connection-status {
+  display: flex;
+  align-items: center;
+}
+
+.status-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.status-badge.active {
+  background: #10b98120;
+  color: #10b981;
+}
+
+.status-badge.inactive {
+  background: #ef444420;
+  color: #ef4444;
+}
+
+.status-badge.imported {
+  background: #10b98120;
+  color: #10b981;
+}
+
+.status-badge.failed {
+  background: #ef444420;
+  color: #ef4444;
+}
+
+.status-badge.pending {
+  background: #f59e0b20;
+  color: #f59e0b;
+}
+
+.status-badge.started {
+  background: #3b82f620;
+  color: #3b82f6;
+}
+
+.status-badge.completed {
+  background: #10b98120;
+  color: #10b981;
+}
+
+.connection-actions {
+  display: flex;
+  gap: 0.5rem;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 1rem;
+}
+
+.action-btn {
+  padding: 0.5rem 1rem;
+  background: none;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s;
+}
+
+.action-btn:hover {
+  background: #f8fafc;
+  border-color: #3b82f6;
+  color: #3b82f6;
+}
+
+.action-btn.delete:hover {
+  background: #fee2e2;
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+.action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+/* Connection Modal */
+.connection-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 16px;
+  width: 500px;
+  max-width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  padding: 1.5rem;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h3 {
+  margin: 0;
+  color: #2c3e50;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #64748b;
+}
+
+.modal-body {
+  padding: 1.5rem;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: #2c3e50;
+}
+
+.form-group input,
+.form-group textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.95rem;
+}
+
+.form-group small {
+  display: block;
+  margin-top: 0.25rem;
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.test-result {
+  padding: 1rem;
+  border-radius: 8px;
+  margin-top: 1rem;
+}
+
+.test-result.success {
+  background: #10b98120;
+  border: 1px solid #10b981;
+  color: #10b981;
+}
+
+.test-result.error {
+  background: #ef444420;
+  border: 1px solid #ef4444;
+  color: #ef4444;
+}
+
+.test-result h4 {
+  margin: 0 0 0.5rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.test-result p {
+  margin: 0.25rem 0;
+}
+
+.modal-footer {
+  padding: 1.5rem;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+}
+
+.btn-primary {
+  padding: 0.75rem 1.5rem;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-primary:hover {
+  background: #2563eb;
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  padding: 0.75rem 1.5rem;
+  background: white;
+  color: #2c3e50;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-secondary:hover {
+  background: #f8fafc;
+}
+
+/* Browse Files */
+.browse-files {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1.5rem;
+}
+
+.browser-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+}
+
+.breadcrumb-item {
+  color: #3b82f6;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+
+.breadcrumb-item:hover {
+  background: #e6f0ff;
+}
+
+.folders-section {
+  margin-bottom: 2rem;
+}
+
+.folders-section h4 {
+  color: #2c3e50;
+  margin-bottom: 1rem;
+}
+
+.folder-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 1rem;
+}
+
+.folder-item {
+  padding: 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.folder-item:hover {
+  background: #f8fafc;
+  border-color: #3b82f6;
+}
+
+.folder-item .folder-name {
+  font-size: 0.9rem;
+  text-align: center;
+  color: #2c3e50;
+}
+
+.files-section {
+  margin-top: 2rem;
+}
+
+.files-section h4 {
+  color: #2c3e50;
+  margin-bottom: 1rem;
+}
+
+.files-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.files-table th {
+  text-align: left;
+  padding: 0.75rem;
+  background: #f8fafc;
+  color: #2c3e50;
+  font-weight: 600;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.files-table td {
+  padding: 0.75rem;
+  border-bottom: 1px solid #e2e8f0;
+  color: #2c3e50;
+}
+
+.file-name {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Sync Logs */
+.sync-logs {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1.5rem;
+}
+
+.logs-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.logs-table th {
+  text-align: left;
+  padding: 0.75rem;
+  background: #f8fafc;
+  color: #2c3e50;
+  font-weight: 600;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.logs-table td {
+  padding: 0.75rem;
+  border-bottom: 1px solid #e2e8f0;
+  color: #2c3e50;
+}
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 3rem;
+  background: #f8fafc;
+  border-radius: 12px;
+}
+
+.empty-state svg {
+  color: #94a3b8;
+  margin-bottom: 1rem;
+}
+
+.empty-state h3 {
+  color: #2c3e50;
+  margin-bottom: 0.5rem;
+}
+
+.empty-state p {
+  color: #64748b;
+  margin-bottom: 1.5rem;
+}
+
+/* Fix for top bar spacing - Add padding to account for fixed top bar */
+@media (min-width: 1025px) {
+  .upload-page {
+    padding-top: 25px !important;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  .upload-page {
+    padding-top: 20px !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .upload-page {
+    padding-top: 20px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .upload-page {
+    padding-top: 18px !important;
+  }
+}
+
+/* Also ensure the upload card has proper spacing */
+.upload-page .upload-card {
+  margin-top: 0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .upload-page {
+    padding: 12px;
+  }
+  
+  .upload-area-section {
+    padding: 24px;
+  }
+  
+  .upload-dropzone {
+    padding: 40px 24px;
+  }
+  
+  .dropzone-icon {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .dropzone-text h3 {
+    font-size: 18px;
+  }
+  
+  .dropzone-text p {
+    font-size: 13px;
+  }
+  
+  .file-info {
+    padding: 20px;
+  }
+  
+  .upload-actions {
+    padding: 20px;
+  }
+  
+  .btn-upload-main {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .extraction-stages {
+    flex-direction: column;
+  }
+  
+  .error-section {
+    flex-direction: column;
+    text-align: center;
+    gap: 16px;
+  }
+  
+  .error-message {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .btn-retry {
+    width: 100%;
+  }
+  
+  .processing-section,
+  .extraction-results-section {
+    padding: 24px;
+  }
+  
+  .extraction-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 16px;
+  }
+  
+  .extraction-actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .btn-upload-another,
+  .btn-view-contract,
+  .btn-view-drafts {
+    width: 100%;
+    min-width: auto;
+  }
+
+  /* SharePoint responsive */
+  .sharepoint-integration {
+    padding: 1rem;
+  }
+  
+  .sharepoint-header {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: flex-start;
+  }
+  
+  .sharepoint-tabs {
+    flex-wrap: wrap;
+  }
+  
+  .connection-header {
+    flex-direction: column;
+  }
+  
+  .connection-actions {
+    flex-wrap: wrap;
+  }
+  
+  .folder-grid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  }
+  
+  .files-table {
+    display: block;
+    overflow-x: auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .upload-page {
+    padding: 8px;
+  }
+  
+  .upload-area-section {
+    padding: 20px;
+  }
+  
+  .upload-dropzone {
+    padding: 32px 20px;
+  }
+  
+  .dropzone-text h3 {
+    font-size: 16px;
+  }
+  
+  .btn-upload-main {
+    font-size: 13px;
+    padding: 12px 20px;
+  }
+  
+  .extraction-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
+  .processing-section,
+  .extraction-results-section,
+  .error-section {
+    padding: 20px;
+  }
+
+  /* SharePoint responsive */
+  .folder-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .modal-content {
+    width: 95%;
+  }
+  
+  .modal-footer {
+    flex-direction: column;
+  }
+  
+  .modal-footer button {
+    width: 100%;
+  }
+  
+  .breadcrumb {
+    flex-wrap: wrap;
+  }
+}
+
 /* Responsive for confirmation popup */
 @media (max-width: 768px) {
   .confirmation-popup {
@@ -891,35 +1544,4 @@
   .filename {
     max-width: 120px;
   }
-}
-
-
-/* Fix for top bar spacing - Add padding to account for fixed top bar */
-@media (min-width: 1025px) {
-  .upload-page {
-    padding-top: 25px !important; /* 64px (topbar) + 24px (original padding) */
-  }
-}
-
-@media (min-width: 769px) and (max-width: 1024px) {
-  .upload-page {
-    padding-top: 20px !important; /* 60px (topbar) + 20px (original padding) */
-  }
-}
-
-@media (max-width: 768px) {
-  .upload-page {
-    padding-top: 20px !important; /* 56px (topbar) + 16px (original padding) */
-  }
-}
-
-@media (max-width: 480px) {
-  .upload-page {
-    padding-top: 18px !important; /* 52px (topbar) + 12px (original padding) */
-  }
-}
-
-/* Also ensure the upload card has proper spacing */
-.upload-page .upload-card {
-  margin-top: 0;
 }

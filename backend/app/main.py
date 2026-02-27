@@ -79,7 +79,7 @@ from app import models, schemas
 from app.auth_models import User, ActivityLog, ContractPermission
 from app.auth_schemas import UserCreate, UserResponse, LoginRequest, Token, ChangePasswordRequest
 from app.models import ReportingSchedule
-
+from app.sharepoint.routes import router as sharepoint_router
 
 # Create tables and setup relationships
 setup_database()
@@ -89,6 +89,7 @@ app.include_router(admin_router)
 app.include_router(agreement_router)
 app.include_router(tenant_router)
 app.include_router(module_router)
+app.include_router(sharepoint_router)
 # CORS
 app.add_middleware(
     CORSMiddleware,

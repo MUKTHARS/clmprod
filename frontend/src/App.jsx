@@ -28,7 +28,7 @@ import UserManagementPage from "./pages/UserManagementPage";
 import PlatformRouter from "./pages/PlatformRouter";
 import PlatformLogin from "./components/Auth/PlatformLogin";
 import TenantLogin from "./components/Auth/TenantLogin";
-
+import SharePointIntegration from './sharepoint/SharePointIntegration';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -128,6 +128,7 @@ function TenantRouter({ user, onLogout }) {
             <Route path="/reports" element={<Reports />} />
             <Route path="/" element={<Navigate to="/app/dashboard" replace />} />
             <Route path="*" element={<Navigate to="/app/dashboard" replace />} />
+            <Route path="/app/sharepoint" element={<SharePointIntegration user={user} />} />
           </Routes>
         </div>
       </div>

@@ -1,3 +1,5 @@
+// C:\saple.ai\POC\frontend\src\UploadPage.jsx
+
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
@@ -17,9 +19,12 @@ import {
   ChevronRight,
   Eye,
   ExternalLink,
-  AlertTriangle // Add this import
+  AlertTriangle,
+  Cloud,  // Add this import for SharePoint
+  Link2   // Add this import for SharePoint
 } from 'lucide-react';
 import './styles/UploadPage.css';
+import SharePointIntegration from './sharepoint/SharePointIntegration'; // Add this import
 
 function UploadPage({ user, setLoading = () => {}, onUploadComplete }) {
   const [file, setFile] = useState(null);
@@ -30,7 +35,8 @@ function UploadPage({ user, setLoading = () => {}, onUploadComplete }) {
   const [extractionDetails, setExtractionDetails] = useState(null);
   const [showExtractionResults, setShowExtractionResults] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [showConfirmation, setShowConfirmation] = useState(false); // Add this state
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [activeTab, setActiveTab] = useState('upload'); // 'upload' or 'sharepoint'
   const navigate = useNavigate();
 
   const extractionStages = [
@@ -80,7 +86,6 @@ function UploadPage({ user, setLoading = () => {}, onUploadComplete }) {
     });
   };
 
-  // New function to handle analyze button click
   const handleAnalyzeClick = () => {
     if (!file) {
       setUploadStatus('Please select a file first');
@@ -89,7 +94,6 @@ function UploadPage({ user, setLoading = () => {}, onUploadComplete }) {
     setShowConfirmation(true);
   };
 
-  // New function to confirm and start upload
   const confirmAndUpload = async () => {
     setShowConfirmation(false);
     
@@ -217,7 +221,6 @@ function UploadPage({ user, setLoading = () => {}, onUploadComplete }) {
     }
   };
 
-  // Cancel confirmation
   const cancelUpload = () => {
     setShowConfirmation(false);
   };
@@ -297,241 +300,276 @@ function UploadPage({ user, setLoading = () => {}, onUploadComplete }) {
   return (
     <div className="upload-page">
       <div className="upload-card">
-        {/* Upload Area */}
-        <div className="upload-area-section">
-          <div className="upload-area">
-            <input
-              type="file"
-              id="pdf-upload"
-              accept=".pdf"
-              onChange={handleFileChange}
-              className="file-input"
-              onDragOver={handleDragOver}
-              onDrop={handleDrop}
-            />
-            
-            {!file ? (
-              <label htmlFor="pdf-upload" className="upload-dropzone">
-                <div className="dropzone-content">
-                  <Upload size={48} className="dropzone-icon" />
-                  <div className="dropzone-text">
-                    <h3>Upload Grant PDF</h3>
-                    <p>Click to browse or drag & drop your PDF file here</p>
-                  </div>
-                  <div className="file-type-badge">
-                    <File size={14} />
-                    <span>PDF files only (max 50MB)</span>
-                  </div>
-                </div>
-              </label>
-            ) : (
-              <div className="file-preview">
-                <div className="file-info">
-                  <FileText size={20} />
-                  <div className="file-details">
-                    <h4>{file.name}</h4>
-                    <p>{(file.size / 1024 / 1024).toFixed(2)} MB • PDF Document</p>
-                  </div>
-                  <button 
-                    className="btn-remove"
-                    onClick={() => {
-                      setFile(null);
-                      setShowExtractionResults(false);
-                      setExtractionDetails(null);
-                      setIsProcessing(false);
-                      setShowConfirmation(false);
-                      document.getElementById('pdf-upload').value = '';
-                    }}
-                  >
-                    <X size={16} />
-                  </button>
-                </div>
+        {/* Tab Navigation */}
+        <div className="upload-tabs">
+          <button 
+            className={`tab-btn ${activeTab === 'upload' ? 'active' : ''}`}
+            onClick={() => setActiveTab('upload')}
+          >
+            <Upload size={18} />
+            Upload PDF
+          </button>
+          <button 
+            className={`tab-btn ${activeTab === 'sharepoint' ? 'active' : ''}`}
+            onClick={() => setActiveTab('sharepoint')}
+          >
+            <Cloud size={18} />
+            SharePoint Import
+          </button>
+        </div>
+
+        {/* Upload Tab Content */}
+        {activeTab === 'upload' && (
+          <>
+            {/* Upload Area */}
+            <div className="upload-area-section">
+              <div className="upload-area">
+                <input
+                  type="file"
+                  id="pdf-upload"
+                  accept=".pdf"
+                  onChange={handleFileChange}
+                  className="file-input"
+                  onDragOver={handleDragOver}
+                  onDrop={handleDrop}
+                />
                 
-                <div className="upload-actions">
-                  <button 
-                    onClick={handleAnalyzeClick} // Changed from handleUpload to handleAnalyzeClick
-                    className="btn-upload-mains"
-                    disabled={!localStorage.getItem('token') || isProcessing}
-                  >
-                    {!isProcessing ? (
-                      <>
-                        <Upload size={26} />
-                        <span>Analyze Grant</span>
-                      </>
-                    ) : (
-                      <>
-                        <Loader2 className="spinner" size={16} />
-                        <span>Processing...</span>
-                      </>
-                    )}
-                  </button>
+                {!file ? (
+                  <label htmlFor="pdf-upload" className="upload-dropzone">
+                    <div className="dropzone-content">
+                      <Upload size={48} className="dropzone-icon" />
+                      <div className="dropzone-text">
+                        <h3>Upload Grant PDF</h3>
+                        <p>Click to browse or drag & drop your PDF file here</p>
+                      </div>
+                      <div className="file-type-badge">
+                        <File size={14} />
+                        <span>PDF files only (max 50MB)</span>
+                      </div>
+                    </div>
+                  </label>
+                ) : (
+                  <div className="file-preview">
+                    <div className="file-info">
+                      <FileText size={20} />
+                      <div className="file-details">
+                        <h4>{file.name}</h4>
+                        <p>{(file.size / 1024 / 1024).toFixed(2)} MB • PDF Document</p>
+                      </div>
+                      <button 
+                        className="btn-remove"
+                        onClick={() => {
+                          setFile(null);
+                          setShowExtractionResults(false);
+                          setExtractionDetails(null);
+                          setIsProcessing(false);
+                          setShowConfirmation(false);
+                          document.getElementById('pdf-upload').value = '';
+                        }}
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                    
+                    <div className="upload-actions">
+                      <button 
+                        onClick={handleAnalyzeClick}
+                        className="btn-upload-mains"
+                        disabled={!localStorage.getItem('token') || isProcessing}
+                      >
+                        {!isProcessing ? (
+                          <>
+                            <Upload size={26} />
+                            <span>Analyze Grant</span>
+                          </>
+                        ) : (
+                          <>
+                            <Loader2 className="spinner" size={16} />
+                            <span>Processing...</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Confirmation Popup */}
+            {showConfirmation && (
+              <div className="confirmation-overlay">
+                <div className="confirmation-popup">
+                  <div className="confirmation-icon">
+                    <AlertTriangle size={32} />
+                  </div>
+                  <h3>Confirm Grant Upload</h3>
+                  <p className="confirmation-message">
+                    Are you sure you want to upload this grant?
+                  </p>
+                
+                  <div className="confirmation-actions">
+                    <button 
+                      className="btn-cancel"
+                      onClick={cancelUpload}
+                    >
+                      Cancel
+                    </button>
+                    <button 
+                      className="btn-confirm"
+                      onClick={confirmAndUpload}
+                    >
+                      <Upload size={16} />
+                      Confirm
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
-          </div>
-        </div>
 
-        {/* Confirmation Popup - Add this section */}
-        {showConfirmation && (
-          <div className="confirmation-overlay">
-            <div className="confirmation-popup">
-              <div className="confirmation-icon">
-                <AlertTriangle size={32} />
-              </div>
-              <h3>Confirm Grant Upload</h3>
-              <p className="confirmation-message">
-                Are you sure you want to upload this grant?
-              </p>
-            
-              <div className="confirmation-actions">
-                <button 
-                  className="btn-cancel"
-                  onClick={cancelUpload}
-                >
-                  Cancel
-                </button>
-                <button 
-                  className="btn-confirm"
-                  onClick={confirmAndUpload}
-                >
-                  <Upload size={16} />
-                  Confirm
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+            {/* Processing Section */}
+            {isProcessing && !showExtractionResults && (
+              <div className="processing-section">
+                <div className="processing-header">
+                  <h3>Processing Grant</h3>
+                  <p className="processing-subtitle">Extracting grant data...</p>
+                </div>
 
-        {/* Processing Section - Only show when processing */}
-        {isProcessing && !showExtractionResults && (
-          <div className="processing-section">
-            <div className="processing-header">
-              <h3>Processing Grant</h3>
-              <p className="processing-subtitle">Extracting grant data...</p>
-            </div>
-
-            <div className="progress-container">
-              <div className="progress-header">
-                <span className="progress-label">Overall Progress</span>
-                <span className="progress-percentage">{Math.min(Math.round(uploadProgress), 100)}%</span>
-              </div>
-              <div className="progress-bar">
-                <div 
-                  className="progress-fill"
-                  style={{ width: `${Math.min(uploadProgress, 100)}%` }}
-                ></div>
-              </div>
-            </div>
-
-            <div className="extraction-stages">
-              {extractionStages.map((stage) => {
-                const isActive = currentStage === stage.id;
-                const isCompleted = stageProgress[stage.id] === 100;
-                
-                return (
-                  <div 
-                    key={stage.id} 
-                    className={`extraction-stage ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''}`}
-                  >
-                    <div className="stage-icon">
-                      {isCompleted ? (
-                        <CheckCircle size={12} />
-                      ) : isActive ? (
-                        <Loader2 className="stage-spinner" size={12} />
-                      ) : (
-                        <div className="stage-placeholder"></div>
-                      )}
-                    </div>
-                    <span className="stage-label">{stage.label}</span>
-                    {stageProgress[stage.id] !== undefined && (
-                      <span className="stage-percentage">{Math.min(Math.round(stageProgress[stage.id]), 100)}%</span>
-                    )}
+                <div className="progress-container">
+                  <div className="progress-header">
+                    <span className="progress-label">Overall Progress</span>
+                    <span className="progress-percentage">{Math.min(Math.round(uploadProgress), 100)}%</span>
                   </div>
-                );
-              })}
-            </div>
+                  <div className="progress-bar">
+                    <div 
+                      className="progress-fill"
+                      style={{ width: `${Math.min(uploadProgress, 100)}%` }}
+                    ></div>
+                  </div>
+                </div>
 
-            <div className="processing-status">
-              <span className="status-text">{uploadStatus}</span>
-            </div>
-          </div>
+                <div className="extraction-stages">
+                  {extractionStages.map((stage) => {
+                    const isActive = currentStage === stage.id;
+                    const isCompleted = stageProgress[stage.id] === 100;
+                    
+                    return (
+                      <div 
+                        key={stage.id} 
+                        className={`extraction-stage ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''}`}
+                      >
+                        <div className="stage-icon">
+                          {isCompleted ? (
+                            <CheckCircle size={12} />
+                          ) : isActive ? (
+                            <Loader2 className="stage-spinner" size={12} />
+                          ) : (
+                            <div className="stage-placeholder"></div>
+                          )}
+                        </div>
+                        <span className="stage-label">{stage.label}</span>
+                        {stageProgress[stage.id] !== undefined && (
+                          <span className="stage-percentage">{Math.min(Math.round(stageProgress[stage.id]), 100)}%</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="processing-status">
+                  <span className="status-text">{uploadStatus}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Extraction Results Section */}
+            {showExtractionResults && extractionDetails && (
+              <div className="extraction-results-section">
+                <div className="extraction-details-card">
+                  <div className="extraction-grid">
+                    <div className="extraction-field">
+                      <span className="field-label">Grant Name</span>
+                      <span className="field-value">{extractionDetails.grant_name}</span>
+                    </div>
+                    <div className="extraction-field">
+                      <span className="field-label">Grant ID</span>
+                      <span className="field-value">{extractionDetails.id}</span>
+                    </div>
+                    <div className="extraction-field">
+                      <span className="field-label">Status</span>
+                      <span className="field-value status-badge draft">Draft</span>
+                    </div>
+                    <div className="extraction-field">
+                      <span className="field-label">Total Amount</span>
+                      <span className="field-value">{formatCurrency(extractionDetails.total_amount)}</span>
+                    </div>
+                    <div className="extraction-field">
+                      <span className="field-label">Grantor</span>
+                      <span className="field-value">{extractionDetails.grantor || 'Not specified'}</span>
+                    </div>
+                    <div className="extraction-field">
+                      <span className="field-label">Upload Date</span>
+                      <span className="field-value">{formatDate(extractionDetails.uploaded_at)}</span>
+                    </div>
+                  </div>
+
+                  <div className="extraction-actions">
+                    <button 
+                      className="btn-view-contract"
+                      onClick={handleViewContract}
+                    >
+                      <Eye size={16} />
+                      View Grant
+                    </button>
+                    <button 
+                      className="btn-view-drafts"
+                      onClick={handleViewInDrafts}
+                    >
+                      <FileText size={16} />
+                      View in Drafts
+                    </button>
+                    <button 
+                      className="btn-upload-another"
+                      onClick={handleUploadAnother}
+                    >
+                      <Upload size={16} />
+                      Upload Another
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Error State */}
+            {currentStage === 'error' && (
+              <div className="error-section">
+                <div className="error-message">
+                  <AlertCircle size={20} />
+                  <div>
+                    <h3>Upload Failed</h3>
+                    <p>{uploadStatus}</p>
+                  </div>
+                </div>
+                <button 
+                  className="btn-retry"
+                  onClick={() => {
+                    setCurrentStage('idle');
+                    setUploadStatus('');
+                    setUploadProgress(0);
+                    setStageProgress({});
+                    setIsProcessing(false);
+                    setShowConfirmation(false);
+                  }}
+                >
+                  Try Again
+                </button>
+              </div>
+            )}
+          </>
         )}
 
-        {/* Extraction Results Section */}
-        {showExtractionResults && extractionDetails && (
-          <div className="extraction-results-section">
-            <div className="extraction-details-card">
-              <div className="extraction-grid">
-                <div className="extraction-field">
-                  <span className="field-label">Grant Name</span>
-                  <span className="field-value">{extractionDetails.grant_name}</span>
-                </div>
-                <div className="extraction-field">
-                  <span className="field-label">Grant ID</span>
-                  <span className="field-value">{extractionDetails.id}</span>
-                </div>
-                <div className="extraction-field">
-                  <span className="field-label">Status</span>
-                  <span className="field-value status-badge draft">Draft</span>
-                </div>
-                <div className="extraction-field">
-                  <span className="field-label">Total Amount</span>
-                  <span className="field-value">{formatCurrency(extractionDetails.total_amount)}</span>
-                </div>
-                <div className="extraction-field">
-                  <span className="field-label">Grantor</span>
-                  <span className="field-value">{extractionDetails.grantor || 'Not specified'}</span>
-                </div>
-                <div className="extraction-field">
-                  <span className="field-label">Upload Date</span>
-                  <span className="field-value">{formatDate(extractionDetails.uploaded_at)}</span>
-                </div>
-              </div>
-
-              <div className="extraction-actions">
-                <button 
-                  className="btn-view-contract"
-                  onClick={handleViewContract}
-                >
-                  <Eye size={16} />
-                  View Grant
-                </button>
-                <button 
-                  className="btn-view-drafts"
-                  onClick={handleViewInDrafts}
-                >
-                  <FileText size={16} />
-                  View in Drafts
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Error State */}
-        {currentStage === 'error' && (
-          <div className="error-section">
-            <div className="error-message">
-              <AlertCircle size={20} />
-              <div>
-                <h3>Upload Failed</h3>
-                <p>{uploadStatus}</p>
-              </div>
-            </div>
-            <button 
-              className="btn-retry"
-              onClick={() => {
-                setCurrentStage('idle');
-                setUploadStatus('');
-                setUploadProgress(0);
-                setStageProgress({});
-                setIsProcessing(false);
-                setShowConfirmation(false);
-              }}
-            >
-              Try Again
-            </button>
-          </div>
+        {/* SharePoint Tab Content */}
+        {activeTab === 'sharepoint' && (
+          <SharePointIntegration user={user} />
         )}
       </div>
     </div>
