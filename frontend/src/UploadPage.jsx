@@ -309,13 +309,13 @@ function UploadPage({ user, setLoading = () => {}, onUploadComplete }) {
             <Upload size={18} />
             Upload PDF
           </button>
-          <button 
+          {/* <button 
             className={`tab-btn ${activeTab === 'sharepoint' ? 'active' : ''}`}
             onClick={() => setActiveTab('sharepoint')}
           >
             <Cloud size={18} />
             SharePoint Import
-          </button>
+          </button> */}
         </div>
 
         {/* Upload Tab Content */}

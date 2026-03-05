@@ -507,14 +507,14 @@ const Sidebar = ({ user, onLogout }) => {
         badge: true,
         showIcon: false
       },
-      { 
-        id: 'reports', 
-        label: 'Reports', 
-        icon: BarChart3,
-        path: '/app/reports', 
-        permission: 'can_view_reports',
-        roles: ['project_manager', 'program_manager', 'director', 'super_admin']
-      }
+      // { 
+      //   id: 'reports', 
+      //   label: 'Reports', 
+      //   icon: BarChart3,
+      //   path: '/app/reports', 
+      //   permission: 'can_view_reports',
+      //   roles: ['project_manager', 'program_manager', 'director', 'super_admin']
+      // }
     ];
     
     // Filter items based on user role
