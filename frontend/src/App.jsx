@@ -91,7 +91,7 @@ function App() {
         />
 
         {/* Default */}
-        <Route path="*" element={<Navigate to="/platform/login" />} />
+        <Route path="*" element={<Navigate to="/app/login" />} />
       </Routes>
     </Router>
   );

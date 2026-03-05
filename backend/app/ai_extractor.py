@@ -1178,19 +1178,19 @@ Contract text (first 12000 characters):
         
         patterns = {
             "investment_id": [
-                r'Investment\s*(?:ID|Number|No\.?)[:\s]*([A-Z0-9\-/#]+)',
-                r'INV-\d+',
-                r'INV[:\s]*([A-Z0-9\-]+)'
+                r'Investment\s*(?:ID|Number|No\.?)[:\s]+([A-Z0-9\-/#]+)',
+                r'\bINV-(\d+)\b',
+                r'\bINV[:\s]+([A-Z0-9][A-Z0-9\-]{1,30})\b'
             ],
             "project_id": [
-                r'Project\s*(?:ID|Number|No\.?|Code)[:\s]*([A-Z0-9\-/#]+)',
-                r'PRJ-\d+',
-                r'PRJ[:\s]*([A-Z0-9\-]+)'
+                r'Project\s*(?:ID|Number|No\.?|Code)[:\s]+([A-Z0-9\-/#]+)',
+                r'\bPRJ-(\d+)\b',
+                r'\bPRJ[:\s]+([A-Z0-9][A-Z0-9\-]{1,30})\b'
             ],
             "grant_id": [
-                r'Grant\s*(?:ID|Number|No\.?|Reference)[:\s]*([A-Z0-9\-/#]+)',
-                r'GR-\d+',
-                r'GRANT[:\s]+([A-Z0-9\-/#]+)'
+                r'Grant\s*(?:ID|Number|No\.?|Reference)[:\s]+([A-Z0-9\-/#]+)',
+                r'\bGR-(\d+)\b',
+                r'\bGRANT[:\s]+([A-Z0-9][A-Z0-9\-/#]{1,30})\b'
             ]
         }
         

@@ -277,11 +277,13 @@ function ContractsListPage({ contracts: propContracts = [], user, refreshContrac
   };
 
   const getContractDisplayId = (contract) => {
-    if (!contract) return 'Unknown';
-    if (contract.investment_id) return `INV-${contract.investment_id}`;
-    if (contract.project_id) return `PRJ-${contract.project_id}`;
-    if (contract.grant_id) return `GRANT-${contract.grant_id}`;
-    return `CONT-${contract.id}`;
+    if (!contract) return 'Not Specified';
+    // A real ID must contain at least one digit (fragments like "alidity", "oices" don't)
+    const isRealId = (val) => val && /\d/.test(val);
+    if (isRealId(contract.investment_id)) return contract.investment_id;
+    if (isRealId(contract.project_id)) return contract.project_id;
+    if (isRealId(contract.grant_id)) return contract.grant_id;
+    return 'Not Specified';
   };
 
   const getStatusColorForApproved = (status) => {
@@ -409,9 +411,9 @@ function ContractsListPage({ contracts: propContracts = [], user, refreshContrac
         </td>
         <td>
           <div className="clp-action-buttons">
-            <button 
+            <button
               className="clp-btn-action"
-              onClick={() => navigate(`/contracts/${contract.id}`)}
+              onClick={() => navigate(`/app/contracts/${contract.id}`)}
               title="View details"
             >
               <Eye size={16} />
@@ -474,9 +476,9 @@ function ContractsListPage({ contracts: propContracts = [], user, refreshContrac
 
         <div className="clp-card-footer">
           <div className="clp-action-buttons">
-            <button 
+            <button
               className="clp-btn-action"
-              onClick={() => navigate(`/contracts/${contract.id}`)}
+              onClick={() => navigate(`/app/contracts/${contract.id}`)}
               title="View details"
             >
               <Eye size={16} />
