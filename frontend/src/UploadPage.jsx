@@ -20,11 +20,11 @@ import {
   Eye,
   ExternalLink,
   AlertTriangle,
-  Cloud,  // Add this import for SharePoint
-  Link2   // Add this import for SharePoint
+  Cloud,
+  Link2
 } from 'lucide-react';
 import './styles/UploadPage.css';
-import SharePointIntegration from './sharepoint/SharePointIntegration'; // Add this import
+import SharePointIntegration from './sharepoint/SharePointIntegration';
 
 function UploadPage({ user, setLoading = () => {}, onUploadComplete }) {
   const [file, setFile] = useState(null);
@@ -36,7 +36,7 @@ function UploadPage({ user, setLoading = () => {}, onUploadComplete }) {
   const [showExtractionResults, setShowExtractionResults] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
-  const [activeTab, setActiveTab] = useState('upload'); // 'upload' or 'sharepoint'
+  const [activeTab, setActiveTab] = useState('upload');
   const navigate = useNavigate();
 
   const extractionStages = [
@@ -330,12 +330,15 @@ function UploadPage({ user, setLoading = () => {}, onUploadComplete }) {
                   accept=".pdf"
                   onChange={handleFileChange}
                   className="file-input"
-                  onDragOver={handleDragOver}
-                  onDrop={handleDrop}
                 />
                 
                 {!file ? (
-                  <label htmlFor="pdf-upload" className="upload-dropzone">
+                  <label 
+                    htmlFor="pdf-upload" 
+                    className="upload-dropzone"
+                    onDragOver={handleDragOver}
+                    onDrop={handleDrop}
+                  >
                     <div className="dropzone-content">
                       <Upload size={48} className="dropzone-icon" />
                       <div className="dropzone-text">
