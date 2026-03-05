@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     EMBEDDING_MODEL: str = "text-embedding-3-small"
     CHAT_MODEL: str = "gpt-4o-mini"
     
+    # CORS — set CORS_ORIGINS in .env as a comma-separated list
+    CORS_ORIGINS: list = [o for o in os.getenv("CORS_ORIGINS", "").split(",") if o]
+
     # Authentication
     SECRET_KEY: str = os.getenv("SECRET_KEY", "your-secret-key-here-change-in-production")
     ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 1440))
