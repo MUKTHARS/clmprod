@@ -32,7 +32,7 @@ function ContractApproval() {
   const fetchContractsForApproval = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('https://grantapi.saple.ai/api/contracts/status/reviewed', {
+      const response = await fetch('http://localhost:4001/api/contracts/status/reviewed', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -56,7 +56,7 @@ function ContractApproval() {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`https://grantapi.saple.ai/api/contracts/${selectedContract.id}/final-approval`, {
+      const response = await fetch(`http://localhost:4001/api/contracts/${selectedContract.id}/final-approval`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
