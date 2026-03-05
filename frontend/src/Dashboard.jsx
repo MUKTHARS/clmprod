@@ -203,7 +203,9 @@ const getTileVariantClass = (variant) => {
       project_id: contract.project_id || contract.projectId,
       grant_id: contract.grant_id || contract.grantId,
       extracted_reference_ids: contract.extracted_reference_ids || [],
-      comprehensive_data: contract.comprehensive_data || contract.comprehensiveData || null
+      comprehensive_data: contract.comprehensive_data || contract.comprehensiveData || null,
+      reporting_events_total: contract.reporting_events_total || 0,
+      reporting_events_fully_approved: contract.reporting_events_fully_approved || 0,
     };
     
     const safeGet = (obj, prop, altProp) => {
@@ -277,16 +279,12 @@ const getTileVariantClass = (variant) => {
     let upcomingDeadlines = 0;
     let highRiskCount = 0;
     const today = new Date();
-    
+
     contractsData.forEach(contract => {
       const amount = contract.total_amount || 0;
       totalAmount += amount;
-      
-      let received = calculateReceivedAmount(contract);
-      
-      fundsReceived += received;
-      fundsRemaining += (amount - received);
-      
+      fundsRemaining += amount;
+
       if (contract.end_date) {
         try {
           const endDate = new Date(contract.end_date);
@@ -321,49 +319,11 @@ const getTileVariantClass = (variant) => {
     });
   };
 
-  const calculateReceivedAmount = (contract) => {
-    let received = 0;
-    const today = new Date();
-    
-    if (contract.comprehensive_data) {
-      const compData = contract.comprehensive_data;
-      const paymentSchedule = compData.financial_details?.payment_schedule || 
-                             compData.financialDetails?.payment_schedule;
-      
-      if (paymentSchedule) {
-        if (paymentSchedule.installments && Array.isArray(paymentSchedule.installments)) {
-          paymentSchedule.installments.forEach(installment => {
-            if (installment.due_date && installment.amount) {
-              try {
-                const dueDate = new Date(installment.due_date);
-                if (!isNaN(dueDate.getTime()) && dueDate <= today) {
-                  received += parseFloat(installment.amount) || 0;
-                }
-              } catch (e) {
-                console.error('Error parsing installment date:', installment.due_date);
-              }
-            }
-          });
-        }
-        
-        if (paymentSchedule.milestones && Array.isArray(paymentSchedule.milestones)) {
-          paymentSchedule.milestones.forEach(milestone => {
-            if (milestone.due_date && milestone.amount) {
-              try {
-                const dueDate = new Date(milestone.due_date);
-                if (!isNaN(dueDate.getTime()) && dueDate <= today) {
-                  received += parseFloat(milestone.amount) || 0;
-                }
-              } catch (e) {
-                console.error('Error parsing milestone date:', milestone.due_date);
-              }
-            }
-          });
-        }
-      }
-    }
-    
-    return received;
+  const calculateProgress = (contract) => {
+    const total = contract.reporting_events_total || 0;
+    const approved = contract.reporting_events_fully_approved || 0;
+    if (total === 0) return 0;
+    return Math.round((approved / total) * 100);
   };
 
   const formatCurrency = (amount) => {
@@ -408,11 +368,13 @@ const getTileVariantClass = (variant) => {
   };
 
   const getContractDisplayId = (contract) => {
-    if (!contract) return 'Unknown';
-    if (contract.investment_id) return `INV-${contract.investment_id}`;
-    if (contract.project_id) return `PRJ-${contract.project_id}`;
-    if (contract.grant_id) return `GRANT-${contract.grant_id}`;
-    return `CONT-${contract.id || 'Unknown'}`;
+    if (!contract) return 'Not Specified';
+    // A real ID must contain at least one digit (fragments like "alidity", "oices" don't)
+    const isRealId = (val) => val && /\d/.test(val);
+    if (isRealId(contract.investment_id)) return contract.investment_id;
+    if (isRealId(contract.project_id)) return contract.project_id;
+    if (isRealId(contract.grant_id)) return contract.grant_id;
+    return 'Not Specified';
   };
 
   const getStatusIcon = (status) => {
@@ -461,6 +423,36 @@ const getTileVariantClass = (variant) => {
     (contract.contract_number && contract.contract_number.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
+  const getStatusColorForApproved = (status) => {
+    switch (status?.toLowerCase()) {
+      case 'approved':    return 'clp-approved';
+      case 'draft':       return 'clp-draft';
+      case 'under_review':return 'clp-under-review';
+      case 'reviewed':    return 'clp-reviewed';
+      case 'rejected':    return 'clp-rejected';
+      case 'published':   return 'clp-published';
+      case 'processed':   return 'clp-processed';
+      case 'processing':  return 'clp-processing';
+      case 'error':       return 'clp-error';
+      default:            return 'clp-default';
+    }
+  };
+
+  const getStatusIconForApproved = (status) => {
+    switch (status?.toLowerCase()) {
+      case 'approved':    return <CheckCircle size={14} className="clp-status-icon clp-approved" />;
+      case 'draft':       return <FileText size={14} className="clp-status-icon clp-draft" />;
+      case 'under_review':return <Clock size={14} className="clp-status-icon clp-under-review" />;
+      case 'reviewed':    return <CheckCircle size={14} className="clp-status-icon clp-reviewed" />;
+      case 'rejected':    return <AlertCircle size={14} className="clp-status-icon clp-rejected" />;
+      case 'published':   return <CheckCircle size={14} className="clp-status-icon clp-published" />;
+      case 'processed':   return <CheckCircle size={14} className="clp-status-icon clp-processed" />;
+      case 'processing':  return <RefreshCw size={14} className="clp-status-icon clp-processing" />;
+      case 'error':       return <AlertCircle size={14} className="clp-status-icon clp-error" />;
+      default:            return <Clock size={14} className="clp-status-icon clp-default" />;
+    }
+  };
+
   const fetchDashboardMetrics = async () => {
     try {
       setMetricsLoading(true);
@@ -490,85 +482,53 @@ const getTileVariantClass = (variant) => {
 
   const renderContractRow = (contract) => {
     if (!contract) return null;
-    
-    const totalAmount = contract.total_amount || 0;
-    const fundsReceived = calculateReceivedAmount(contract);
-    const progressPercentage = totalAmount > 0 ? Math.round((fundsReceived / totalAmount) * 100) : 0;
-    
+    const displayId = getContractDisplayId(contract);
     return (
-      <tr key={contract.id} className="contract-row">
+      <tr key={contract.id} className="clp-contract-row">
         <td>
-          <div className="contract-info">
-            <div className="contract-name-only">
+          <div className="clp-contract-info">
+            <div className="clp-contract-name">
               {contract.grant_name || contract.filename || 'Unnamed Grant'}
             </div>
           </div>
         </td>
         <td>
-          <div className="contract-id-only">
-            {getContractDisplayId(contract)}
-          </div>
+          <div className="clp-contract-id">{displayId}</div>
         </td>
         <td>
-          <div className="grantor-cell">
+          <div className="clp-grantor-cell">
             <span>{contract.grantor || 'N/A'}</span>
           </div>
         </td>
         <td>
-          <div className="amount-cell">
+          <div className="clp-amount-cell">
             <span>{formatCurrency(contract.total_amount)}</span>
           </div>
         </td>
         <td>
-          <div className="date-cell">
+          <div className="clp-date-cell">
             <span>{contract.uploaded_at ? new Date(contract.uploaded_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}</span>
           </div>
         </td>
         <td>
-          <div className="date-cell">
+          <div className="clp-date-cell">
             <span>{contract.end_date ? new Date(contract.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}</span>
           </div>
         </td>
         <td>
-          <div className="status-cell">
-            {getStatusIcon(contract.status)}
-            <span className={`status-text ${getStatusColor(contract.status)}`}>
-              {contract.status || 'unknown'}
+          <div className="clp-status-cell">
+            {getStatusIconForApproved(contract.status)}
+            <span className={`clp-status-text ${getStatusColorForApproved(contract.status)}`}>
+              {contract.status ? contract.status.replace('_', ' ') : 'unknown'}
             </span>
           </div>
         </td>
         <td>
-          <div className="progress-cell">
-            <div className="progress-container">
-              <div className="progress-bar">
-                <div 
-                  className="progress-fill"
-                  style={{ 
-                    width: `${progressPercentage}%`,
-                    backgroundColor: getProgressColor(progressPercentage)
-                  }}
-                ></div>
-              </div>
-              <div className="progress-text">
-                {progressPercentage}%
-              </div>
-            </div>
-          </div>
-        </td>
-        <td>
-          <div className="action-buttons">
-            <button 
-              className="btn-action"
-              onClick={() => navigate(`/app/contracts/${contract.id}`)}
-              title="View details"
-            >
+          <div className="clp-action-buttons">
+            <button className="clp-btn-action" onClick={() => navigate(`/app/contracts/${contract.id}`)} title="View details">
               <Eye size={16} />
             </button>
-            <button 
-              className="btn-action"
-              title="Download"
-              onClick={() => {}}
-            >
+            <button className="clp-btn-action" title="Download">
               <Download size={16} />
             </button>
           </div>
@@ -579,80 +539,54 @@ const getTileVariantClass = (variant) => {
 
   const renderContractCard = (contract) => {
     if (!contract) return null;
-    
-    const totalAmount = contract.total_amount || 0;
-    const fundsReceived = calculateReceivedAmount(contract);
-    const progressPercentage = totalAmount > 0 ? Math.round((fundsReceived / totalAmount) * 100) : 0;
-    
+    const displayId = getContractDisplayId(contract);
+    const daysRemaining = getDaysRemaining(contract.end_date);
     return (
-      <div key={contract.id} className="contract-card">
-        <div className="card-header">
-          <div className="contract-status">
-            {getStatusIcon(contract.status)}
-            <span className={`status-text ${contract.status}`}>
-              {contract.status || 'unknown'}
+      <div key={contract.id} className="clp-contract-card">
+        <div className="clp-card-header">
+          <div className="clp-contract-status">
+            {getStatusIconForApproved(contract.status)}
+            <span className={`clp-status-text ${getStatusColorForApproved(contract.status)}`}>
+              {contract.status ? contract.status.replace('_', ' ') : 'unknown'}
             </span>
           </div>
         </div>
 
-        <div className="card-content">
-          <h3 className="contract-name-small">
+        <div className="clp-card-content">
+          <h3 className="clp-contract-name-small">
             {contract.grant_name || contract.filename || 'Unnamed Grant'}
           </h3>
-          <p className="contract-id-small">
-            ID: {getContractDisplayId(contract)}
-          </p>
+          <p className="clp-contract-id-small">ID: {displayId}</p>
 
-          <div className="contract-meta">
-            <div className="meta-item">
+          <div className="clp-contract-meta">
+            <div className="clp-meta-item">
               <span>{contract.grantor || 'No grantor'}</span>
             </div>
-            <div className="meta-item">
+            <div className="clp-meta-item">
               <span>{contract.uploaded_at ? new Date(contract.uploaded_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'No date'}</span>
             </div>
           </div>
 
-          <div className="contract-amount">
+          <div className="clp-contract-amount">
             <span>{formatCurrency(contract.total_amount)}</span>
           </div>
 
-          <div className="contract-progress">
-            <div className="progress-container">
-              <div className="progress-bar">
-                <div 
-                  className="progress-fill"
-                  style={{ 
-                    width: `${progressPercentage}%`,
-                    backgroundColor: getProgressColor(progressPercentage)
-                  }}
-                ></div>
-              </div>
-              <div className="progress-text">
-                <span>Progress: {progressPercentage}%</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="contract-timeline">
-            <div className="timeline-item">
-              <span className="timeline-label">Ends in</span>
-              <span className={`timeline-value ${getDaysColor(getDaysRemaining(contract.end_date))}`}>
-                {getDaysRemaining(contract.end_date)}
+          <div className="clp-contract-timeline">
+            <div className="clp-timeline-item">
+              <span className="clp-timeline-label">Ends in</span>
+              <span className={`clp-timeline-value ${getDaysColor(daysRemaining)}`}>
+                {daysRemaining}
               </span>
             </div>
           </div>
         </div>
 
-        <div className="card-footer">
-          <div className="action-buttons">
-            <button 
-              className="btn-action"
-              onClick={() => navigate(`/app/contracts/${contract.id}`)}
-              title="View details"
-            >
+        <div className="clp-card-footer">
+          <div className="clp-action-buttons">
+            <button className="clp-btn-action" onClick={() => navigate(`/app/contracts/${contract.id}`)} title="View details">
               <Eye size={16} />
             </button>
-            <button className="btn-action" title="Download">
+            <button className="clp-btn-action" title="Download">
               <Download size={16} />
             </button>
           </div>
@@ -706,19 +640,18 @@ const getTileVariantClass = (variant) => {
             ) : filteredContracts.length > 0 ? (
               <>
                 {activeView === 'list' ? (
-                  <div className="contracts-table-container">
-                    <table className="contracts-table">
+                  <div className="clp-contracts-table-container">
+                    <table className="clp-contracts-table">
                       <thead>
                         <tr>
-                          <th className="table-header-large">Grant Name</th>
-                          <th className="table-header-large">Grant ID</th>
-                          <th className="table-header-large">Grantor</th>
-                          <th className="table-header-large">Amount</th>
-                          <th className="table-header-large">Upload Date</th>
-                          <th className="table-header-large">End Date</th>
-                          <th className="table-header-large">Status</th>
-                          <th className="table-header-large">Progress</th>
-                          <th className="table-header-large">Actions</th>
+                          <th className="clp-table-header">Grant Name</th>
+                          <th className="clp-table-header">Grant ID</th>
+                          <th className="clp-table-header">Grantor</th>
+                          <th className="clp-table-header">Amount</th>
+                          <th className="clp-table-header">Upload Date</th>
+                          <th className="clp-table-header">End Date</th>
+                          <th className="clp-table-header">Status</th>
+                          <th className="clp-table-header">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -727,7 +660,7 @@ const getTileVariantClass = (variant) => {
                     </table>
                   </div>
                 ) : (
-                  <div className="contracts-grid">
+                  <div className="clp-contracts-grid">
                     {filteredContracts.slice(0, 6).map(renderContractCard)}
                   </div>
                 )}
@@ -759,9 +692,7 @@ const getTileVariantClass = (variant) => {
             </div>
             <div className="financial-summary">
               {normalizedContracts.slice(0, 3).map((contract) => {
-                const totalAmount = contract.total_amount || 0;
-                const fundsReceived = calculateReceivedAmount(contract);
-                const progressPercentage = totalAmount > 0 ? Math.round((fundsReceived / totalAmount) * 100) : 0;
+                const progressPercentage = calculateProgress(contract);
                 
                 if (!contract.id) return null;
                 
@@ -779,11 +710,11 @@ const getTileVariantClass = (variant) => {
                     <div className="contract-financial-details">
                       <div className="financial-item">
                         <span className="item-label">Total Value</span>
-                        <span className="item-value total">{formatCurrency(totalAmount)}</span>
+                        <span className="item-value total">{formatCurrency(contract.total_amount)}</span>
                       </div>
                       <div className="financial-item">
-                        <span className="item-label">Funds Received</span>
-                        <span className="item-value received">{formatCurrencyWithDecimals(fundsReceived)}</span>
+                        <span className="item-label">Reports Approved</span>
+                        <span className="item-value received">{contract.reporting_events_fully_approved || 0} / {contract.reporting_events_total || 0}</span>
                       </div>
                     </div>
                     
@@ -810,24 +741,27 @@ const getTileVariantClass = (variant) => {
                   <span className="item-label">Total Value (All)</span>
                   <span className="item-value total">{formatCurrency(stats.totalAmount)}</span>
                 </div>
-                <div className="financial-item">
-                  <span className="item-label">Funds Received (All)</span>
-                  <span className="item-value received">{formatCurrencyWithDecimals(stats.fundsReceived)}</span>
-                </div>
-                <div className="progress-container">
-                  <div className="progress-bar">
-                    <div 
-                      className="progress-fill"
-                      style={{ 
-                        width: `${stats.totalAmount > 0 ? Math.round((stats.fundsReceived / stats.totalAmount * 100)) : 0}%`,
-                        backgroundColor: getProgressColor(stats.totalAmount > 0 ? Math.round((stats.fundsReceived / stats.totalAmount * 100)) : 0)
-                      }}
-                    ></div>
-                  </div>
-                  <div className="progress-text">
-                    <span>Overall Progress: {stats.totalAmount > 0 ? Math.round((stats.fundsReceived / stats.totalAmount * 100)) : 0}%</span>
-                  </div>
-                </div>
+                {(() => {
+                  const totalEvents = normalizedContracts.reduce((sum, c) => sum + (c.reporting_events_total || 0), 0);
+                  const approvedEvents = normalizedContracts.reduce((sum, c) => sum + (c.reporting_events_fully_approved || 0), 0);
+                  const overallPct = totalEvents > 0 ? Math.round((approvedEvents / totalEvents) * 100) : 0;
+                  return (
+                    <div className="progress-container">
+                      <div className="progress-bar">
+                        <div
+                          className="progress-fill"
+                          style={{
+                            width: `${overallPct}%`,
+                            backgroundColor: getProgressColor(overallPct)
+                          }}
+                        ></div>
+                      </div>
+                      <div className="progress-text">
+                        <span>Overall Progress: {overallPct}%</span>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           </div>
