@@ -2478,12 +2478,21 @@ async def get_all_contracts(
                 }
             }
             
+            # Add reporting event progress counts
+            reporting_events = db.query(models.ReportingEvent).filter(
+                models.ReportingEvent.contract_id == contract.id
+            ).all()
+            contract_dict["reporting_events_total"] = len(reporting_events)
+            contract_dict["reporting_events_fully_approved"] = len(
+                [e for e in reporting_events if e.status == "fully_approved"]
+            )
+
             contracts_dict.append(contract_dict)
-        
+
         # Log activity
         log_activity(
-            db, 
-            current_user.id, 
+            db,
+            current_user.id,
             "view_all_contracts", 
             details={"skip": skip, "limit": limit, "count": len(contracts_dict)}, 
             request=request
@@ -2718,16 +2727,25 @@ async def get_contract(
         }
     }
     
+    # Add reporting event progress counts
+    reporting_events = db.query(models.ReportingEvent).filter(
+        models.ReportingEvent.contract_id == contract_id
+    ).all()
+    contract_dict["reporting_events_total"] = len(reporting_events)
+    contract_dict["reporting_events_fully_approved"] = len(
+        [e for e in reporting_events if e.status == "fully_approved"]
+    )
+
     # Log activity
     log_activity(
-        db, 
-        current_user.id, 
-        "view_contract", 
-        contract_id=contract_id, 
-        details={"contract_id": contract_id}, 
+        db,
+        current_user.id,
+        "view_contract",
+        contract_id=contract_id,
+        details={"contract_id": contract_id},
         request=request
     )
-    
+
     print(f"Returning contract {contract_id}")
     return contract_dict
 
