@@ -187,15 +187,15 @@ async def update_draft_agreement(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only Project Managers can update draft agreements"
         )
-    
+
     contract = db.query(Contract).filter(
         Contract.id == contract_id,
         Contract.created_by == current_user.id,
-        Contract.status == "draft"
+        Contract.status.in_(["draft", "rejected"])
     ).first()
-    
+
     if not contract:
-        raise HTTPException(status_code=404, detail="Draft agreement not found")
+        raise HTTPException(status_code=404, detail="Draft agreement not found or not editable in current status")
     
     try:
         # Update basic metadata

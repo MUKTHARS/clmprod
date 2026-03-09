@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import ReactDOM from 'react-dom';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Bot,
@@ -32,10 +33,15 @@ import {
   UserPlus,
   ThumbsUp,
   ThumbsDown,
-  Eye
+  Eye,
+  AlertTriangle,
+  X
 } from 'lucide-react';
 import './TopBar.css';
 import API_CONFIG from '../../config';
+
+// Status-change notification types that require a PM login popup
+const STATUS_CHANGE_TYPES = ['modification_requested', 'status_rejected', 'status_reviewed', 'status_approved'];
 
 const TopBar = ({ user = null }) => {
   const navigate = useNavigate();
@@ -48,6 +54,8 @@ const TopBar = ({ user = null }) => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifLoading, setNotifLoading] = useState(false);
   const pollIntervalRef = useRef(null);
+  const [loginAlerts, setLoginAlerts] = useState([]);   // status-change notifs to show on login
+  const [showLoginPopup, setShowLoginPopup] = useState(false);
 
   const getPageTitle = (pathname) => {
     const routes = {
@@ -96,15 +104,16 @@ const TopBar = ({ user = null }) => {
 
   const getNotificationIcon = (type) => {
     switch (type) {
-      case 'grant_uploaded':        return <Upload size={16} />;
+      case 'grant_uploaded':           return <Upload size={16} />;
       case 'pgm_assigned':
-      case 'director_assigned':     return <UserPlus size={16} />;
-      case 'agreement_published':   return <Eye size={16} />;
-      case 'status_under_review':   return <Clock size={16} />;
-      case 'status_reviewed':       return <FileCheck size={16} />;
-      case 'status_approved':       return <ThumbsUp size={16} />;
-      case 'status_rejected':       return <ThumbsDown size={16} />;
-      default:                      return <Bell size={16} />;
+      case 'director_assigned':        return <UserPlus size={16} />;
+      case 'agreement_published':      return <Eye size={16} />;
+      case 'status_under_review':      return <Clock size={16} />;
+      case 'status_reviewed':          return <FileCheck size={16} />;
+      case 'status_approved':          return <ThumbsUp size={16} />;
+      case 'status_rejected':          return <ThumbsDown size={16} />;
+      case 'modification_requested':   return <AlertTriangle size={16} />;
+      default:                         return <Bell size={16} />;
     }
   };
 
@@ -177,6 +186,32 @@ const TopBar = ({ user = null }) => {
     return () => clearInterval(pollIntervalRef.current);
   }, [user]);
 
+  // On login, check for unread status-change notifications and show popup
+  useEffect(() => {
+    if (!user) {
+      // Reset popup state on logout so it shows again on next login
+      setShowLoginPopup(false);
+      setLoginAlerts([]);
+      return;
+    }
+
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    fetch(`${API_CONFIG.BASE_URL}/api/notifications?unread_only=true`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+      .then(r => r.ok ? r.json() : [])
+      .then(data => {
+        const alerts = (data || []).filter(n => STATUS_CHANGE_TYPES.includes(n.type));
+        if (alerts.length > 0) {
+          setLoginAlerts(alerts);
+          setShowLoginPopup(true);
+        }
+      })
+      .catch(() => {});
+  }, [user]);
+
   // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -201,6 +236,33 @@ const TopBar = ({ user = null }) => {
     setPageIcon(pageInfo.icon);
   }, [location.pathname]);
 
+  const handleDismissLoginPopup = async () => {
+    setShowLoginPopup(false);
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    // Mark each alert notification as read
+    for (const n of loginAlerts) {
+      try {
+        await fetch(`${API_CONFIG.BASE_URL}/api/notifications/${n.id}/read`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+      } catch (_) { /* ignore */ }
+    }
+    // Refresh notification list
+    fetchNotifications();
+  };
+
+  const getLoginAlertIcon = (type) => {
+    switch (type) {
+      case 'modification_requested': return <AlertTriangle size={18} style={{ color: '#f97316' }} />;
+      case 'status_rejected':        return <ThumbsDown size={18} style={{ color: '#ef4444' }} />;
+      case 'status_reviewed':        return <FileCheck size={18} style={{ color: '#3b82f6' }} />;
+      case 'status_approved':        return <ThumbsUp size={18} style={{ color: '#22c55e' }} />;
+      default:                       return <Bell size={18} />;
+    }
+  };
+
   if (!user) {
     return (
       <header className="tb-topbar">
@@ -214,6 +276,7 @@ const TopBar = ({ user = null }) => {
   }
 
   return (
+    <>
     <header className="tb-topbar">
       <div className="tb-topbar-left">
         <div className="tb-page-title-container">
@@ -276,7 +339,7 @@ const TopBar = ({ user = null }) => {
                         style={{ cursor: 'pointer' }}
                       >
                         <div className="tb-notification-icon">
-                          {getNotificationIcon(notif.notification_type)}
+                          {getNotificationIcon(notif.type)}
                         </div>
                         <div className="tb-notification-content">
                           <p className="tb-notification-title">{notif.title}</p>
@@ -293,7 +356,49 @@ const TopBar = ({ user = null }) => {
           </div>
         </div>
       </div>
+
     </header>
+
+    {/* Login status-change popup — rendered via portal to avoid stacking context issues */}
+    {showLoginPopup && loginAlerts.length > 0 && ReactDOM.createPortal(
+      <div className="tb-login-popup-overlay">
+        <div className="tb-login-popup">
+          <div className="tb-login-popup-header">
+            <BellRing size={20} />
+            <h3>Updates While You Were Away</h3>
+            <button className="tb-login-popup-close" onClick={handleDismissLoginPopup}>
+              <X size={18} />
+            </button>
+          </div>
+          <div className="tb-login-popup-body">
+            {loginAlerts.map(n => (
+              <div
+                key={n.id}
+                className="tb-login-popup-item"
+                onClick={() => {
+                  handleDismissLoginPopup();
+                  if (n.contract_id) navigate(`/app/contracts/${n.contract_id}`);
+                }}
+              >
+                <div className="tb-login-popup-icon">{getLoginAlertIcon(n.type)}</div>
+                <div className="tb-login-popup-text">
+                  <strong>{n.title}</strong>
+                  <span>{n.message}</span>
+                  <small>{getTimeAgo(n.created_at)}</small>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="tb-login-popup-footer">
+            <button className="tb-login-popup-btn" onClick={handleDismissLoginPopup}>
+              Got it
+            </button>
+          </div>
+        </div>
+      </div>,
+      document.body
+    )}
+  </>
   );
 };
 

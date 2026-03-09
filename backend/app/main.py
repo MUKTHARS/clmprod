@@ -4350,10 +4350,36 @@ async def submit_contract_review(
         # Force commit and refresh
         db.commit()
         db.refresh(contract)
-        
-        # Verify the status was saved
-        # print(f"DEBUG: After commit - Contract {contract_id} status: {contract.status}")
-        
+
+        # Notify PM when PGM requests modification or rejects
+        try:
+            pgm_name = current_user.full_name or current_user.username
+            contract_name = contract.grant_name or f"Contract #{contract_id}"
+            if review_data.overall_recommendation == "modify" and contract.created_by:
+                db.add(UserNotification(
+                    user_id=contract.created_by,
+                    notification_type="modification_requested",
+                    title="Modification Requested",
+                    message=f"Program Manager {pgm_name} has requested changes to '{contract_name}'. Please review the comments and resubmit.",
+                    contract_id=contract_id,
+                    is_read=False,
+                    created_at=datetime.utcnow()
+                ))
+                db.commit()
+            elif review_data.overall_recommendation == "reject" and contract.created_by:
+                db.add(UserNotification(
+                    user_id=contract.created_by,
+                    notification_type="status_rejected",
+                    title="Grant Rejected",
+                    message=f"'{contract_name}' was rejected by Program Manager {pgm_name}.",
+                    contract_id=contract_id,
+                    is_read=False,
+                    created_at=datetime.utcnow()
+                ))
+                db.commit()
+        except Exception as _notif_err:
+            print(f"Warning: could not create PGM-review notification: {_notif_err}")
+
         # IMPORTANT: Add notification tracking for Director
         if review_data.overall_recommendation == "approve":
             if not contract.comprehensive_data:

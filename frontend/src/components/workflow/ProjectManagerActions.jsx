@@ -88,6 +88,10 @@ function ProjectManagerActions({ contract, user, onActionComplete }) {
   useEffect(() => {
     if (contract && (contract.status === 'under_review' || contract.status === 'rejected')) {
       fetchReviewComments();
+      // Auto-show comments when returned for modification so PM can see the reason
+      if (contract.status === 'rejected') {
+        setShowComments(true);
+      }
     }
   }, [contract]);
 
@@ -97,6 +101,20 @@ function ProjectManagerActions({ contract, user, onActionComplete }) {
       setActiveAction('submit_review');
     } else {
       setActiveAction(null);
+    }
+    // Pre-fill fix metadata form with existing contract values when rejected
+    if (contract && contract.status === 'rejected') {
+      setFormData(prev => ({
+        ...prev,
+        grant_name: contract.grant_name || '',
+        contract_number: contract.contract_number || '',
+        grantor: contract.grantor || '',
+        grantee: contract.grantee || '',
+        total_amount: contract.total_amount || '',
+        start_date: contract.start_date || '',
+        end_date: contract.end_date || '',
+        purpose: contract.purpose || ''
+      }));
     }
   }, [contract]);
 
@@ -339,7 +357,7 @@ const handleSubmitForReview = async (contractId, notes) => {
       'under_review': 'Under Review',
       'reviewed': 'Reviewed',
       'approved': 'Approved',
-      'rejected': 'Rejected',
+      'rejected': 'Returned for Modification',
       'completed': 'Completed'
     };
     return statusMap[status] || status;
@@ -353,9 +371,9 @@ const handleSubmitForReview = async (contractId, notes) => {
   // Get appropriate action title based on status
   const getActionTitle = () => {
     if (contract.status === 'rejected') {
-      return 'Resubmit Contract for Review';
+      return 'Resubmit Grant for Review';
     }
-    return 'Submit Contract for Review';
+    return 'Submit Grant for Review';
   };
 
   // Get appropriate button text based on status
@@ -377,6 +395,17 @@ const handleSubmitForReview = async (contractId, notes) => {
           {getStatusDisplay(contract.status)}
         </div>
       </div>
+
+      {/* Modification Requested Banner - shown when grant was returned by PGM */}
+      {contract.status === 'rejected' && (
+        <div className="project-modification-banner">
+          <FileWarning size={18} />
+          <div>
+            <strong>Action Required: Grant Returned for Modification</strong>
+            <p>The Program Manager has requested changes to this grant. Please review the comments below, edit the grant details if needed, then resubmit for review.</p>
+          </div>
+        </div>
+      )}
 
       {/* Action Forms - Always show for draft/rejected contracts */}
       {shouldShowActionForms() && (
@@ -597,14 +626,24 @@ const handleSubmitForReview = async (contractId, notes) => {
           {/* Additional Actions Bar */}
           <div className="project-additional-actions">
             {contract.status === 'rejected' && (
-              <button
-                className="project-action-btn secondary"
-                onClick={() => setActiveAction('respond_comments')}
-                disabled={loading || activeAction === 'respond_comments'}
-              >
-                <MessageSquare size={16} />
-                Respond to Comments
-              </button>
+              <>
+                <button
+                  className="project-action-btn primary"
+                  onClick={() => setActiveAction('fix_metadata')}
+                  disabled={loading || activeAction === 'fix_metadata'}
+                >
+                  <Edit size={16} />
+                  Edit Grant Details
+                </button>
+                <button
+                  className="project-action-btn secondary"
+                  onClick={() => setActiveAction('respond_comments')}
+                  disabled={loading || activeAction === 'respond_comments'}
+                >
+                  <MessageSquare size={16} />
+                  Respond to Comments
+                </button>
+              </>
             )}
           </div>
         </div>
