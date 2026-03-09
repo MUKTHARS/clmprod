@@ -1516,32 +1516,77 @@ async def delete_contract(
             detail="You don't have permission to delete this contract"
         )
     
+    # Collect assigned users to notify before deletion
+    contract_name = contract.grant_name or contract.filename or f"Contract #{contract_id}"
+    actor_name = current_user.full_name or current_user.username
+    notify_user_ids = set()
+    if contract.created_by and contract.created_by != current_user.id:
+        notify_user_ids.add(contract.created_by)
+    for uid in (contract.assigned_pm_users or []):
+        if uid != current_user.id:
+            notify_user_ids.add(uid)
+    for uid in (contract.assigned_pgm_users or []):
+        if uid != current_user.id:
+            notify_user_ids.add(uid)
+    for uid in (contract.assigned_director_users or []):
+        if uid != current_user.id:
+            notify_user_ids.add(uid)
+
     # Delete from ChromaDB
     if contract.chroma_id:
         vector_store.delete_by_contract_id(contract.id)
-    
-    # ✅ Delete PDF from S3
+
+    # Delete PDF from S3
     try:
         s3_service.delete_contract_files(contract.id)
         print(f"✅ Deleted PDF from S3 for contract {contract.id}")
     except Exception as s3_error:
         print(f"⚠️ Warning: Failed to delete PDF from S3: {s3_error}")
-        # Continue with deletion even if S3 fails
-    
-    # Delete from database
+
+    # Delete all child records that reference this contract (FK order matters)
+    db.query(UserNotification).filter(UserNotification.contract_id == contract_id).delete(synchronize_session=False)
+    db.query(ActivityLog).filter(ActivityLog.contract_id == contract_id).delete(synchronize_session=False)
+    db.query(ContractPermission).filter(ContractPermission.contract_id == contract_id).delete(synchronize_session=False)
+    db.query(ReviewComment).filter(ReviewComment.contract_id == contract_id).delete(synchronize_session=False)
+    db.query(models.ContractVersion).filter(models.ContractVersion.contract_id == contract_id).delete(synchronize_session=False)
+    db.query(models.ReportingSchedule).filter(models.ReportingSchedule.contract_id == contract_id).delete(synchronize_session=False)
+    db.query(models.ReportingEvent).filter(models.ReportingEvent.contract_id == contract_id).delete(synchronize_session=False)
+
+    # Delete the contract itself
     db.delete(contract)
+    db.flush()
+
+    # Notify assigned users about the deletion
+    try:
+        new_notifs = [
+            UserNotification(
+                user_id=uid,
+                notification_type="contract_deleted",
+                title="Grant Deleted",
+                message=f"'{contract_name}' has been permanently deleted by {actor_name}.",
+                contract_id=None,
+                is_read=False,
+                created_at=datetime.utcnow()
+            )
+            for uid in notify_user_ids
+        ]
+        for n in new_notifs:
+            db.add(n)
+    except Exception as notif_err:
+        print(f"Warning: could not create deletion notifications: {notif_err}")
+
     db.commit()
-    
-    # Log activity
+
+    # Log activity (without contract_id since contract is gone)
     log_activity(
-        db, 
-        current_user.id, 
-        "delete_contract", 
-        contract_id=contract_id, 
-        details={"contract_id": contract_id}, 
+        db,
+        current_user.id,
+        "delete_contract",
+        contract_id=None,
+        details={"deleted_contract_id": contract_id, "contract_name": contract_name},
         request=request
     )
-    
+
     return {"message": "Contract deleted successfully"}
 
 
