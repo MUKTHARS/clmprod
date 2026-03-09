@@ -765,14 +765,14 @@ useEffect(() => {
         ...basicData,
         contract_id: contractId,
         filename: filename,
-        grant_name: contractDetails.grant_name || basicData.grant_name || filename,
-        contract_number: contractDetails.contract_number || basicData.contract_number,
-        grantor: parties.grantor?.organization_name || basicData.grantor || 'Unknown Grantor',
-        grantee: parties.grantee?.organization_name || basicData.grantee || 'Unknown Grantee',
-        total_amount: financial?.total_grant_amount || basicData.total_amount || 0,
-        start_date: contractDetails.start_date || basicData.start_date,
-        end_date: contractDetails.end_date || basicData.end_date,
-        purpose: contractDetails.purpose || basicData.purpose,
+        grant_name: basicData.grant_name || contractDetails.grant_name || filename,
+        contract_number: basicData.contract_number || contractDetails.contract_number,
+        grantor: basicData.grantor || parties.grantor?.organization_name || 'Unknown Grantor',
+        grantee: basicData.grantee || parties.grantee?.organization_name || 'Unknown Grantee',
+        total_amount: basicData.total_amount || financial?.total_grant_amount || 0,
+        start_date: basicData.start_date || contractDetails.start_date,
+        end_date: basicData.end_date || contractDetails.end_date,
+        purpose: basicData.purpose || contractDetails.purpose,
         status: basicData.status || programManagerReview.overall_recommendation || 'processed',
         investment_id: basicData.investment_id,
         project_id: basicData.project_id,
@@ -1500,12 +1500,12 @@ const hasDeliverableBeenUploaded = (index) => {
                   {renderField('Agreement Type', contractDetails.agreement_type, <FileText size={16} />)}
                   {renderField('Effective Date', contractDetails.effective_date, <Calendar size={16} />, 'date')}
                   {renderField('Signature Date', contractDetails.signature_date, <Calendar size={16} />, 'date')}
-                  {renderField('Start Date', contractDetails.start_date || contractData.start_date, <Calendar size={16} />, 'date')}
-                  {renderField('End Date', contractDetails.end_date || contractData.end_date, <Calendar size={16} />, 'date')}
+                  {renderField('Start Date', contractData.start_date || contractDetails.start_date, <Calendar size={16} />, 'date')}
+                  {renderField('End Date', contractData.end_date || contractDetails.end_date, <Calendar size={16} />, 'date')}
                   {renderField('Duration', contractDetails.duration, <Clock size={16} />)}
-                  
+
                   {/* Full width paragraph fields */}
-                  {renderField('Purpose', contractDetails.purpose || contractData.purpose, <Target size={16} />, 'text', true)}
+                  {renderField('Purpose', contractData.purpose || contractDetails.purpose, <Target size={16} />, 'text', true)}
                   {renderField('Geographic Scope', contractDetails.geographic_scope, <MapPin size={16} />, 'text', true)}
                   {renderField('Risk Management', contractDetails.risk_management, <AlertCircle size={16} />, 'text', true)}
                 </div>
