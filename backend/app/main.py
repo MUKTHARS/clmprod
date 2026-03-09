@@ -3111,7 +3111,7 @@ async def update_contract_status_endpoint(
     allowed_transitions = {
         "project_manager": {
             "draft": ["under_review"],
-            "rejected": ["under_review"]
+            "rejected": ["under_review", "draft"]
         },
         "program_manager": {
             "under_review": ["reviewed", "rejected"]

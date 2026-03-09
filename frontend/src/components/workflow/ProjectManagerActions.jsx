@@ -24,6 +24,8 @@ import {
   ListChecks,
   AlertTriangle,
   XCircle,
+  X,
+  Trash2,
   Info,
   FileWarning
 } from 'lucide-react';
@@ -290,6 +292,82 @@ const handleSubmitForReview = async (contractId, notes) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleReinstate = () => {
+    showPopup(
+      'Reinstate to Draft',
+      'This will reset the contract back to Draft status. You can then edit and resubmit when ready. Continue?',
+      'confirm',
+      async () => {
+        closePopup();
+        setLoading(true);
+        try {
+          const token = localStorage.getItem('token');
+          const response = await fetch(
+            `${API_CONFIG.BASE_URL}/api/contracts/${contract.id}/update-status?status=draft`,
+            {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              }
+            }
+          );
+          if (response.ok) {
+            showPopup('Reinstated', 'Contract has been reinstated to Draft status.', 'success');
+            if (onActionComplete) onActionComplete();
+          } else {
+            const error = await response.json();
+            showPopup('Failed', `Failed to reinstate: ${error.detail}`, 'error');
+          }
+        } catch (error) {
+          console.error('Failed to reinstate contract:', error);
+          showPopup('Failed', 'Failed to reinstate contract. Please try again.', 'error');
+        } finally {
+          setLoading(false);
+        }
+      },
+      closePopup
+    );
+  };
+
+  const handleDeleteContract = () => {
+    showPopup(
+      'Delete Contract',
+      'This will permanently delete the contract and all associated data. This action cannot be undone. Continue?',
+      'confirm',
+      async () => {
+        closePopup();
+        setLoading(true);
+        try {
+          const token = localStorage.getItem('token');
+          const response = await fetch(
+            `${API_CONFIG.BASE_URL}/api/contracts/${contract.id}`,
+            {
+              method: 'DELETE',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              }
+            }
+          );
+          if (response.ok) {
+            showPopup('Deleted', 'Contract has been permanently deleted.', 'success');
+            if (onActionComplete) onActionComplete();
+          } else {
+            const error = await response.json();
+            showPopup('Failed', `Failed to delete: ${error.detail}`, 'error');
+          }
+        } catch (error) {
+          console.error('Failed to delete contract:', error);
+          showPopup('Failed', 'Failed to delete contract. Please try again.', 'error');
+        } finally {
+          setLoading(false);
+        }
+      },
+      closePopup
+    );
   };
 
   const handleAddProjectManagerComment = async () => {
@@ -642,6 +720,22 @@ const handleSubmitForReview = async (contractId, notes) => {
                 >
                   <MessageSquare size={16} />
                   Respond to Comments
+                </button>
+                <button
+                  className="project-action-btn reinstate"
+                  onClick={handleReinstate}
+                  disabled={loading}
+                >
+                  <RefreshCw size={16} />
+                  Reinstate to Draft
+                </button>
+                <button
+                  className="project-action-btn danger"
+                  onClick={handleDeleteContract}
+                  disabled={loading}
+                >
+                  <Trash2 size={16} />
+                  Delete Contract
                 </button>
               </>
             )}

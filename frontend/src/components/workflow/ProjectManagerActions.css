@@ -361,6 +361,40 @@
   border-color: #3b82f6;
 }
 
+.project-action-btn.reinstate {
+  background: white;
+  color: #d97706;
+  border-color: #d97706;
+}
+
+.project-action-btn.reinstate:hover {
+  background: #fffbeb;
+  border-color: #b45309;
+  color: #b45309;
+}
+
+.project-action-btn.reinstate:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.project-action-btn.danger {
+  background: white;
+  color: #dc2626;
+  border-color: #dc2626;
+}
+
+.project-action-btn.danger:hover {
+  background: #fef2f2;
+  border-color: #b91c1c;
+  color: #b91c1c;
+}
+
+.project-action-btn.danger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .project-action-btn svg {
   width: 16px;
   height: 16px;
