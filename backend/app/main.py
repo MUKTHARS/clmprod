@@ -66,6 +66,7 @@ from fastapi import FastAPI, UploadFile, File, HTTPException, Depends, status, R
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
+from sqlalchemy.orm.attributes import flag_modified
 import json
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -2154,7 +2155,8 @@ async def fix_contract_metadata(
         })
         
         contract.comprehensive_data["metadata_history"] = metadata_history
-        
+        flag_modified(contract, "comprehensive_data")
+
         db.commit()
         
         # Log activity

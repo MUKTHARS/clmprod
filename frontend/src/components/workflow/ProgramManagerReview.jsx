@@ -421,7 +421,7 @@ function ProgramManagerReview() {
         <div className="header-action-buttons">
           <button 
             className="primary-action-btn"
-            onClick={() => navigate(`/contracts/${contractId}`)}
+            onClick={() => navigate(`/app/contracts/${contractId}`)}
           >
             <Eye size={16} />
             View Full Details
@@ -574,6 +574,89 @@ function ProgramManagerReview() {
             </div>
           </div>
         )}
+
+        {/* Metadata Changes Section */}
+        {(() => {
+          const metadataHistory = contractData.comprehensive_data?.metadata_history || [];
+          if (metadataHistory.length === 0) return null;
+
+          const fieldLabels = {
+            grant_name: 'Grant Name',
+            contract_number: 'Contract Number',
+            grantor: 'Grantor',
+            grantee: 'Grantee',
+            total_amount: 'Total Amount',
+            start_date: 'Start Date',
+            end_date: 'End Date',
+            purpose: 'Purpose'
+          };
+
+          const formatValue = (field, value) => {
+            if (value === null || value === undefined || value === '') return <em style={{color:'#94a3b8'}}>—</em>;
+            if (field === 'total_amount') return `$${Number(value).toLocaleString()}`;
+            return String(value);
+          };
+
+          return (
+            <div className="comments-section">
+              <div className="comments-section-header">
+                <h4 style={{display:'flex', alignItems:'center', gap:'8px'}}>
+                  <History size={16} style={{color:'#3b82f6'}} />
+                  Metadata Changes by Project Manager
+                </h4>
+              </div>
+              <div className="comments-list">
+                {metadataHistory.map((entry, idx) => (
+                  <div key={idx} className="comment-card pgmr-metadata-change-card">
+                    <div className="comment-header">
+                      <div className="comment-author">
+                        <div className="comment-author-avatar">
+                          <User size={16} />
+                        </div>
+                        <div className="comment-author-info">
+                          <span className="comment-author-name">{entry.by_user_name || 'Project Manager'}</span>
+                          <span className="comment-date">
+                            {entry.timestamp ? new Date(entry.timestamp).toLocaleString('en-US', {
+                              year: 'numeric', month: 'short', day: 'numeric',
+                              hour: '2-digit', minute: '2-digit'
+                            }) : ''}
+                          </span>
+                        </div>
+                      </div>
+                      <span className="pgmr-version-badge">v{entry.version_number}</span>
+                    </div>
+
+                    <table className="pgmr-changes-table">
+                      <thead>
+                        <tr>
+                          <th>Field</th>
+                          <th>Before</th>
+                          <th>After</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(entry.updated_fields || []).map(field => (
+                          <tr key={field}>
+                            <td className="pgmr-field-name">{fieldLabels[field] || field}</td>
+                            <td className="pgmr-old-value">{formatValue(field, entry.old_values?.[field])}</td>
+                            <td className="pgmr-new-value">{formatValue(field, entry.new_values?.[field])}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+
+                    {entry.notes && (
+                      <div className="pgmr-change-notes">
+                        <Info size={13} />
+                        <span>{entry.notes}</span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Final Review Summary Section */}
         <div className="review-section-card">

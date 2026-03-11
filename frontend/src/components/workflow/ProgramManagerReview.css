@@ -561,6 +561,93 @@
   margin-right: 8px;
 }
 
+/* ----- Metadata Changes Table ----- */
+.pgmr-metadata-change-card {
+  border-left: 3px solid #3b82f6;
+}
+
+.pgmr-version-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #3b82f6;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 12px;
+  padding: 2px 10px;
+  white-space: nowrap;
+}
+
+.pgmr-changes-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+  font-size: 0.875rem;
+}
+
+.pgmr-changes-table thead tr {
+  background: #f8fafc;
+}
+
+.pgmr-changes-table th {
+  text-align: left;
+  padding: 8px 12px;
+  font-weight: 600;
+  color: #475569;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.pgmr-changes-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: top;
+}
+
+.pgmr-changes-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.pgmr-field-name {
+  font-weight: 500;
+  color: #374151;
+  white-space: nowrap;
+}
+
+.pgmr-old-value {
+  color: #dc2626;
+  background: #fef2f2;
+  border-radius: 4px;
+  max-width: 260px;
+  word-break: break-word;
+}
+
+.pgmr-new-value {
+  color: #16a34a;
+  background: #f0fdf4;
+  border-radius: 4px;
+  max-width: 260px;
+  word-break: break-word;
+}
+
+.pgmr-change-notes {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 8px 12px;
+  background: #eff6ff;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  color: #3b82f6;
+}
+
+.pgmr-change-notes svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
 /* ----- Review Section Card ----- */
 .review-section-card {
   background: #ffffff;
