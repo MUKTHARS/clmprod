@@ -6,9 +6,10 @@ import {
   FileText,
   UserCheck,
   Clock,
-  AlertCircle
+  AlertCircle,
+  UserPlus
 } from 'lucide-react';
-import { TbFilePencil, TbUserCheck } from 'react-icons/tb';
+import { TbFilePencil, TbUserCheck, TbUserPlus } from 'react-icons/tb';
 import API_CONFIG from '../../config';
 import './DraftsPanel.css';
 
@@ -17,9 +18,10 @@ const DraftsPanel = ({ user }) => {
   const location = useLocation();
   const [isExpanded, setIsExpanded] = useState(true);
   const [myDrafts, setMyDrafts] = useState([]);
-  const [assignedDrafts, setAssignedDrafts] = useState([]);
+  const [assignedToMe, setAssignedToMe] = useState([]);
+  const [assignedByMe, setAssignedByMe] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState('myDrafts'); // 'myDrafts' or 'assigned'
+  const [activeTab, setActiveTab] = useState('myDrafts'); // 'myDrafts', 'assignedToMe', 'assignedByMe'
 
   const fetchDrafts = useCallback(async () => {
     if (!user) return;
@@ -29,7 +31,7 @@ const DraftsPanel = ({ user }) => {
     const baseUrl = API_CONFIG.BASE_URL;
 
     try {
-      // Fetch My Drafts
+      // Fetch My Drafts (only for Project Managers)
       if (user.role === 'project_manager') {
         const myDraftsResponse = await fetch(`${baseUrl}/api/agreements/drafts`, {
           headers: { 'Authorization': `Bearer ${token}` }
@@ -39,18 +41,29 @@ const DraftsPanel = ({ user }) => {
           const filtered = data.filter(draft => 
             draft.created_by === user.id || draft.userId === user.id
           );
-          setMyDrafts(filtered.slice(0, 10)); // Show more drafts
+          setMyDrafts(filtered.slice(0, 10));
         }
       }
 
-      // Fetch Assigned Drafts (for PM, Program Manager, Director)
+      // Fetch Assigned to Me (for PM, Program Manager, Director)
       if (['project_manager', 'program_manager', 'director'].includes(user.role)) {
-        const assignedResponse = await fetch(`${baseUrl}/api/agreements/assigned-drafts?limit=10`, {
+        const assignedToMeResponse = await fetch(`${baseUrl}/api/agreements/assigned-drafts?limit=10`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
-        if (assignedResponse.ok) {
-          const data = await assignedResponse.json();
-          setAssignedDrafts(data.drafts?.slice(0, 10) || []);
+        if (assignedToMeResponse.ok) {
+          const data = await assignedToMeResponse.json();
+          setAssignedToMe(data.drafts?.slice(0, 10) || []);
+        }
+      }
+
+      // Fetch Assigned by Me (for Program Manager and Director)
+      if (['program_manager', 'director'].includes(user.role)) {
+        const assignedByMeResponse = await fetch(`${baseUrl}/api/agreements/assigned-by-me?limit=10`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (assignedByMeResponse.ok) {
+          const data = await assignedByMeResponse.json();
+          setAssignedByMe(data.drafts?.slice(0, 10) || []);
         }
       }
     } catch (error) {
@@ -100,19 +113,22 @@ const DraftsPanel = ({ user }) => {
     );
   };
 
-  // Calculate total drafts count for badge
-  const totalDrafts = (myDrafts?.length || 0) + (assignedDrafts?.length || 0);
+  // Calculate total drafts count for collapsed badge
+  const totalDrafts = (myDrafts?.length || 0) + (assignedToMe?.length || 0) + (assignedByMe?.length || 0);
 
   // Check if user has access to each tab
   const hasMyDraftsAccess = user?.role === 'project_manager';
-  const hasAssignedAccess = ['project_manager', 'program_manager', 'director'].includes(user?.role);
+  const hasAssignedToMeAccess = ['project_manager', 'program_manager', 'director'].includes(user?.role);
+  const hasAssignedByMeAccess = ['program_manager', 'director'].includes(user?.role);
 
-  // Set default tab based on access
+  // Set default tab based on access priority
   useEffect(() => {
-    if (!hasMyDraftsAccess && hasAssignedAccess) {
-      setActiveTab('assigned');
+    if (hasMyDraftsAccess) {
+      setActiveTab('myDrafts');
+    } else if (hasAssignedToMeAccess) {
+      setActiveTab('assignedToMe');
     }
-  }, [hasMyDraftsAccess, hasAssignedAccess]);
+  }, [hasMyDraftsAccess, hasAssignedToMeAccess]);
 
   // Don't render if user doesn't have draft access
   if (!user || !['project_manager', 'program_manager', 'director'].includes(user.role)) {
@@ -134,15 +150,17 @@ const DraftsPanel = ({ user }) => {
           // Expanded View
           <div className="draft-panel-content">
             <div className="draft-panel-header">
-              <h3>Drafts</h3>
-              <button 
-                className="draft-view-all"
-                onClick={() => navigate('/app/drafts')}
-                title="View all drafts"
-              >
-                View All
-              </button>
-            </div>
+  <h3>
+    {user?.role === 'project_manager' ? 'Drafts' : 'Assigned Grants'}
+  </h3>
+  <button 
+    className="draft-view-all"
+    onClick={() => navigate('/app/drafts')}
+    title={user?.role === 'project_manager' ? 'View all drafts' : 'View all assigned grants'}
+  >
+    View All
+  </button>
+</div>
 
             {/* Tabs Navigation */}
             <div className="draft-tabs">
@@ -159,15 +177,28 @@ const DraftsPanel = ({ user }) => {
                 </button>
               )}
               
-              {hasAssignedAccess && (
+              {hasAssignedToMeAccess && (
                 <button 
-                  className={`draft-tab ${activeTab === 'assigned' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('assigned')}
+                  className={`draft-tab ${activeTab === 'assignedToMe' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('assignedToMe')}
                 >
                   <TbUserCheck size={14} />
-                  <span>Assigned</span>
-                  {assignedDrafts.length > 0 && (
-                    <span className="draft-tab-count">{assignedDrafts.length}</span>
+                  <span>To Me</span>
+                  {assignedToMe.length > 0 && (
+                    <span className="draft-tab-count">{assignedToMe.length}</span>
+                  )}
+                </button>
+              )}
+
+              {hasAssignedByMeAccess && (
+                <button 
+                  className={`draft-tab ${activeTab === 'assignedByMe' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('assignedByMe')}
+                >
+                  <TbUserPlus size={14} />
+                  <span>By Me</span>
+                  {assignedByMe.length > 0 && (
+                    <span className="draft-tab-count">{assignedByMe.length}</span>
                   )}
                 </button>
               )}
@@ -200,13 +231,13 @@ const DraftsPanel = ({ user }) => {
               </div>
             )}
 
-            {/* Assigned Tab Content */}
-            {activeTab === 'assigned' && hasAssignedAccess && (
+            {/* Assigned to Me Tab Content */}
+            {activeTab === 'assignedToMe' && hasAssignedToMeAccess && (
               <div className="draft-tab-content">
                 {loading ? (
                   <div className="draft-loading">Loading assigned drafts...</div>
-                ) : assignedDrafts.length > 0 ? (
-                  assignedDrafts.map(draft => (
+                ) : assignedToMe.length > 0 ? (
+                  assignedToMe.map(draft => (
                     <div
                       key={draft.id}
                       className={`draft-item ${location.pathname.includes(draft.agreement_id || draft.id) ? 'active' : ''}`}
@@ -222,7 +253,34 @@ const DraftsPanel = ({ user }) => {
                     </div>
                   ))
                 ) : (
-                  <div className="draft-empty">No assigned drafts</div>
+                  <div className="draft-empty">No drafts assigned to you</div>
+                )}
+              </div>
+            )}
+
+            {/* Assigned by Me Tab Content */}
+            {activeTab === 'assignedByMe' && hasAssignedByMeAccess && (
+              <div className="draft-tab-content">
+                {loading ? (
+                  <div className="draft-loading">Loading drafts you assigned...</div>
+                ) : assignedByMe.length > 0 ? (
+                  assignedByMe.map(draft => (
+                    <div
+                      key={draft.id}
+                      className={`draft-item ${location.pathname.includes(draft.agreement_id || draft.id) ? 'active' : ''}`}
+                      onClick={() => handleDraftClick(draft)}
+                    >
+                      <div className="draft-item-title">{draft.title || 'Untitled Draft'}</div>
+                      <div className="draft-item-meta">
+                        {getStatusBadge(draft.status)}
+                        <span className="draft-date">
+                          {new Date(draft.updated_at || draft.created_at).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="draft-empty">No drafts assigned by you</div>
                 )}
               </div>
             )}
@@ -230,16 +288,16 @@ const DraftsPanel = ({ user }) => {
         ) : (
           // Collapsed View - Vertical text only
           <div 
-            className="draft-vertical-text"
-            onClick={() => setIsExpanded(true)}
-            title="Expand drafts panel"
-          >
-            <TbFilePencil size={18} />
-            <span>DRAFTS</span>
-            {totalDrafts > 0 && (
-              <span className="draft-collapsed-badge">{totalDrafts}</span>
-            )}
-          </div>
+  className="draft-vertical-text"
+  onClick={() => setIsExpanded(true)}
+  title={user?.role === 'project_manager' ? 'Expand drafts panel' : 'Expand assigned grants panel'}
+>
+  <TbFilePencil size={18} />
+  <span>{user?.role === 'project_manager' ? 'DRAFTS' : 'ASSIGNED'}</span>
+  {totalDrafts > 0 && (
+    <span className="draft-collapsed-badge">{totalDrafts}</span>
+  )}
+</div>
         )}
       </div>
     </>
