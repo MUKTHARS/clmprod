@@ -14,15 +14,54 @@
   top: 0;
   z-index: 1000;
   box-shadow: 2px 0 8px rgba(0, 0, 0, 0.3);
-  transition: transform 0.3s ease;
+  transition: width 0.25s ease, transform 0.3s ease;
   color: #e5e7eb;
+}
+
+/* Collapsed sidebar */
+.sbr-sidebar-collapsed {
+  width: 64px;
+}
+
+body:has(.sbr-sidebar-collapsed) .main-content {
+  margin-left: 64px;
 }
 
 /* Header section - Dark Mode */
 .sbr-header {
   padding: 1.25rem 1rem;
   border-bottom: 1px solid #2a3142;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-height: 64px;
+}
+
+.sbr-sidebar-collapsed .sbr-header {
+  justify-content: center;
+  padding: 1.25rem 0.5rem;
+}
+
+/* Collapse toggle button */
+.sbr-collapse-btn {
+  background: transparent;
+  border: 1px solid #2a3142;
+  border-radius: 4px;
+  color: #9ca3af;
   cursor: pointer;
+  padding: 4px 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+  line-height: 1;
+}
+
+.sbr-collapse-btn:hover {
+  background: #2a3142;
+  color: #ffffff;
 }
 
 .sbr-logo-container {
@@ -30,6 +69,7 @@
   align-items: center;
   gap: 0.75rem;
   text-decoration: none;
+  cursor: pointer;
 }
 
 .sbr-logo-text {
@@ -94,11 +134,55 @@
   font-weight: 600 !important;
 }
 
+/* Nav icon */
+.sbr-nav-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: inherit;
+  width: 18px;
+  height: 18px;
+}
+
 .sbr-nav-label {
   flex: 1;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  transition: opacity 0.15s ease;
+}
+
+/* Collapsed state — hide text and extras, center icons */
+.sbr-sidebar-collapsed .sbr-nav-label,
+.sbr-sidebar-collapsed .sbr-nav-badge,
+.sbr-sidebar-collapsed .sbr-menu-arrow,
+.sbr-sidebar-collapsed .sbr-green-dot,
+.sbr-sidebar-collapsed .sbr-user-info,
+.sbr-sidebar-collapsed .sbr-user-arrow,
+.sbr-sidebar-collapsed .sbr-section-divider,
+.sbr-sidebar-collapsed .sbr-submenu {
+  display: none;
+}
+
+.sbr-sidebar-collapsed .sbr-nav-item {
+  justify-content: center;
+  padding: 0.7rem;
+}
+
+.sbr-sidebar-collapsed .sbr-nav-icon {
+  margin: 0;
+}
+
+.sbr-sidebar-collapsed .sbr-user-profile {
+  justify-content: center;
+  padding: 0.5rem;
+}
+
+.sbr-sidebar-collapsed .sbr-admin-item {
+  margin-left: 0;
+  width: 100%;
+  border-left: none !important;
 }
 
 .sbr-nav-badge {

@@ -5,11 +5,42 @@ import {
   User,
   LogOut,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  ChevronLeft,
+  LayoutDashboard,
+  FileText,
+  Upload,
+  ClipboardList,
+  CheckCircle2,
+  FolderOpen,
+  FilePen,
+  UserCheck,
+  Archive,
+  CheckSquare,
+  Users,
+  UserPlus,
 } from 'lucide-react';
 import './Sidebar.css';
 import API_CONFIG from '../../config';
 import { useModules } from "../../pages/ModuleContext";
+
+const ITEM_ICONS = {
+  'dashboard': LayoutDashboard,
+  'grants': FileText,
+  'upload': Upload,
+  'review': ClipboardList,
+  'approvals': CheckCircle2,
+  'draft-parent': FolderOpen,
+  'my-drafts': FilePen,
+  'assigned-drafts': UserCheck,
+  'archive': Archive,
+  'approved-contracts': CheckSquare,
+  'assigned-parent': Users,
+  'assigned-to-me': UserCheck,
+  'assigned-by-me': UserPlus,
+  'admin-portal': Settings,
+  'user-management': Users,
+};
 
 const Sidebar = ({ user, onLogout }) => {
   const navigate = useNavigate();
@@ -18,6 +49,7 @@ const Sidebar = ({ user, onLogout }) => {
   const [permissions, setPermissions] = useState({});
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState({
     draft: false,
     assigned: false,
@@ -657,13 +689,22 @@ const Sidebar = ({ user, onLogout }) => {
         onClick={closeMobileMenu}
       />
 
-      <aside className={`sbr-sidebar ${mobileMenuOpen ? 'sbr-sidebar-open' : ''}`}>
+      <aside className={`sbr-sidebar ${mobileMenuOpen ? 'sbr-sidebar-open' : ''} ${isCollapsed ? 'sbr-sidebar-collapsed' : ''}`}>
         <div className="sbr-header">
-          <div className="sbr-logo-container" onClick={() => handleNavigation('/app/dashboard')} title="GrantOS">
-            <div className="sbr-logo-text">
-              <span className="sbr-logo-primary">GrantOS</span>
+          {!isCollapsed && (
+            <div className="sbr-logo-container" onClick={() => handleNavigation('/app/dashboard')} title="GrantOS">
+              <div className="sbr-logo-text">
+                <span className="sbr-logo-primary">GrantOS</span>
+              </div>
             </div>
-          </div>
+          )}
+          <button
+            className="sbr-collapse-btn"
+            onClick={() => setIsCollapsed(prev => !prev)}
+            title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+          </button>
         </div>
 
         <nav className="sbr-nav">
@@ -685,6 +726,7 @@ const Sidebar = ({ user, onLogout }) => {
               
               const badgeCount = badgeCounts[item.id];
               
+              const RegularIcon = ITEM_ICONS[item.id];
               return (
                 <li key={item.id}>
                   <button
@@ -692,7 +734,7 @@ const Sidebar = ({ user, onLogout }) => {
                     onClick={() => handleNavigation(item.path)}
                     title={item.label}
                   >
-                    
+                    {RegularIcon && <span className="sbr-nav-icon"><RegularIcon size={18} /></span>}
                     <span className="sbr-nav-label">{item.label}</span>
                     {badgeCount > 0 && (
                       <span className="sbr-nav-badge">{badgeCount}</span>
@@ -711,7 +753,7 @@ const Sidebar = ({ user, onLogout }) => {
                   onClick={() => toggleMenu('draft')}
                   title={menuItems.draftParent.label}
                 >
-                
+                  {ITEM_ICONS['draft-parent'] && <span className="sbr-nav-icon">{React.createElement(ITEM_ICONS['draft-parent'], { size: 18 })}</span>}
                   <span className="sbr-nav-label">{menuItems.draftParent.label}</span>
                   {hasSubmenuBadge(menuItems.draftSubmenuItems) && !expandedMenus.draft && (
                     <span className="sbr-green-dot"></span>
@@ -737,7 +779,7 @@ const Sidebar = ({ user, onLogout }) => {
                             onClick={() => handleNavigation(subItem.path)}
                             title={subItem.label}
                           >
-                          
+                            {ITEM_ICONS[subItem.id] && <span className="sbr-nav-icon">{React.createElement(ITEM_ICONS[subItem.id], { size: 16 })}</span>}
                             <span className="sbr-nav-label">{subItem.label}</span>
                             {badgeCount > 0 && (
                               <span className="sbr-nav-badge">{badgeCount}</span>
@@ -760,7 +802,7 @@ const Sidebar = ({ user, onLogout }) => {
                   onClick={() => toggleMenu('assigned')}
                   title={menuItems.assignedParent.label}
                 >
-                 
+                  {ITEM_ICONS['assigned-parent'] && <span className="sbr-nav-icon">{React.createElement(ITEM_ICONS['assigned-parent'], { size: 18 })}</span>}
                   <span className="sbr-nav-label">{menuItems.assignedParent.label}</span>
                   {hasSubmenuBadge(menuItems.assignedSubmenuItems) && !expandedMenus.assigned && (
                     <span className="sbr-green-dot"></span>
@@ -786,7 +828,7 @@ const Sidebar = ({ user, onLogout }) => {
                             onClick={() => handleNavigation(subItem.path)}
                             title={subItem.label}
                           >
-                          
+                            {ITEM_ICONS[subItem.id] && <span className="sbr-nav-icon">{React.createElement(ITEM_ICONS[subItem.id], { size: 16 })}</span>}
                             <span className="sbr-nav-label">{subItem.label}</span>
                             {badgeCount > 0 && (
                               <span className="sbr-nav-badge">{badgeCount}</span>
@@ -814,7 +856,7 @@ const Sidebar = ({ user, onLogout }) => {
                       onClick={() => handleNavigation(item.path)}
                       title={item.label}
                     >
-                     
+                      {ITEM_ICONS[item.id] && <span className="sbr-nav-icon">{React.createElement(ITEM_ICONS[item.id], { size: 18 })}</span>}
                       <span className="sbr-nav-label">{item.label}</span>
                       {isActive && <span className="sbr-nav-indicator" />}
                     </button>
@@ -841,7 +883,7 @@ const Sidebar = ({ user, onLogout }) => {
                         onClick={() => handleNavigation(item.path)}
                         title={item.label}
                       >
-                      
+                        {ITEM_ICONS[item.id] && <span className="sbr-nav-icon">{React.createElement(ITEM_ICONS[item.id], { size: 18 })}</span>}
                         <span className="sbr-nav-label">{item.label}</span>
                         {isActive && <span className="sbr-nav-indicator" />}
                       </button>
