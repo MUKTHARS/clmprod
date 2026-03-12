@@ -697,13 +697,6 @@ const Sidebar = ({ user, onLogout }) => {
 
       <aside className={`sbr-sidebar ${mobileMenuOpen ? 'sbr-sidebar-open' : ''} ${isCollapsed ? 'sbr-sidebar-collapsed' : ''}`}>
         <div className="sbr-header">
-          {!isCollapsed && (
-            <div className="sbr-logo-container" onClick={() => handleNavigation('/app/dashboard')} title="GrantOS">
-              <div className="sbr-logo-text">
-                <span className="sbr-logo-primary">GrantOS</span>
-              </div>
-            </div>
-          )}
           <button
             className="sbr-collapse-btn"
             onClick={() => setIsCollapsed(prev => !prev)}

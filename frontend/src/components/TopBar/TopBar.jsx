@@ -1,34 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
-  Bot,
   Bell,
-  User,
-  Settings,
-  Shield,
-  ChevronDown,
-  Calendar,
-  CheckCircle,
-  FileText,
-  AlertCircle,
   Sparkles,
   BellRing,
-  Home,
-  FileBarChart,
-  ShieldCheck,
-  Users,
-  Building,
-  Wallet,
-  PieChart,
-  BookOpen,
-  HelpCircle,
   Upload,
   FileCheck,
-  Key,
-  FolderOpen,
-  Archive,
-  UserCheck,
   Clock,
   UserPlus,
   ThumbsUp,
@@ -45,11 +23,8 @@ const STATUS_CHANGE_TYPES = ['modification_requested', 'status_rejected', 'statu
 
 const TopBar = ({ user = null }) => {
   const navigate = useNavigate();
-  const location = useLocation();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
-  const [pageTitle, setPageTitle] = useState('Dashboard');
-  const [pageIcon, setPageIcon] = useState(<Home size={20} />);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifLoading, setNotifLoading] = useState(false);
@@ -57,50 +32,6 @@ const TopBar = ({ user = null }) => {
   const [loginAlerts, setLoginAlerts] = useState([]);   // status-change notifs to show on login
   const [showLoginPopup, setShowLoginPopup] = useState(false);
 
-  const getPageTitle = (pathname) => {
-    const routes = {
-      '/dashboard': { title: 'Dashboard', icon: <Home size={20} /> },
-      '/contracts': { title: 'Grants', icon: <FileText size={20} /> },
-      '/upload': { title: 'Upload', icon: <Upload size={20} /> },
-      '/review': { title: 'Review', icon: <FileCheck size={20} /> },
-      '/program-manager/director-decisions': { title: 'Director Decisions', icon: <Shield size={20} /> },
-      '/approvals': { title: 'Approvals', icon: <Shield size={20} /> },
-      '/users': { title: 'Users', icon: <Users size={20} /> },
-      '/admin': { title: 'Admin Portal', icon: <Key size={20} /> },
-      '/drafts/my': { title: 'My Drafts', icon: <FolderOpen size={20} /> },
-      '/drafts/assigned': { title: 'Assigned to Me', icon: <FolderOpen size={20} /> },
-      '/archive': { title: 'Archive', icon: <Archive size={20} /> },
-      '/approved-contracts': { title: 'Approved', icon: <CheckCircle size={20} /> },
-      '/agreements/assigned': { title: 'Assigned to Me', icon: <UserCheck size={20} /> },
-      '/agreements/assigned-by-me': { title: 'Assigned by Me', icon: <UserCheck size={20} /> },
-      '/copilot': { title: 'AI Copilot', icon: <Sparkles size={20} /> },
-      '/settings': { title: 'Settings', icon: <Settings size={20} /> },
-    };
-
-    // Find the matching route (checking for exact matches or startsWith)
-    for (const [route, info] of Object.entries(routes)) {
-      if (pathname === route || pathname.startsWith(`${route}/`)) {
-        return info;
-      }
-    }
-
-    // Default fallback - extract from pathname if possible
-    const pathSegments = pathname.split('/').filter(seg => seg);
-    if (pathSegments.length > 0) {
-      // Format: "My Drafts" instead of "my-drafts"
-      const formattedTitle = pathSegments[pathSegments.length - 1]
-        .split('-')
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(' ');
-      
-      return { 
-        title: formattedTitle, 
-        icon: <FileText size={20} /> // Default icon
-      };
-    }
-
-    return { title: 'Dashboard', icon: <Home size={20} /> };
-  };
 
   const getNotificationIcon = (type) => {
     switch (type) {
@@ -227,14 +158,6 @@ const TopBar = ({ user = null }) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showNotifications, showProfile]);
 
-  // Update page title when route changes
-  useEffect(() => {
-    // Strip the /app prefix so the route map keys match
-    const normalizedPath = location.pathname.replace(/^\/app/, '') || '/dashboard';
-    const pageInfo = getPageTitle(normalizedPath);
-    setPageTitle(pageInfo.title);
-    setPageIcon(pageInfo.icon);
-  }, [location.pathname]);
 
   const handleDismissLoginPopup = async () => {
     setShowLoginPopup(false);
@@ -267,8 +190,8 @@ const TopBar = ({ user = null }) => {
     return (
       <header className="tb-topbar">
         <div className="tb-topbar-left">
-          <div className="tb-page-title-container">
-            <h1 className="tb-page-title">Grant OS</h1>
+          <div className="tb-brand">
+            <span className="tb-brand-logo">GrantOS</span>
           </div>
         </div>
       </header>
@@ -279,11 +202,8 @@ const TopBar = ({ user = null }) => {
     <>
     <header className="tb-topbar">
       <div className="tb-topbar-left">
-        <div className="tb-page-title-container">
-          <div className="tb-page-title-content">
-            <h1 className="tb-page-title">{pageTitle}</h1>
-            <p className="tb-page-subtitle"></p>
-          </div>
+        <div className="tb-brand">
+          <span className="tb-brand-logo">GrantOS</span>
         </div>
       </div>
 
@@ -295,7 +215,7 @@ const TopBar = ({ user = null }) => {
             onClick={() => navigate('/app/copilot')}
           >
             <span className="tb-ai-icon">
-              <Sparkles size={20} />
+              <Sparkles size={12} />
             </span>
             <span className="tb-ai-label">Copilot</span>
           </button>
@@ -307,7 +227,7 @@ const TopBar = ({ user = null }) => {
               onClick={() => setShowNotifications(!showNotifications)}
             >
               <span className="tb-alert-icon">
-                {unreadCount > 0 ? <BellRing size={20} /> : <Bell size={20} />}
+                {unreadCount > 0 ? <BellRing size={14} /> : <Bell size={14} />}
               </span>
               {unreadCount > 0 && (
                 <span className="tb-alert-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>

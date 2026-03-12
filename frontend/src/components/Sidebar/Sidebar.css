@@ -4,14 +4,14 @@
 /* Main sidebar container - Dark Mode */
 .sbr-sidebar {
   width: 210px;
-  background: #1a1f2e; /* Dark navy background like Fluxx */
-  border-right: 1px solid #2a3142; /* Subtle border */
-  height: 100vh;
+  background: #1a1f2e;
+  border-right: 1px solid #2a3142;
+  height: calc(100vh - 28px);
   display: flex;
   flex-direction: column;
   position: fixed;
   left: 0;
-  top: 0;
+  top: 28px;
   z-index: 1000;
   box-shadow: 2px 0 8px rgba(0, 0, 0, 0.3);
   transition: width 0.25s ease, transform 0.3s ease;
@@ -531,19 +531,19 @@ body:has(.sbr-sidebar-collapsed) .main-content {
 .sbr-mobile-toggle {
   display: none;
   position: fixed;
-  top: 16px;
+  top: 8px;
   left: 16px;
-  z-index: 1001;
+  z-index: 1200;
   width: 40px;
   height: 40px;
   border-radius: 8px;
-  background: #1a1f2e;
+  background: transparent;
   border: 1px solid #2f3749;
   color: #9ca3af;
   cursor: pointer;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  box-shadow: none;
 }
 
 .sbr-mobile-toggle:hover {
@@ -575,6 +575,8 @@ body:has(.sbr-sidebar-collapsed) .main-content {
 /* Main content adjustment */
 .main-content {
   margin-left: 210px;
+  margin-top: 28px;
+  padding-top: 12px;
   transition: margin-left 0.3s ease;
 }
 
@@ -602,9 +604,9 @@ body:has(.sbr-sidebar-collapsed) .main-content {
     width: 100%;
   }
 
-  /* Adjust content area padding to account for hamburger */
+  /* No extra padding needed — topbar margin-top handles offset */
   .content-area {
-    padding-top: 60px !important;
+    padding-top: 0 !important;
   }
 
   /* Dashboard adjustments for mobile */
