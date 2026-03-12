@@ -165,7 +165,21 @@ const DraftsPanel = ({ user }) => {
     }
   };
 
-  const renderCard = (draft, showWorkflowBtn = false) => (
+  const getEffectiveStatus = (draft, tab) => {
+    if (tab === 'assignedToMe') return 'assigned';
+    if (tab === 'myDrafts') {
+      const tracking = draft.comprehensive_data?.assignment_tracking;
+      const hasAssigned = (
+        (tracking?.current_pm_users?.length > 0) ||
+        (tracking?.current_pgm_users?.length > 0) ||
+        (tracking?.current_director_users?.length > 0)
+      );
+      if (hasAssigned) return 'assigned';
+    }
+    return draft.status;
+  };
+
+  const renderCard = (draft, showWorkflowBtn = false, statusOverride = null) => (
     <div
       key={draft.id}
       className={`draft-item${selectedDraft?.id === draft.id ? ' selected' : ''}`}
@@ -173,7 +187,7 @@ const DraftsPanel = ({ user }) => {
     >
       <div className="draft-item-title">{draft.grant_name || draft.filename || draft.title || 'Untitled Draft'}</div>
       <div className="draft-item-meta">
-        {getStatusBadge(draft.status)}
+        {getStatusBadge(statusOverride || draft.status)}
         <span className="draft-date">
           {formatDate(draft.uploaded_at || draft.updated_at || draft.created_at)}
         </span>
@@ -378,7 +392,7 @@ const DraftsPanel = ({ user }) => {
                 {loading ? (
                   <div className="draft-loading">Loading drafts...</div>
                 ) : myDrafts.length > 0 ? (
-                  myDrafts.map(draft => renderCard(draft, true))
+                  myDrafts.map(draft => renderCard(draft, true, getEffectiveStatus(draft, 'myDrafts')))
                 ) : (
                   <div className="draft-empty">No drafts yet</div>
                 )}
@@ -391,7 +405,7 @@ const DraftsPanel = ({ user }) => {
                 {loading ? (
                   <div className="draft-loading">Loading assigned drafts...</div>
                 ) : assignedToMe.length > 0 ? (
-                  assignedToMe.map(draft => renderCard(draft, false))
+                  assignedToMe.map(draft => renderCard(draft, ['program_manager', 'director'].includes(user?.role), 'assigned'))
                 ) : (
                   <div className="draft-empty">No drafts assigned to you</div>
                 )}

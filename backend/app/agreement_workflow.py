@@ -1040,10 +1040,10 @@ async def get_available_users(
     """
     Get available users for assignment (filtered by role)
     """
-    if current_user.role != "project_manager":
+    if current_user.role not in ["project_manager", "program_manager"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only Project Managers can view available users"
+            detail="Only Project Managers and Program Managers can view available users"
         )
     
     from app.auth_models import User as AuthUser

@@ -188,41 +188,55 @@ useEffect(() => {
   const fetchAvailableUsers = async () => {
     try {
       const token = localStorage.getItem('token');
-      
-      // Fetch project managers
-      const pmResponse = await fetch(`${API_CONFIG.BASE_URL}/api/agreements/users/available?role=project_manager`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      // Fetch program managers
-      const pgmResponse = await fetch(`${API_CONFIG.BASE_URL}/api/agreements/users/available?role=program_manager`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      // Fetch directors
-      const directorResponse = await fetch(`${API_CONFIG.BASE_URL}/api/agreements/users/available?role=director`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
 
-      if (pmResponse.ok && pgmResponse.ok && directorResponse.ok) {
-        const pmUsers = await pmResponse.json();
-        const pgmUsers = await pgmResponse.json();
-        const directorUsers = await directorResponse.json();
-        
-        setAvailableUsers({
-          project_managers: pmUsers,
-          program_managers: pgmUsers,
-          directors: directorUsers
-        });
+      if (user?.role === 'project_manager') {
+        // PM can use the dedicated available-users endpoint
+        const [pmResponse, pgmResponse, directorResponse] = await Promise.all([
+          fetch(`${API_CONFIG.BASE_URL}/api/agreements/users/available?role=project_manager`, { headers }),
+          fetch(`${API_CONFIG.BASE_URL}/api/agreements/users/available?role=program_manager`, { headers }),
+          fetch(`${API_CONFIG.BASE_URL}/api/agreements/users/available?role=director`, { headers }),
+        ]);
+
+        if (pmResponse.ok && pgmResponse.ok && directorResponse.ok) {
+          const pmUsers = await pmResponse.json();
+          const pgmUsers = await pgmResponse.json();
+          const directorUsers = await directorResponse.json();
+          setAvailableUsers({
+            project_managers: pmUsers,
+            program_managers: pgmUsers,
+            directors: directorUsers
+          });
+        }
+      } else if (user?.role === 'director') {
+        // Director can use /api/users to get all users, then filter by role
+        const response = await fetch(`${API_CONFIG.BASE_URL}/api/users`, { headers });
+        if (response.ok) {
+          const allUsers = await response.json();
+          setAvailableUsers({
+            project_managers: allUsers.filter(u => u.role === 'project_manager'),
+            program_managers: allUsers.filter(u => u.role === 'program_manager'),
+            directors: allUsers.filter(u => u.role === 'director'),
+          });
+        }
+      } else if (user?.role === 'program_manager') {
+        // PGM can now use the available-users endpoint (same as PM)
+        const [pmResponse, pgmResponse, directorResponse] = await Promise.all([
+          fetch(`${API_CONFIG.BASE_URL}/api/agreements/users/available?role=project_manager`, { headers }),
+          fetch(`${API_CONFIG.BASE_URL}/api/agreements/users/available?role=program_manager`, { headers }),
+          fetch(`${API_CONFIG.BASE_URL}/api/agreements/users/available?role=director`, { headers }),
+        ]);
+
+        if (pmResponse.ok && pgmResponse.ok && directorResponse.ok) {
+          const pmUsers = await pmResponse.json();
+          const pgmUsers = await pgmResponse.json();
+          const directorUsers = await directorResponse.json();
+          setAvailableUsers({
+            project_managers: pmUsers,
+            program_managers: pgmUsers,
+            directors: directorUsers
+          });
+        }
       }
     } catch (error) {
       console.error('Failed to fetch available users:', error);
