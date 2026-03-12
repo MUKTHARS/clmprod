@@ -43,8 +43,8 @@ const DraftsPanel = ({ user }) => {
     const baseUrl = API_CONFIG.BASE_URL;
 
     try {
-      // Fetch My Drafts — use /api/contracts/ for properly formatted fields
-      if (['project_manager', 'program_manager', 'director'].includes(user.role)) {
+      // Fetch My Drafts — only for project_manager
+      if (['project_manager'].includes(user.role)) {
         const myDraftsResponse = await fetch(`${baseUrl}/api/contracts/`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -286,7 +286,7 @@ const DraftsPanel = ({ user }) => {
   const totalDrafts = (myDrafts?.length || 0) + (assignedToMe?.length || 0) + (assignedByMe?.length || 0);
 
   // Check if user has access to each tab
-  const hasMyDraftsAccess = ['project_manager', 'program_manager', 'director'].includes(user?.role);
+  const hasMyDraftsAccess = ['project_manager'].includes(user?.role);
   const hasAssignedToMeAccess = ['project_manager', 'program_manager', 'director'].includes(user?.role);
   const hasAssignedByMeAccess = ['program_manager', 'director'].includes(user?.role);
 
@@ -294,10 +294,10 @@ const DraftsPanel = ({ user }) => {
   useEffect(() => {
     if (hasMyDraftsAccess) {
       setActiveTab('myDrafts');
-    } else if (hasAssignedToMeAccess) {
+    } else {
       setActiveTab('assignedToMe');
     }
-  }, [hasMyDraftsAccess, hasAssignedToMeAccess]);
+  }, [hasMyDraftsAccess]);
 
   // Don't render if user doesn't have draft access
   if (!user || !['project_manager', 'program_manager', 'director'].includes(user.role)) {
