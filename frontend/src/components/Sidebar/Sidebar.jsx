@@ -435,15 +435,15 @@ const Sidebar = ({ user, onLogout }) => {
       },
 
       // DRAFT SUBMENU ITEMS (Will be grouped under "Draft" parent)
-      {
-        id: 'draft-parent',
-        label: 'Draft',
-        path: '#',
-        permission: 'can_view_drafts',
-        roles: ['project_manager'],
-        isDraftParent: true,
-        hasSubmenu: true
-      },
+      // {
+      //   id: 'draft-parent',
+      //   label: 'Draft',
+      //   path: '#',
+      //   permission: 'can_view_drafts',
+      //   roles: ['project_manager'],
+      //   isDraftParent: true,
+      //   hasSubmenu: true
+      // },
       {
         id: 'my-drafts',
         label: 'My Drafts',

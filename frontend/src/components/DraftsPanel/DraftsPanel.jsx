@@ -6,9 +6,7 @@ import {
   FileText,
   UserCheck,
   Clock,
-  AlertCircle,
-  ChevronDown,
-  ChevronUp
+  AlertCircle
 } from 'lucide-react';
 import { TbFilePencil, TbUserCheck } from 'react-icons/tb';
 import API_CONFIG from '../../config';
@@ -21,10 +19,7 @@ const DraftsPanel = ({ user }) => {
   const [myDrafts, setMyDrafts] = useState([]);
   const [assignedDrafts, setAssignedDrafts] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [expandedSections, setExpandedSections] = useState({
-    myDrafts: true,
-    assigned: true
-  });
+  const [activeTab, setActiveTab] = useState('myDrafts'); // 'myDrafts' or 'assigned'
 
   const fetchDrafts = useCallback(async () => {
     if (!user) return;
@@ -44,18 +39,18 @@ const DraftsPanel = ({ user }) => {
           const filtered = data.filter(draft => 
             draft.created_by === user.id || draft.userId === user.id
           );
-          setMyDrafts(filtered.slice(0, 5)); // Show only latest 5
+          setMyDrafts(filtered.slice(0, 10)); // Show more drafts
         }
       }
 
       // Fetch Assigned Drafts (for PM, Program Manager, Director)
       if (['project_manager', 'program_manager', 'director'].includes(user.role)) {
-        const assignedResponse = await fetch(`${baseUrl}/api/agreements/assigned-drafts?limit=5`, {
+        const assignedResponse = await fetch(`${baseUrl}/api/agreements/assigned-drafts?limit=10`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (assignedResponse.ok) {
           const data = await assignedResponse.json();
-          setAssignedDrafts(data.drafts?.slice(0, 5) || []);
+          setAssignedDrafts(data.drafts?.slice(0, 10) || []);
         }
       }
     } catch (error) {
@@ -80,13 +75,6 @@ const DraftsPanel = ({ user }) => {
       window.removeEventListener('assignment-changed', handleDraftUpdate);
     };
   }, [fetchDrafts]);
-
-  const toggleSection = (section) => {
-    setExpandedSections(prev => ({
-      ...prev,
-      [section]: !prev[section]
-    }));
-  };
 
   const handleDraftClick = (draft) => {
     if (draft.agreement_id || draft.id) {
@@ -114,6 +102,17 @@ const DraftsPanel = ({ user }) => {
 
   // Calculate total drafts count for badge
   const totalDrafts = (myDrafts?.length || 0) + (assignedDrafts?.length || 0);
+
+  // Check if user has access to each tab
+  const hasMyDraftsAccess = user?.role === 'project_manager';
+  const hasAssignedAccess = ['project_manager', 'program_manager', 'director'].includes(user?.role);
+
+  // Set default tab based on access
+  useEffect(() => {
+    if (!hasMyDraftsAccess && hasAssignedAccess) {
+      setActiveTab('assigned');
+    }
+  }, [hasMyDraftsAccess, hasAssignedAccess]);
 
   // Don't render if user doesn't have draft access
   if (!user || !['project_manager', 'program_manager', 'director'].includes(user.role)) {
@@ -145,88 +144,85 @@ const DraftsPanel = ({ user }) => {
               </button>
             </div>
 
-            {/* My Drafts Section */}
-            {user.role === 'project_manager' && (
-              <div className="draft-section">
-                <div 
-                  className="draft-section-header"
-                  onClick={() => toggleSection('myDrafts')}
+            {/* Tabs Navigation */}
+            <div className="draft-tabs">
+              {hasMyDraftsAccess && (
+                <button 
+                  className={`draft-tab ${activeTab === 'myDrafts' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('myDrafts')}
                 >
-                  <div className="draft-section-title">
-                    <TbFilePencil size={16} />
-                    <span>My Drafts</span>
-                    <span className="draft-count">{myDrafts.length}</span>
-                  </div>
-                  {expandedSections.myDrafts ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                </div>
+                  <TbFilePencil size={14} />
+                  <span>My Drafts</span>
+                  {myDrafts.length > 0 && (
+                    <span className="draft-tab-count">{myDrafts.length}</span>
+                  )}
+                </button>
+              )}
+              
+              {hasAssignedAccess && (
+                <button 
+                  className={`draft-tab ${activeTab === 'assigned' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('assigned')}
+                >
+                  <TbUserCheck size={14} />
+                  <span>Assigned</span>
+                  {assignedDrafts.length > 0 && (
+                    <span className="draft-tab-count">{assignedDrafts.length}</span>
+                  )}
+                </button>
+              )}
+            </div>
 
-                {expandedSections.myDrafts && (
-                  <div className="draft-list">
-                    {loading ? (
-                      <div className="draft-loading">Loading...</div>
-                    ) : myDrafts.length > 0 ? (
-                      myDrafts.map(draft => (
-                        <div
-                          key={draft.id}
-                          className={`draft-item ${location.pathname.includes(draft.agreement_id || draft.id) ? 'active' : ''}`}
-                          onClick={() => handleDraftClick(draft)}
-                        >
-                          <div className="draft-item-title">{draft.title || 'Untitled Draft'}</div>
-                          <div className="draft-item-meta">
-                            {getStatusBadge(draft.status)}
-                            <span className="draft-date">
-                              {new Date(draft.updated_at || draft.created_at).toLocaleDateString()}
-                            </span>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="draft-empty">No drafts yet</div>
-                    )}
-                  </div>
+            {/* My Drafts Tab Content */}
+            {activeTab === 'myDrafts' && hasMyDraftsAccess && (
+              <div className="draft-tab-content">
+                {loading ? (
+                  <div className="draft-loading">Loading drafts...</div>
+                ) : myDrafts.length > 0 ? (
+                  myDrafts.map(draft => (
+                    <div
+                      key={draft.id}
+                      className={`draft-item ${location.pathname.includes(draft.agreement_id || draft.id) ? 'active' : ''}`}
+                      onClick={() => handleDraftClick(draft)}
+                    >
+                      <div className="draft-item-title">{draft.title || 'Untitled Draft'}</div>
+                      <div className="draft-item-meta">
+                        {getStatusBadge(draft.status)}
+                        <span className="draft-date">
+                          {new Date(draft.updated_at || draft.created_at).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="draft-empty">No drafts yet</div>
                 )}
               </div>
             )}
 
-            {/* Assigned to Me Section */}
-            {['project_manager', 'program_manager', 'director'].includes(user.role) && (
-              <div className="draft-section">
-                <div 
-                  className="draft-section-header"
-                  onClick={() => toggleSection('assigned')}
-                >
-                  <div className="draft-section-title">
-                    <TbUserCheck size={16} />
-                    <span>Assigned to Me</span>
-                    <span className="draft-count">{assignedDrafts.length}</span>
-                  </div>
-                  {expandedSections.assigned ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                </div>
-
-                {expandedSections.assigned && (
-                  <div className="draft-list">
-                    {loading ? (
-                      <div className="draft-loading">Loading...</div>
-                    ) : assignedDrafts.length > 0 ? (
-                      assignedDrafts.map(draft => (
-                        <div
-                          key={draft.id}
-                          className={`draft-item ${location.pathname.includes(draft.agreement_id || draft.id) ? 'active' : ''}`}
-                          onClick={() => handleDraftClick(draft)}
-                        >
-                          <div className="draft-item-title">{draft.title || 'Untitled Draft'}</div>
-                          <div className="draft-item-meta">
-                            {getStatusBadge(draft.status)}
-                            <span className="draft-date">
-                              {new Date(draft.updated_at || draft.created_at).toLocaleDateString()}
-                            </span>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="draft-empty">No assigned drafts</div>
-                    )}
-                  </div>
+            {/* Assigned Tab Content */}
+            {activeTab === 'assigned' && hasAssignedAccess && (
+              <div className="draft-tab-content">
+                {loading ? (
+                  <div className="draft-loading">Loading assigned drafts...</div>
+                ) : assignedDrafts.length > 0 ? (
+                  assignedDrafts.map(draft => (
+                    <div
+                      key={draft.id}
+                      className={`draft-item ${location.pathname.includes(draft.agreement_id || draft.id) ? 'active' : ''}`}
+                      onClick={() => handleDraftClick(draft)}
+                    >
+                      <div className="draft-item-title">{draft.title || 'Untitled Draft'}</div>
+                      <div className="draft-item-meta">
+                        {getStatusBadge(draft.status)}
+                        <span className="draft-date">
+                          {new Date(draft.updated_at || draft.created_at).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="draft-empty">No assigned drafts</div>
                 )}
               </div>
             )}

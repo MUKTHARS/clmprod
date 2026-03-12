@@ -12,7 +12,7 @@
   transition: left 0.25s ease, width 0.25s ease;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow: visible !important;
 }
 
 /* When sidebar is collapsed */
@@ -23,29 +23,36 @@
 /* Draft panel collapsed state - vertical text only */
 .draft-panel.collapsed {
   width: 40px;
-  background: #ffffff;
+  background: #c8cbd8;
   border-right: 1px solid #e5e7eb;
   box-shadow: 2px 0 8px rgba(0, 0, 0, 0.05);
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: visible !important;
+}
+
+.draft-panel.expanded {
+  overflow: visible !important;
 }
 
 .draft-panel.collapsed .draft-panel-content,
 .draft-panel.collapsed .draft-section,
 .draft-panel.collapsed .draft-list,
 .draft-panel.collapsed .draft-item,
-.draft-panel.collapsed .draft-horizontal-container {
+.draft-panel.collapsed .draft-horizontal-container,
+.draft-panel.collapsed .draft-tabs,
+.draft-panel.collapsed .draft-tab-content {
   display: none;
 }
 
-/* Vertical text for collapsed state */
+/* Vertical text for collapsed state - darker text */
 .draft-vertical-text {
   writing-mode: vertical-rl;
   transform: rotate(180deg);
   font-size: 14px;
-  font-weight: 600;
-  color: #6b7280;
+  font-weight: 700;
+  color: #111827 !important;
   letter-spacing: 2px;
   text-transform: uppercase;
   white-space: nowrap;
@@ -56,46 +63,63 @@
   padding: 16px 0;
   cursor: pointer;
   transition: color 0.2s;
-}
-
-.draft-vertical-text:hover {
-  color: #3b82f6;
+  position: relative;
 }
 
 .draft-vertical-text svg {
   margin-bottom: 12px;
   width: 18px;
   height: 18px;
+  color: #1f2937;
 }
 
-/* Toggle button */
+.draft-vertical-text:hover {
+  color: #2563eb !important;
+}
+
+/* Toggle button - make it bigger and fully visible */
 .draft-panel-toggle {
   position: absolute;
-  right: -12px;
+  right: -14px;
   top: 50%;
   transform: translateY(-50%);
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
+  border: 2px solid #e5e7eb;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  z-index: 10;
-  color: #6b7280;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  color: #3b82f6;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
   transition: all 0.2s;
 }
 
 .draft-panel-toggle:hover {
-  background: #f3f4f6;
-  color: #3b82f6;
+  background: #3b82f6;
+  color: white;
   border-color: #3b82f6;
+  transform: translateY(-50%) scale(1.1);
+  box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+}
+
+.draft-panel-toggle svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 2.5;
 }
 
 /* Expanded panel content */
+.draft-panel.expanded .draft-panel-content {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
 .draft-panel-content {
   flex: 1;
   display: flex;
@@ -139,83 +163,115 @@
   text-decoration: underline;
 }
 
-.draft-section {
-  margin-bottom: 20px;
-}
-
-.draft-section-header {
+/* Tabs Styling */
+.draft-tabs {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 0;
-  cursor: pointer;
-  border-radius: 4px;
-  transition: background 0.2s;
-}
-
-.draft-section-header:hover {
-  background: #f9fafb;
-}
-
-.draft-section-title {
-  display: flex;
-  align-items: center;
   gap: 8px;
-  font-size: 13px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 8px;
+}
+
+.draft-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 4px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
   font-weight: 500;
-  color: #4b5563;
-}
-
-.draft-section-title svg {
   color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
 }
 
-.draft-count {
+.draft-tab:hover {
   background: #f3f4f6;
-  padding: 2px 6px;
-  border-radius: 12px;
-  font-size: 11px;
-  font-weight: 600;
   color: #4b5563;
 }
 
-.draft-list {
-  max-height: 300px;
+.draft-tab.active {
+  background: #e6f0ff;
+  color: #2563eb;
+  font-weight: 600;
+}
+
+.draft-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: -9px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #2563eb;
+  border-radius: 2px 2px 0 0;
+}
+
+.draft-tab svg {
+  width: 14px;
+  height: 14px;
+}
+
+.draft-tab-count {
+  background: #e5e7eb;
+  color: #4b5563;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 10px;
+  min-width: 18px;
+  text-align: center;
+}
+
+.draft-tab.active .draft-tab-count {
+  background: #2563eb;
+  color: white;
+}
+
+/* Tab Content */
+.draft-tab-content {
+  flex: 1;
   overflow-y: auto;
-  margin-top: 4px;
-  padding-left: 24px;
+  padding-right: 4px;
 }
 
 /* Custom scrollbar */
-.draft-list::-webkit-scrollbar {
+.draft-tab-content::-webkit-scrollbar {
   width: 4px;
 }
 
-.draft-list::-webkit-scrollbar-track {
+.draft-tab-content::-webkit-scrollbar-track {
   background: #f1f5f9;
 }
 
-.draft-list::-webkit-scrollbar-thumb {
+.draft-tab-content::-webkit-scrollbar-thumb {
   background: #cbd5e1;
   border-radius: 4px;
 }
 
-.draft-list::-webkit-scrollbar-thumb:hover {
+.draft-tab-content::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
 
 .draft-item {
-  padding: 8px;
-  margin: 2px 0;
+  padding: 10px;
+  margin: 4px 0;
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s;
-  border-left: 2px solid transparent;
+  border-left: 3px solid transparent;
+  background: #f9fafb;
 }
 
 .draft-item:hover {
-  background: #f9fafb;
-  border-left-color: #d1d5db;
+  background: #f3f4f6;
+  border-left-color: #94a3b8;
+  transform: translateX(2px);
 }
 
 .draft-item.active {
@@ -227,7 +283,7 @@
   font-size: 12px;
   font-weight: 500;
   color: #1f2937;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -279,22 +335,25 @@
 
 .draft-loading,
 .draft-empty {
-  padding: 12px 8px;
+  padding: 24px 12px;
   text-align: center;
   font-size: 12px;
   color: #9ca3af;
   font-style: italic;
+  background: #f9fafb;
+  border-radius: 6px;
 }
 
-/* Badge for collapsed state - positioned at top */
+/* Badge for collapsed state */
 .draft-collapsed-badge {
   position: absolute;
-  top: 475px; /* Positioned at top */
-  left: 50%;
-  transform: translateX(-50%); /* Centered horizontally */
-  background: #3b82f6;
+  top: 475px;
+  right: -8px;
+  left: auto;
+  transform: none;
+  background: #f63b3b;
   color: white;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
   min-width: 20px;
   height: 20px;
@@ -305,12 +364,25 @@
   padding: 0 5px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   z-index: 11;
-  animation: draft-pulse 2s infinite; /* Subtle pulse animation to draw attention */
+  animation: draft-pulse 2s infinite;
+}
+
+/* Pulse animation */
+@keyframes draft-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(246, 59, 59, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(246, 59, 59, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(246, 59, 59, 0);
+  }
 }
 
 /* ===== MAIN CONTENT ADJUSTMENTS ===== */
 .main-content {
-  margin-left: 210px; /* Default sidebar width */
+  margin-left: 210px;
   transition: margin-left 0.25s ease;
 }
 
@@ -321,28 +393,28 @@
 
 /* When draft panel is expanded */
 .draft-panel.expanded ~ .main-content {
-  margin-left: 470px; /* 210px + 260px */
+  margin-left: 470px;
 }
 
 /* When draft panel is collapsed */
 .draft-panel.collapsed ~ .main-content {
-  margin-left: 250px; /* 210px + 40px */
+  margin-left: 250px;
 }
 
 /* When sidebar is collapsed AND draft panel is expanded */
 .sbr-sidebar-collapsed ~ .draft-panel.expanded ~ .main-content {
-  margin-left: 324px; /* 64px + 260px */
+  margin-left: 324px;
 }
 
 /* When sidebar is collapsed AND draft panel is collapsed */
 .sbr-sidebar-collapsed ~ .draft-panel.collapsed ~ .main-content {
-  margin-left: 104px; /* 64px + 40px */
+  margin-left: 104px;
 }
 
 /* ===== RESPONSIVE ADJUSTMENTS ===== */
 @media (max-width: 1024px) {
   .draft-panel {
-    left: 60px; /* Collapsed sidebar on tablet */
+    left: 60px;
   }
   
   .draft-panel.expanded {
@@ -364,63 +436,10 @@
 
 @media (max-width: 768px) {
   .draft-panel {
-    display: none; /* Hide on mobile */
+    display: none;
   }
   
   .main-content {
     margin-left: 64px !important;
   }
-}
-
-/* Toggle button - make it bigger and fully visible */
-.draft-panel-toggle {
-  position: absolute;
-  right: -14px; /* Increased from -12px to show more */
-  top: 50%;
-  transform: translateY(-50%);
-  width: 28px; /* Increased from 24px */
-  height: 28px; /* Increased from 24px */
-  background: #ffffff;
-  border: 2px solid #e5e7eb; /* Thicker border */
-  border-radius: 14px; /* Adjusted for new size */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  z-index: 1000; /* Increased z-index to ensure it's above everything */
-  color: #3b82f6; /* Changed to blue for better visibility */
-  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15); /* Stronger shadow */
-  transition: all 0.2s;
-}
-
-.draft-panel-toggle:hover {
-  background: #3b82f6;
-  color: white;
-  border-color: #3b82f6;
-  transform: translateY(-50%) scale(1.1); /* Slight scale on hover */
-  box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
-}
-
-.draft-panel-toggle svg {
-  width: 18px; /* Larger icon */
-  height: 18px; /* Larger icon */
-  stroke-width: 2.5; /* Thicker stroke */
-}
-
-/* Ensure the panel doesn't clip the toggle button */
-.draft-panel {
-  overflow: visible !important; /* Override the overflow:hidden */
-}
-
-/* But keep content hidden when needed */
-.draft-panel.collapsed {
-  overflow: visible !important;
-}
-
-.draft-panel.expanded {
-  overflow: visible !important;
-}
-
-.draft-panel.expanded .draft-panel-content {
-  overflow: hidden; /* Keep content scrolling properly */
 }
