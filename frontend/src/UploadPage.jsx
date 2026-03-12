@@ -183,8 +183,9 @@ function UploadPage({ user, setLoading = () => {}, onUploadComplete }) {
           is_draft: true
         });
         localStorage.setItem('user_drafts', JSON.stringify(userDrafts));
+        window.dispatchEvent(new CustomEvent('draft-updated'));
       }
-      
+
       if (onUploadComplete) {
         onUploadComplete(response.data);
       }
