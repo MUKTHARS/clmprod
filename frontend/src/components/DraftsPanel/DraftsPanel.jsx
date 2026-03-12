@@ -216,11 +216,13 @@ const DraftsPanel = ({ user }) => {
                       className={`draft-item ${location.pathname.includes(draft.agreement_id || draft.id) ? 'active' : ''}`}
                       onClick={() => handleDraftClick(draft)}
                     >
-                      <div className="draft-item-title">{draft.title || 'Untitled Draft'}</div>
+                      <div className="draft-item-title">{draft.grant_name || draft.filename || draft.title || 'Untitled Draft'}</div>
                       <div className="draft-item-meta">
                         {getStatusBadge(draft.status)}
                         <span className="draft-date">
-                          {new Date(draft.updated_at || draft.created_at).toLocaleDateString()}
+                          {draft.uploaded_at || draft.updated_at || draft.created_at
+                            ? new Date(draft.uploaded_at || draft.updated_at || draft.created_at).toLocaleDateString()
+                            : 'No date'}
                         </span>
                       </div>
                     </div>
@@ -243,11 +245,13 @@ const DraftsPanel = ({ user }) => {
                       className={`draft-item ${location.pathname.includes(draft.agreement_id || draft.id) ? 'active' : ''}`}
                       onClick={() => handleDraftClick(draft)}
                     >
-                      <div className="draft-item-title">{draft.title || 'Untitled Draft'}</div>
+                      <div className="draft-item-title">{draft.grant_name || draft.filename || draft.title || 'Untitled Draft'}</div>
                       <div className="draft-item-meta">
                         {getStatusBadge(draft.status)}
                         <span className="draft-date">
-                          {new Date(draft.updated_at || draft.created_at).toLocaleDateString()}
+                          {draft.uploaded_at || draft.updated_at || draft.created_at
+                            ? new Date(draft.uploaded_at || draft.updated_at || draft.created_at).toLocaleDateString()
+                            : 'No date'}
                         </span>
                       </div>
                     </div>
@@ -270,11 +274,13 @@ const DraftsPanel = ({ user }) => {
                       className={`draft-item ${location.pathname.includes(draft.agreement_id || draft.id) ? 'active' : ''}`}
                       onClick={() => handleDraftClick(draft)}
                     >
-                      <div className="draft-item-title">{draft.title || 'Untitled Draft'}</div>
+                      <div className="draft-item-title">{draft.grant_name || draft.filename || draft.title || 'Untitled Draft'}</div>
                       <div className="draft-item-meta">
                         {getStatusBadge(draft.status)}
                         <span className="draft-date">
-                          {new Date(draft.updated_at || draft.created_at).toLocaleDateString()}
+                          {draft.uploaded_at || draft.updated_at || draft.created_at
+                            ? new Date(draft.uploaded_at || draft.updated_at || draft.created_at).toLocaleDateString()
+                            : 'No date'}
                         </span>
                       </div>
                     </div>
