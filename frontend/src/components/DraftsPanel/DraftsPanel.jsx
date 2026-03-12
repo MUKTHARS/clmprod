@@ -7,9 +7,12 @@ import {
   UserCheck,
   Clock,
   AlertCircle,
-  UserPlus
+  UserPlus,
+  Settings,
+  Eye
 } from 'lucide-react';
 import { TbFilePencil, TbUserCheck, TbUserPlus } from 'react-icons/tb';
+import AgreementWorkflow from '../workflow/AgreementWorkflow';
 import API_CONFIG from '../../config';
 import './DraftsPanel.css';
 
@@ -23,9 +26,13 @@ const DraftsPanel = ({ user }) => {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('myDrafts'); // 'myDrafts', 'assignedToMe', 'assignedByMe'
 
+  // Workflow modal state
+  const [showWorkflowModal, setShowWorkflowModal] = useState(false);
+  const [selectedContractForWorkflow, setSelectedContractForWorkflow] = useState(null);
+
   const fetchDrafts = useCallback(async () => {
     if (!user) return;
-    
+
     setLoading(true);
     const token = localStorage.getItem('token');
     const baseUrl = API_CONFIG.BASE_URL;
@@ -97,6 +104,33 @@ const DraftsPanel = ({ user }) => {
     }
   };
 
+  const handleOpenWorkflow = async (e, draft) => {
+    e.stopPropagation();
+    const token = localStorage.getItem('token');
+    try {
+      const response = await fetch(
+        `${API_CONFIG.BASE_URL}/api/agreements/drafts/${draft.id}`,
+        { headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' } }
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setSelectedContractForWorkflow(data.contract || draft);
+      } else {
+        setSelectedContractForWorkflow(draft);
+      }
+    } catch {
+      setSelectedContractForWorkflow(draft);
+    }
+    setShowWorkflowModal(true);
+  };
+
+  const handleWorkflowComplete = () => {
+    fetchDrafts();
+    setShowWorkflowModal(false);
+    setSelectedContractForWorkflow(null);
+    window.dispatchEvent(new CustomEvent('assignment-changed'));
+  };
+
   const getStatusBadge = (status) => {
     const statusMap = {
       'draft': { label: 'Draft', class: 'draft-status-draft', icon: FileText },
@@ -106,7 +140,7 @@ const DraftsPanel = ({ user }) => {
     };
     const statusInfo = statusMap[status] || { label: status, class: 'draft-status-default', icon: FileText };
     const StatusIcon = statusInfo.icon;
-    
+
     return (
       <span className={`draft-status-badge ${statusInfo.class}`}>
         <StatusIcon size={12} />
@@ -149,7 +183,7 @@ const DraftsPanel = ({ user }) => {
   return (
     <>
       <div className={`draft-panel ${isExpanded ? 'expanded' : 'collapsed'}`}>
-        <button 
+        <button
           className="draft-panel-toggle"
           onClick={() => setIsExpanded(!isExpanded)}
           title={isExpanded ? 'Collapse drafts panel' : 'Expand drafts panel'}
@@ -164,7 +198,7 @@ const DraftsPanel = ({ user }) => {
   <h3>
     {user?.role === 'project_manager' ? 'Drafts' : 'Assigned Grants'}
   </h3>
-  <button 
+  <button
     className="draft-view-all"
     onClick={() => navigate('/app/drafts')}
     title={user?.role === 'project_manager' ? 'View all drafts' : 'View all assigned grants'}
@@ -176,7 +210,7 @@ const DraftsPanel = ({ user }) => {
             {/* Tabs Navigation */}
             <div className="draft-tabs">
               {hasMyDraftsAccess && (
-                <button 
+                <button
                   className={`draft-tab ${activeTab === 'myDrafts' ? 'active' : ''}`}
                   onClick={() => setActiveTab('myDrafts')}
                 >
@@ -187,9 +221,9 @@ const DraftsPanel = ({ user }) => {
                   )}
                 </button>
               )}
-              
+
               {hasAssignedToMeAccess && (
-                <button 
+                <button
                   className={`draft-tab ${activeTab === 'assignedToMe' ? 'active' : ''}`}
                   onClick={() => setActiveTab('assignedToMe')}
                 >
@@ -202,7 +236,7 @@ const DraftsPanel = ({ user }) => {
               )}
 
               {hasAssignedByMeAccess && (
-                <button 
+                <button
                   className={`draft-tab ${activeTab === 'assignedByMe' ? 'active' : ''}`}
                   onClick={() => setActiveTab('assignedByMe')}
                 >
@@ -225,7 +259,6 @@ const DraftsPanel = ({ user }) => {
                     <div
                       key={draft.id}
                       className={`draft-item ${location.pathname.includes(draft.agreement_id || draft.id) ? 'active' : ''}`}
-                      onClick={() => handleDraftClick(draft)}
                     >
                       <div className="draft-item-title">{draft.grant_name || draft.filename || draft.title || 'Untitled Draft'}</div>
                       <div className="draft-item-meta">
@@ -233,6 +266,24 @@ const DraftsPanel = ({ user }) => {
                         <span className="draft-date">
                           {formatDate(draft.uploaded_at || draft.updated_at || draft.created_at)}
                         </span>
+                      </div>
+                      <div className="draft-item-actions">
+                        <button
+                          className="draft-action-btn draft-action-eye"
+                          onClick={() => handleDraftClick(draft)}
+                          title="View contract details"
+                        >
+                          <Eye size={13} />
+                          <span>View</span>
+                        </button>
+                        <button
+                          className="draft-action-btn draft-action-gear"
+                          onClick={(e) => handleOpenWorkflow(e, draft)}
+                          title="Manage workflow & assignment"
+                        >
+                          <Settings size={13} />
+                          <span>Workflow</span>
+                        </button>
                       </div>
                     </div>
                   ))
@@ -252,7 +303,6 @@ const DraftsPanel = ({ user }) => {
                     <div
                       key={draft.id}
                       className={`draft-item ${location.pathname.includes(draft.agreement_id || draft.id) ? 'active' : ''}`}
-                      onClick={() => handleDraftClick(draft)}
                     >
                       <div className="draft-item-title">{draft.grant_name || draft.filename || draft.title || 'Untitled Draft'}</div>
                       <div className="draft-item-meta">
@@ -260,6 +310,16 @@ const DraftsPanel = ({ user }) => {
                         <span className="draft-date">
                           {formatDate(draft.uploaded_at || draft.updated_at || draft.created_at)}
                         </span>
+                      </div>
+                      <div className="draft-item-actions">
+                        <button
+                          className="draft-action-btn draft-action-eye"
+                          onClick={() => handleDraftClick(draft)}
+                          title="View contract details"
+                        >
+                          <Eye size={13} />
+                          <span>View</span>
+                        </button>
                       </div>
                     </div>
                   ))
@@ -279,7 +339,6 @@ const DraftsPanel = ({ user }) => {
                     <div
                       key={draft.id}
                       className={`draft-item ${location.pathname.includes(draft.agreement_id || draft.id) ? 'active' : ''}`}
-                      onClick={() => handleDraftClick(draft)}
                     >
                       <div className="draft-item-title">{draft.grant_name || draft.filename || draft.title || 'Untitled Draft'}</div>
                       <div className="draft-item-meta">
@@ -287,6 +346,16 @@ const DraftsPanel = ({ user }) => {
                         <span className="draft-date">
                           {formatDate(draft.uploaded_at || draft.updated_at || draft.created_at)}
                         </span>
+                      </div>
+                      <div className="draft-item-actions">
+                        <button
+                          className="draft-action-btn draft-action-eye"
+                          onClick={() => handleDraftClick(draft)}
+                          title="View contract details"
+                        >
+                          <Eye size={13} />
+                          <span>View</span>
+                        </button>
                       </div>
                     </div>
                   ))
@@ -298,7 +367,7 @@ const DraftsPanel = ({ user }) => {
           </div>
         ) : (
           // Collapsed View - Vertical text only
-          <div 
+          <div
   className="draft-vertical-text"
   onClick={() => setIsExpanded(true)}
   title={user?.role === 'project_manager' ? 'Expand drafts panel' : 'Expand assigned grants panel'}
@@ -311,6 +380,32 @@ const DraftsPanel = ({ user }) => {
 </div>
         )}
       </div>
+
+      {/* Workflow Modal */}
+      {showWorkflowModal && selectedContractForWorkflow && (
+        <div className="draft-workflow-modal-overlay" onClick={() => { setShowWorkflowModal(false); setSelectedContractForWorkflow(null); }}>
+          <div className="draft-workflow-modal-content" onClick={e => e.stopPropagation()}>
+            <div className="draft-workflow-modal-header">
+              <h3>Agreement Workflow</h3>
+              <button
+                className="draft-workflow-modal-close"
+                onClick={() => { setShowWorkflowModal(false); setSelectedContractForWorkflow(null); }}
+              >
+                ×
+              </button>
+            </div>
+            <div className="draft-workflow-modal-body">
+              <AgreementWorkflow
+                contract={selectedContractForWorkflow}
+                user={user}
+                showWorkflow={showWorkflowModal}
+                setShowWorkflow={setShowWorkflowModal}
+                onWorkflowComplete={handleWorkflowComplete}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };
