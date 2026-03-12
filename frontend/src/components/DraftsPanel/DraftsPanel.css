@@ -286,25 +286,26 @@
   font-style: italic;
 }
 
-/* Badge for collapsed state - shows count */
+/* Badge for collapsed state - positioned at top */
 .draft-collapsed-badge {
   position: absolute;
-  top: 50%;
+  top: 475px; /* Positioned at top */
   left: 50%;
-  transform: translate(-50%, -50%);
+  transform: translateX(-50%); /* Centered horizontally */
   background: #3b82f6;
   color: white;
   font-size: 10px;
   font-weight: 600;
-  min-width: 18px;
-  height: 18px;
-  border-radius: 9px;
+  min-width: 20px;
+  height: 20px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 4px;
+  padding: 0 5px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  pointer-events: none;
+  z-index: 11;
+  animation: draft-pulse 2s infinite; /* Subtle pulse animation to draw attention */
 }
 
 /* ===== MAIN CONTENT ADJUSTMENTS ===== */
@@ -369,4 +370,57 @@
   .main-content {
     margin-left: 64px !important;
   }
+}
+
+/* Toggle button - make it bigger and fully visible */
+.draft-panel-toggle {
+  position: absolute;
+  right: -14px; /* Increased from -12px to show more */
+  top: 50%;
+  transform: translateY(-50%);
+  width: 28px; /* Increased from 24px */
+  height: 28px; /* Increased from 24px */
+  background: #ffffff;
+  border: 2px solid #e5e7eb; /* Thicker border */
+  border-radius: 14px; /* Adjusted for new size */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 1000; /* Increased z-index to ensure it's above everything */
+  color: #3b82f6; /* Changed to blue for better visibility */
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15); /* Stronger shadow */
+  transition: all 0.2s;
+}
+
+.draft-panel-toggle:hover {
+  background: #3b82f6;
+  color: white;
+  border-color: #3b82f6;
+  transform: translateY(-50%) scale(1.1); /* Slight scale on hover */
+  box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+}
+
+.draft-panel-toggle svg {
+  width: 18px; /* Larger icon */
+  height: 18px; /* Larger icon */
+  stroke-width: 2.5; /* Thicker stroke */
+}
+
+/* Ensure the panel doesn't clip the toggle button */
+.draft-panel {
+  overflow: visible !important; /* Override the overflow:hidden */
+}
+
+/* But keep content hidden when needed */
+.draft-panel.collapsed {
+  overflow: visible !important;
+}
+
+.draft-panel.expanded {
+  overflow: visible !important;
+}
+
+.draft-panel.expanded .draft-panel-content {
+  overflow: hidden; /* Keep content scrolling properly */
 }
