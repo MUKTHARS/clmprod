@@ -492,3 +492,99 @@ textarea:focus {
     padding: 16px 12px !important;
   }
 }
+
+/* Adjust main content for drafts panel */
+.main-content {
+  margin-left: 240px; /* Sidebar width */
+  transition: margin-left 0.25s ease;
+}
+
+/* When drafts panel is expanded */
+body:has(.drafts-panel.expanded) .main-content {
+  margin-left: 500px; /* 240px (sidebar) + 260px (drafts panel) */
+}
+
+/* When drafts panel is collapsed */
+body:has(.drafts-panel.collapsed) .main-content {
+  margin-left: 280px; /* 240px (sidebar) + 40px (collapsed drafts panel) */
+}
+
+/* Adjust for collapsed sidebar */
+body:has(.sbr-sidebar-collapsed) .main-content {
+  margin-left: 64px;
+}
+
+body:has(.sbr-sidebar-collapsed):has(.drafts-panel.expanded) .main-content {
+  margin-left: 324px; /* 64px + 260px */
+}
+
+body:has(.sbr-sidebar-collapsed):has(.drafts-panel.collapsed) .main-content {
+  margin-left: 104px; /* 64px + 40px */
+}
+
+/* Tablet adjustments */
+@media (max-width: 1024px) {
+  body:has(.drafts-panel.expanded) .main-content {
+    margin-left: 300px !important; /* 60px + 240px */
+  }
+  
+  body:has(.drafts-panel.collapsed) .main-content {
+    margin-left: 100px !important; /* 60px + 40px */
+  }
+}
+
+
+
+/* ===== MAIN CONTENT ADJUSTMENTS FOR DRAFTS PANEL ===== */
+.main-content {
+  margin-left: 210px; /* Default sidebar width */
+  transition: margin-left 0.25s ease;
+}
+
+/* When sidebar is collapsed */
+.sbr-sidebar-collapsed + .drafts-panel + .main-content,
+.sbr-sidebar-collapsed ~ .main-content {
+  margin-left: 64px;
+}
+
+/* When drafts panel is expanded (default) */
+.drafts-panel.expanded + .main-content {
+  margin-left: 470px; /* 210px + 260px */
+}
+
+/* When drafts panel is collapsed */
+.drafts-panel.collapsed + .main-content {
+  margin-left: 250px; /* 210px + 40px */
+}
+
+/* When sidebar is collapsed AND drafts panel is expanded */
+.sbr-sidebar-collapsed + .drafts-panel.expanded + .main-content {
+  margin-left: 324px; /* 64px + 260px */
+}
+
+/* When sidebar is collapsed AND drafts panel is collapsed */
+.sbr-sidebar-collapsed + .drafts-panel.collapsed + .main-content {
+  margin-left: 104px; /* 64px + 40px */
+}
+
+/* Tablet adjustments */
+@media (max-width: 1024px) {
+  .main-content {
+    margin-left: 60px !important;
+  }
+  
+  .drafts-panel.expanded + .main-content {
+    margin-left: 300px !important; /* 60px + 240px */
+  }
+  
+  .drafts-panel.collapsed + .main-content {
+    margin-left: 100px !important; /* 60px + 40px */
+  }
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+  .main-content {
+    margin-left: 64px !important;
+  }
+}

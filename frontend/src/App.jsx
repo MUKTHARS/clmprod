@@ -4,7 +4,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import Sidebar from "./components/Sidebar/Sidebar";
 import TopBar from "./components/TopBar/TopBar";
 import Login from "./components/Auth/Login";
-
+import DraftsPanel from './components/DraftsPanel/DraftsPanel';
 import Dashboard from "./Dashboard";
 import UploadPage from "./UploadPage";
 import ContractsListPage from "./ContractsListPage";
@@ -101,6 +101,7 @@ function TenantRouter({ user, onLogout }) {
   return (
     <>
       <Sidebar user={user} onLogout={onLogout} />
+      <DraftsPanel user={user} />
       <div className="main-content">
         <TopBar user={user} />
         <div className="content-area">

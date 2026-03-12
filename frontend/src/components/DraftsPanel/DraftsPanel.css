@@ -1,0 +1,319 @@
+/* Drafts Panel Styles */
+.drafts-panel {
+  position: fixed;
+  left: 210px; /* Matches expanded sidebar width */
+  top: 56px; /* Below topbar */
+  bottom: 0;
+  width: 260px;
+  background: #ffffff;
+  border-right: 1px solid #e5e7eb;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.05);
+  z-index: 900;
+  transition: left 0.25s ease, width 0.25s ease;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* When sidebar is collapsed */
+.sbr-sidebar-collapsed + .drafts-panel {
+  left: 64px; /* Collapsed sidebar width */
+}
+
+/* Drafts panel collapsed state */
+.drafts-panel.collapsed {
+  width: 40px;
+}
+
+.drafts-panel.collapsed .drafts-panel-content {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Toggle button positioning - fixed relative to panel */
+.drafts-panel-toggle {
+  position: absolute;
+  right: -12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 24px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  color: #6b7280;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s;
+}
+
+/* Adjust toggle button position when panel is collapsed */
+.drafts-panel.collapsed .drafts-panel-toggle {
+  right: -12px; /* Keep same position */
+}
+
+.drafts-panel-toggle:hover {
+  background: #f3f4f6;
+  color: #3b82f6;
+  border-color: #3b82f6;
+}
+
+.drafts-panel-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 16px 12px;
+  transition: opacity 0.2s;
+}
+
+.drafts-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.drafts-panel-header h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.drafts-view-all {
+  font-size: 12px;
+  color: #3b82f6;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.drafts-view-all:hover {
+  background: #eff6ff;
+  text-decoration: underline;
+}
+
+.drafts-section {
+  margin-bottom: 20px;
+}
+
+.drafts-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.drafts-section-header:hover {
+  background: #f9fafb;
+}
+
+.drafts-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #4b5563;
+}
+
+.drafts-section-title svg {
+  color: #6b7280;
+}
+
+.drafts-count {
+  background: #f3f4f6;
+  padding: 2px 6px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #4b5563;
+}
+
+.drafts-list {
+  max-height: 300px;
+  overflow-y: auto;
+  margin-top: 4px;
+  padding-left: 24px;
+}
+
+/* Custom scrollbar for drafts list */
+.drafts-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.drafts-list::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+.drafts-list::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.drafts-list::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.draft-item {
+  padding: 8px;
+  margin: 2px 0;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border-left: 2px solid transparent;
+}
+
+.draft-item:hover {
+  background: #f9fafb;
+  border-left-color: #d1d5db;
+}
+
+.draft-item.active {
+  background: #eff6ff;
+  border-left-color: #3b82f6;
+}
+
+.draft-item-title {
+  font-size: 12px;
+  font-weight: 500;
+  color: #1f2937;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.draft-item-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.draft-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 500;
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+.draft-status-badge.status-draft {
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+.draft-status-badge.status-review {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.draft-status-badge.status-assigned {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.draft-status-badge.status-changes {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.draft-date {
+  font-size: 10px;
+  color: #9ca3af;
+}
+
+.drafts-loading,
+.drafts-empty {
+  padding: 12px 8px;
+  text-align: center;
+  font-size: 12px;
+  color: #9ca3af;
+  font-style: italic;
+}
+
+/* ===== MAIN CONTENT ADJUSTMENTS ===== */
+.main-content {
+  margin-left: 210px; /* Default sidebar width */
+  transition: margin-left 0.25s ease;
+}
+
+/* When sidebar is collapsed */
+.sbr-sidebar-collapsed ~ .main-content {
+  margin-left: 64px;
+}
+
+/* When drafts panel is expanded (default) */
+.drafts-panel.expanded ~ .main-content {
+  margin-left: 470px; /* 210px + 260px */
+}
+
+/* When drafts panel is collapsed */
+.drafts-panel.collapsed ~ .main-content {
+  margin-left: 250px; /* 210px + 40px */
+}
+
+/* When sidebar is collapsed AND drafts panel is expanded */
+.sbr-sidebar-collapsed ~ .drafts-panel.expanded ~ .main-content {
+  margin-left: 324px; /* 64px + 260px */
+}
+
+/* When sidebar is collapsed AND drafts panel is collapsed */
+.sbr-sidebar-collapsed ~ .drafts-panel.collapsed ~ .main-content {
+  margin-left: 104px; /* 64px + 40px */
+}
+
+/* ===== RESPONSIVE ADJUSTMENTS ===== */
+@media (max-width: 1024px) {
+  .drafts-panel {
+    left: 60px; /* Collapsed sidebar on tablet */
+  }
+  
+  .drafts-panel.expanded {
+    width: 240px;
+  }
+  
+  .drafts-panel.collapsed {
+    width: 40px;
+  }
+  
+  /* When drafts panel is expanded on tablet */
+  .drafts-panel.expanded ~ .main-content {
+    margin-left: 300px !important; /* 60px + 240px */
+  }
+  
+  /* When drafts panel is collapsed on tablet */
+  .drafts-panel.collapsed ~ .main-content {
+    margin-left: 100px !important; /* 60px + 40px */
+  }
+}
+
+@media (max-width: 768px) {
+  .drafts-panel {
+    display: none; /* Hide on mobile */
+  }
+  
+  .main-content {
+    margin-left: 64px !important;
+  }
+}
