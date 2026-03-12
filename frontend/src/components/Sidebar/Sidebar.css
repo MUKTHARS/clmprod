@@ -6,12 +6,12 @@
   width: 210px;
   background: #1a1f2e;
   border-right: 1px solid #2a3142;
-  height: calc(100vh - 28px);
+  height: calc(100vh - 56px);
   display: flex;
   flex-direction: column;
   position: fixed;
   left: 0;
-  top: 28px;
+  top: 56px;
   z-index: 1000;
   box-shadow: 2px 0 8px rgba(0, 0, 0, 0.3);
   transition: width 0.25s ease, transform 0.3s ease;
@@ -575,8 +575,7 @@ body:has(.sbr-sidebar-collapsed) .main-content {
 /* Main content adjustment */
 .main-content {
   margin-left: 210px;
-  margin-top: 28px;
-  padding-top: 12px;
+  margin-top: 56px;
   transition: margin-left 0.3s ease;
 }
 
