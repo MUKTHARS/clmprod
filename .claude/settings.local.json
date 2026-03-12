@@ -3,7 +3,8 @@
     "allow": [
       "Bash(xargs grep -l \"notif\")",
       "Bash(xargs grep -l \"login\\\\|Login\")",
-      "Bash(grep -n \"class ProjectManagerActions\\\\|function ProjectManagerActions\\\\|const ProjectManagerActions\" /c/saple.ai/POCFIX/frontend/src/components/workflow/*.jsx)"
+      "Bash(grep -n \"class ProjectManagerActions\\\\|function ProjectManagerActions\\\\|const ProjectManagerActions\" /c/saple.ai/POCFIX/frontend/src/components/workflow/*.jsx)",
+      "Bash(xargs grep:*)"
     ]
   }
 }

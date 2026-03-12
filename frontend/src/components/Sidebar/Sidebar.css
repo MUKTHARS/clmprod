@@ -1,10 +1,11 @@
 /* Sidebar CSS - All classes prefixed with sbr- */
+/* Dark Mode Theme - Fluxx Inspired */
 
-/* Main sidebar container */
+/* Main sidebar container - Dark Mode */
 .sbr-sidebar {
-  width: 240px;
-  background: white;
-  border-right: 1px solid #e5e7eb;
+  width: 210px;
+  background: #1a1f2e; /* Dark navy background like Fluxx */
+  border-right: 1px solid #2a3142; /* Subtle border */
   height: 100vh;
   display: flex;
   flex-direction: column;
@@ -12,14 +13,15 @@
   left: 0;
   top: 0;
   z-index: 1000;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.3);
   transition: transform 0.3s ease;
+  color: #e5e7eb;
 }
 
-/* Header section */
+/* Header section - Dark Mode */
 .sbr-header {
-  padding: 1.5rem 1rem;
-  border-bottom: 1px solid #f3f4f6;
+  padding: 1.25rem 1rem;
+  border-bottom: 1px solid #2a3142;
   cursor: pointer;
 }
 
@@ -28,7 +30,6 @@
   align-items: center;
   gap: 0.75rem;
   text-decoration: none;
-  color: inherit;
 }
 
 .sbr-logo-text {
@@ -39,12 +40,16 @@
 
 .sbr-logo-primary {
   font-size: 1.25rem;
-  font-weight: 800;
-  color: #2563eb;
+  font-weight: 700;
+  color: #ffffff;
   letter-spacing: -0.5px;
+  background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
-/* Navigation */
+/* Navigation - Dark Mode */
 .sbr-nav {
   flex: 1;
   padding: 1rem 0.5rem;
@@ -65,11 +70,11 @@
   align-items: center;
   gap: 0.75rem;
   width: 100%;
-  padding: 0.75rem 1rem;
+  padding: 0.7rem 1rem;
   background: transparent;
   border: none;
-  border-radius: 8px;
-  color: #4b5563;
+  border-radius: 6px;
+  color: #9ca3af; /* Muted text for inactive items */
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
@@ -79,32 +84,14 @@
 }
 
 .sbr-nav-item:hover {
-  background-color: #f3f4f6;
-  color: #111827;
+  background-color: #2a3142; /* Dark hover state */
+  color: #ffffff;
 }
 
 .sbr-nav-active {
-  background-color: #eff6ff !important;
-  color: #2563eb !important;
+  background-color: #2d3748 !important; /* Active item background */
+  color: #ffffff !important;
   font-weight: 600 !important;
-}
-
-.sbr-nav-active .sbr-nav-icon {
-  color: #2563eb !important;
-}
-
-.sbr-nav-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  color: #6b7280;
-  flex-shrink: 0;
-}
-
-.sbr-nav-item:hover .sbr-nav-icon {
-  color: #111827;
 }
 
 .sbr-nav-label {
@@ -115,9 +102,9 @@
 }
 
 .sbr-nav-badge {
-  background-color: #ef4444;
+  background-color: #3b82f6;
   color: white;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 600;
   min-width: 20px;
   height: 20px;
@@ -126,6 +113,7 @@
   align-items: center;
   justify-content: center;
   padding: 0 0.375rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .sbr-nav-indicator {
@@ -135,42 +123,53 @@
   transform: translateY(-50%);
   width: 3px;
   height: 60%;
-  background-color: #2563eb;
+  background: linear-gradient(180deg, #60a5fa 0%, #a78bfa 100%);
   border-radius: 0 3px 3px 0;
 }
 
-/* Footer section */
+/* Footer section - Dark Mode */
 .sbr-footer {
   padding: 1rem;
-  border-top: 1px solid #f3f4f6;
+  border-top: 1px solid #2a3142;
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  background: #1a1f2e;
 }
 
-/* User profile at bottom */
+/* User profile at bottom - Dark Mode */
 .sbr-user-profile {
   display: flex;
   align-items: center;
   gap: 0.75rem;
   padding: 0.75rem 0.5rem;
   border-radius: 8px;
-  background-color: #f8fafc;
+  background-color: #252b3b;
   margin-bottom: 0.5rem;
   cursor: pointer;
   position: relative;
+  border: 1px solid #2f3749;
+  transition: all 0.2s ease;
+}
+
+.sbr-user-profile:hover {
+  background-color: #2f3749;
+  border-color: #3f4a5e;
 }
 
 .sbr-user-avatar {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border-radius: 8px;
-  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
+  font-weight: 600;
+  font-size: 1rem;
   flex-shrink: 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .sbr-user-info {
@@ -181,7 +180,7 @@
 .sbr-user-name {
   font-size: 0.8125rem;
   font-weight: 600;
-  color: #111827;
+  color: #ffffff;
   margin-bottom: 0.125rem;
   white-space: nowrap;
   overflow: hidden;
@@ -190,8 +189,8 @@
 }
 
 .sbr-user-email {
-  font-size: 0.75rem;
-  color: #6b7280;
+  font-size: 0.7rem;
+  color: #9ca3af;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -200,17 +199,17 @@
 }
 
 .sbr-user-arrow {
-  color: #6b7280;
+  color: #9ca3af;
   transition: transform 0.2s;
   flex-shrink: 0;
 }
 
 .sbr-user-profile:hover .sbr-user-arrow {
-  color: #374151;
+  color: #ffffff;
 }
 
 .sbr-user-role {
-  font-size: 10px;
+  font-size: 0.6rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -221,35 +220,35 @@
 }
 
 .sbr-role-super_admin {
-  color: #a855f7;
-  background: rgba(168, 85, 247, 0.1);
+  color: #c084fc;
+  background: rgba(192, 132, 252, 0.15);
 }
 
 .sbr-role-director {
-  color: #3b82f6;
-  background: rgba(59, 130, 246, 0.1);
+  color: #60a5fa;
+  background: rgba(96, 165, 250, 0.15);
 }
 
 .sbr-role-program_manager {
-  color: #f59e0b;
-  background: rgba(245, 158, 11, 0.1);
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.15);
 }
 
 .sbr-role-project_manager {
-  color: #10b981;
-  background: rgba(16, 185, 129, 0.1);
+  color: #4ade80;
+  background: rgba(74, 222, 128, 0.15);
 }
 
-/* Dropdown Menu */
+/* Dropdown Menu - Dark Mode */
 .sbr-dropdown-menu {
   position: absolute;
   bottom: 80px;
   left: 1rem;
   right: 1rem;
-  background: white;
+  background: #252b3b;
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  border: 1px solid #e5e7eb;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  border: 1px solid #3f4a5e;
   z-index: 100;
   overflow: hidden;
   animation: sbr-slideUp 0.2s ease;
@@ -272,7 +271,7 @@
 
 .sbr-dropdown-divider {
   height: 1px;
-  background: #e5e7eb;
+  background: #3f4a5e;
   margin: 0.25rem 0;
 }
 
@@ -284,7 +283,7 @@
   padding: 0.75rem;
   border: none;
   background: transparent;
-  color: #374151;
+  color: #d1d5db;
   font-size: 0.875rem;
   cursor: pointer;
   border-radius: 6px;
@@ -293,32 +292,34 @@
 }
 
 .sbr-dropdown-item:hover {
-  background: #f3f4f6;
+  background: #2f3749;
+  color: #ffffff;
 }
 
 .sbr-dropdown-item.sbr-logout-item {
-  color: #dc2626;
+  color: #f87171;
 }
 
 .sbr-dropdown-item.sbr-logout-item:hover {
-  background: #fee2e2;
-  color: #b91c1c;
+  background: rgba(248, 113, 113, 0.15);
+  color: #fca5a5;
 }
 
 .sbr-dropdown-item svg {
   width: 16px;
   height: 16px;
+  color: currentColor;
 }
 
-/* Admin Section Styling */
+/* Admin Section Styling - Dark Mode */
 .sbr-section-divider {
   margin: 20px 16px 8px 16px;
   padding-top: 10px;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid #2f3749;
 }
 
 .sbr-section-label {
-  font-size: 11px;
+  font-size: 0.65rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -328,54 +329,42 @@
 }
 
 .sbr-admin-item {
-  background: linear-gradient(135deg, rgba(168, 85, 247, 0.05), rgba(139, 92, 246, 0.02));
-  border-left: 3px solid #a855f7 !important;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(124, 58, 237, 0.05));
+  border-left: 3px solid #a78bfa !important;
   margin-left: 13px;
   width: calc(100% - 13px);
 }
 
 .sbr-admin-item:hover {
-  background: linear-gradient(135deg, rgba(168, 85, 247, 0.08), rgba(139, 92, 246, 0.04));
-  border-left: 3px solid #c084fc !important;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(124, 58, 237, 0.1));
+  border-left: 3px solid #c4b5fd !important;
 }
 
 .sbr-admin-item.sbr-nav-active {
-  background: linear-gradient(135deg, rgba(168, 85, 247, 0.12), rgba(139, 92, 246, 0.08));
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.25), rgba(124, 58, 237, 0.15));
   border-left: 3px solid #d8b4fe !important;
-}
-
-.sbr-admin-item .sbr-nav-icon {
-  color: #a855f7;
-}
-
-.sbr-admin-item:hover .sbr-nav-icon {
-  color: #c084fc;
-}
-
-.sbr-admin-item.sbr-nav-active .sbr-nav-icon {
-  color: #d8b4fe;
 }
 
 /* Menu arrow for expandable items */
 .sbr-menu-arrow {
   margin-left: auto;
-  opacity: 0.6;
+  opacity: 0.7;
   transition: transform 0.2s ease;
-  color: #6b7280;
+  color: #9ca3af;
 }
 
 .sbr-nav-active .sbr-menu-arrow {
   opacity: 1;
-  color: #2563eb;
+  color: #60a5fa;
 }
 
-/* Submenu styles */
+/* Submenu styles - Dark Mode */
 .sbr-submenu {
   list-style: none;
   padding: 0;
   margin: 0 0 0 12px;
-  background: #f9fafb;
-  border-left: 2px solid rgba(59, 130, 246, 0.2);
+  background: #1f2535;
+  border-left: 2px solid rgba(96, 165, 250, 0.3);
   border-radius: 0 0 8px 8px;
   overflow: hidden;
 }
@@ -383,24 +372,19 @@
 .sbr-submenu-item {
   padding-left: 36px !important;
   min-height: 36px !important;
-  font-size: 13px !important;
-  color: #4b5563 !important;
-}
-
-.sbr-submenu-item .sbr-nav-icon {
-  width: 18px !important;
-  height: 18px !important;
+  font-size: 0.8125rem !important;
+  color: #9ca3af !important;
 }
 
 .sbr-submenu-item.sbr-nav-active {
-  background: rgba(59, 130, 246, 0.1) !important;
-  color: #2563eb !important;
+  background: rgba(59, 130, 246, 0.15) !important;
+  color: #ffffff !important;
   font-weight: 600 !important;
 }
 
 .sbr-submenu-item:hover {
-  background: rgba(59, 130, 246, 0.05) !important;
-  color: #111827 !important;
+  background: rgba(59, 130, 246, 0.1) !important;
+  color: #ffffff !important;
 }
 
 /* Green dot for notifications */
@@ -408,64 +392,53 @@
   display: inline-block;
   width: 8px;
   height: 8px;
-  background-color: #10b981;
+  background-color: #4ade80;
   border-radius: 50%;
   margin-left: auto;
   margin-right: 4px;
   animation: sbr-pulse-green 2s infinite;
-  box-shadow: 0 0 0 rgba(16, 185, 129, 0.4);
+  box-shadow: 0 0 0 rgba(74, 222, 128, 0.4);
   position: relative;
   top: -1px;
 }
 
 @keyframes sbr-pulse-green {
   0% {
-    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+    box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.7);
   }
   70% {
-    box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
+    box-shadow: 0 0 0 6px rgba(74, 222, 128, 0);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+    box-shadow: 0 0 0 0 rgba(74, 222, 128, 0);
   }
-}
-
-/* Placeholder for items without icons */
-.sbr-no-icon-placeholder {
-  width: 22px;
-  height: 22px;
-}
-
-.sbr-submenu-item .sbr-no-icon-placeholder {
-  width: 18px;
-  height: 18px;
 }
 
 /* Version text */
 .sbr-version {
   text-align: center;
-  font-size: 0.75rem;
-  color: #9ca3af;
+  font-size: 0.7rem;
+  color: #4b5563;
   padding-top: 0.5rem;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid #2f3749;
 }
 
-/* Scrollbar */
+/* Scrollbar - Dark Mode */
 .sbr-nav::-webkit-scrollbar {
   width: 4px;
 }
 
 .sbr-nav::-webkit-scrollbar-track {
-  background: #f1f5f9;
+  background: #1f2535;
 }
 
 .sbr-nav::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: #3f4a5e;
   border-radius: 4px;
 }
 
 .sbr-nav::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: #5f6b84;
 }
 
 /* ================= MOBILE HAMBURGER MENU ================= */
@@ -480,17 +453,18 @@
   width: 40px;
   height: 40px;
   border-radius: 8px;
-  background: white;
-  border: 1px solid #e5e7eb;
-  color: #4b5563;
+  background: #1a1f2e;
+  border: 1px solid #2f3749;
+  color: #9ca3af;
   cursor: pointer;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .sbr-mobile-toggle:hover {
-  background: #f3f4f6;
+  background: #2f3749;
+  color: #ffffff;
 }
 
 /* Overlay for mobile */
@@ -501,7 +475,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.7);
   z-index: 998;
   opacity: 0;
   transition: opacity 0.3s ease;
@@ -516,7 +490,7 @@
 
 /* Main content adjustment */
 .main-content {
-  margin-left: 240px;
+  margin-left: 210px;
   transition: margin-left 0.3s ease;
 }
 
@@ -530,7 +504,7 @@
   /* Hide sidebar by default on tablet/mobile */
   .sbr-sidebar {
     transform: translateX(-100%);
-    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+    box-shadow: 2px 0 12px rgba(0, 0, 0, 0.5);
   }
 
   /* Show sidebar when open */
@@ -570,7 +544,7 @@
 /* Small Tablet Styles (768px to 1024px) */
 @media (min-width: 769px) and (max-width: 1024px) {
   .sbr-sidebar {
-    width: 280px;
+    width: 250px;
   }
 
   .dashboard {
@@ -581,7 +555,7 @@
 /* Mobile Styles (up to 768px) */
 @media (max-width: 768px) {
   .sbr-sidebar {
-    width: 260px;
+    width: 230px;
   }
 
   .sbr-mobile-toggle {
@@ -594,18 +568,8 @@
   .dashboard {
     padding: 60px 12px 12px 12px !important;
   }
-
-  /* Hide user info on mobile when sidebar is collapsed */
-  .sbr-user-info {
-    display: none;
-  }
-  
-  .sbr-user-arrow {
-    display: none;
-  }
   
   .sbr-user-profile {
-    justify-content: center;
     padding: 0.5rem;
   }
 }
@@ -613,7 +577,7 @@
 /* Small Mobile Styles (up to 480px) */
 @media (max-width: 480px) {
   .sbr-sidebar {
-    width: 240px;
+    width: 210px;
   }
 
   .dashboard {
@@ -631,15 +595,18 @@
   }
 }
 
-
-
-
-
 /* Move hamburger menu to the right when sidebar is open */
 @media (max-width: 1024px) {
   body:has(.sbr-sidebar-open) .sbr-mobile-toggle {
     left: auto !important;
     right: 16px !important;
+    background: #ef4444;
+    color: white;
+    border-color: #dc2626;
+  }
+  
+  body:has(.sbr-sidebar-open) .sbr-mobile-toggle:hover {
+    background: #dc2626;
   }
 }
 
@@ -655,10 +622,6 @@
   }
 }
 
-
-
-
-
 /* Fix footer visibility on mobile and tablet */
 @media (max-width: 1024px) {
   .sbr-sidebar {
@@ -671,29 +634,28 @@
   .sbr-nav {
     flex: 1 1 auto;
     overflow-y: auto;
-    padding-bottom: 80px; /* Add extra padding to ensure content doesn't hide behind footer */
+    padding-bottom: 80px;
   }
 
   .sbr-footer {
     position: sticky;
     bottom: 0;
-    background: white;
-    border-top: 1px solid #f3f4f6;
+    background: #1a1f2e;
+    border-top: 1px solid #2f3749;
     padding: 1rem;
     margin-top: auto;
-    box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.3);
     z-index: 10;
     width: 100%;
   }
 
-  /* Ensure user profile is always visible */
   .sbr-user-profile {
-    background-color: #f8fafc;
+    background-color: #252b3b;
     margin-bottom: 0;
     width: 100%;
+    border: 1px solid #2f3749;
   }
 
-  /* Fix for very short screens */
   @media (max-height: 600px) {
     .sbr-footer {
       position: relative;
@@ -717,8 +679,7 @@
   }
 
   .sbr-user-info {
-    display: block; /* Override any previous display:none */
-    font-size: 0.75rem;
+    display: block;
   }
 
   .sbr-user-name {
@@ -726,16 +687,16 @@
   }
 
   .sbr-user-email {
-    font-size: 0.7rem;
+    font-size: 0.65rem;
   }
 
   .sbr-user-role {
-    font-size: 0.6rem;
+    font-size: 0.55rem;
     padding: 1px 4px;
   }
 
   .sbr-dropdown-menu {
-    bottom: 70px; /* Adjust dropdown position for mobile */
+    bottom: 70px;
     left: 0.5rem;
     right: 0.5rem;
   }
@@ -752,8 +713,8 @@
   }
 
   .sbr-user-avatar {
-    width: 28px;
-    height: 28px;
+    width: 32px;
+    height: 32px;
     font-size: 0.875rem;
   }
 
@@ -766,8 +727,8 @@
 @media (max-height: 500px) {
   .sbr-footer {
     position: relative;
-    background: white;
-    border-top: 1px solid #f3f4f6;
+    background: #1a1f2e;
+    border-top: 1px solid #2f3749;
   }
   
   .sbr-sidebar {
@@ -778,7 +739,7 @@
 /* Improve scrolling behavior */
 .sbr-sidebar {
   scrollbar-width: thin;
-  scrollbar-color: #cbd5e1 #f1f5f9;
+  scrollbar-color: #3f4a5e #1f2535;
 }
 
 .sbr-sidebar::-webkit-scrollbar {
@@ -786,14 +747,14 @@
 }
 
 .sbr-sidebar::-webkit-scrollbar-track {
-  background: #f1f5f9;
+  background: #1f2535;
 }
 
 .sbr-sidebar::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: #3f4a5e;
   border-radius: 4px;
 }
 
 .sbr-sidebar::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: #5f6b84;
 }

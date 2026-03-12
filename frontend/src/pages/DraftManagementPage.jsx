@@ -794,7 +794,7 @@ function DraftManagementPage({ user }) {
           className={`dmp-tab-btn ${activeTab === 'my-drafts' ? 'dmp-active' : ''}`}
           onClick={() => navigate('/app/drafts/my')}
         >
-          <FolderOpen size={18} />
+          {/* <FolderOpen size={18} /> */}
           My Drafts
           <span className="dmp-tab-count">
             {tabCounts['my-drafts']}
@@ -804,7 +804,7 @@ function DraftManagementPage({ user }) {
           className={`dmp-tab-btn ${activeTab === 'assigned-drafts' ? 'dmp-active' : ''}`}
           onClick={() => navigate('/app/drafts/assigned')}
         >
-          <UserCheck size={18} />
+          {/* <UserCheck size={18} /> */}
           Assigned to Me
           <span className="dmp-tab-count">
             {tabCounts['assigned-drafts']}

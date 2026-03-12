@@ -1,22 +1,9 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  LayoutDashboard,
-  CheckCircle,
-  FileText,
-  Upload,
   Settings,
   User,
-  BarChart3,
   LogOut,
-  Shield,
-  FileCheck,
-  Users,
-  Archive,
-  FolderOpen,
-  UserCheck,
-  Key,
-  Users as UsersIcon,
   ChevronDown,
   ChevronRight
 } from 'lucide-react';
@@ -352,55 +339,49 @@ const Sidebar = ({ user, onLogout }) => {
     
     const allItems = [
       // COMMON ITEMS FOR ALL USERS
-      { 
-        id: 'dashboard', 
-        label: 'Dashboard', 
-        icon: LayoutDashboard, 
-        path: '/app/dashboard', 
+      {
+        id: 'dashboard',
+        label: 'Dashboard',
+        path: '/app/dashboard',
         permission: 'can_view_dashboard',
         roles: ['project_manager', 'director', 'program_manager', 'super_admin']
       },
-      { 
-        id: 'grants', 
-        label: 'Grants', 
-        icon: FileText, 
-        path: '/app/contracts', 
+      {
+        id: 'grants',
+        label: 'Grants',
+        path: '/app/contracts',
         permission: 'can_view_contracts',
         roles: ['project_manager', 'program_manager', 'director', 'super_admin']
       },
-      { 
-        id: 'upload', 
-        label: 'Upload', 
-        icon: Upload, 
-        path: '/app/upload', 
+      {
+        id: 'upload',
+        label: 'Upload',
+        path: '/app/upload',
         permission: 'can_upload',
         roles: ['project_manager', 'director', 'super_admin']
       },
-      { 
-        id: 'review', 
-        label: 'Review', 
-        icon: FileCheck, 
-        path: '/app/review', 
+      {
+        id: 'review',
+        label: 'Review',
+        path: '/app/review',
         permission: 'can_review',
         roles: ['program_manager'],
         badge: true
       },
-      { 
-        id: 'approvals', 
-        label: 'Approvals', 
-        icon: Shield, 
-        path: '/app/approvals', 
+      {
+        id: 'approvals',
+        label: 'Approvals',
+        path: '/app/approvals',
         permission: 'can_approve',
         roles: ['director'],
         badge: true
       },
-     
-      
+
+
       // SUPER ADMIN SPECIFIC ITEMS
       {
         id: 'admin-portal',
         label: 'Settings',
-        icon: Key,
         path: '/app/admin',
         permission: 'can_manage_all_users',
         roles: ['super_admin'],
@@ -409,7 +390,6 @@ const Sidebar = ({ user, onLogout }) => {
       {
         id: 'user-management',
         label: 'User Management',
-        icon: Users,
         path: '/app/users',
         permission: 'can_manage_all_users',
         roles: ['super_admin'],
@@ -417,104 +397,84 @@ const Sidebar = ({ user, onLogout }) => {
       },
 
       // DRAFT SUBMENU ITEMS (Will be grouped under "Draft" parent)
-      { 
-        id: 'draft-parent', 
-        label: 'Draft', 
-        icon: FolderOpen, 
-        path: '#', 
+      {
+        id: 'draft-parent',
+        label: 'Draft',
+        path: '#',
         permission: 'can_view_drafts',
         roles: ['project_manager'],
         isDraftParent: true,
         hasSubmenu: true
       },
-      { 
-        id: 'my-drafts', 
-        label: 'My Drafts', 
-        icon: null,
-        path: '/app/drafts/my', 
+      {
+        id: 'my-drafts',
+        label: 'My Drafts',
+        path: '/app/drafts/my',
         permission: 'can_view_drafts',
         roles: ['project_manager'],
         isDraftSubmenu: true,
         parentId: 'draft-parent',
-        showIcon: false,
         badge: true
       },
-      { 
-        id: 'assigned-drafts', 
-        label: 'Assigned to Me', 
-        icon: null,
-        path: '/app/drafts/assigned', 
+      {
+        id: 'assigned-drafts',
+        label: 'Assigned to Me',
+        path: '/app/drafts/assigned',
         permission: 'can_view_assigned_drafts',
         roles: ['project_manager'],
         isDraftSubmenu: true,
         parentId: 'draft-parent',
-        showIcon: false,
         badge: true
       },
-      
+
       // ARCHIVE ITEMS
-      { 
-        id: 'archive', 
-        label: 'Archive', 
-        icon: Archive, 
-        path: '/app/archive', 
+      {
+        id: 'archive',
+        label: 'Archive',
+        path: '/app/archive',
         permission: 'can_view_archive',
         roles: ['project_manager', 'director'],
         isArchiveSection: true
       },
 
-      { 
-        id: 'approved-contracts', 
-        label: 'Approved', 
-        icon: CheckCircle, 
-        path: '/app/approved-contracts', 
+      {
+        id: 'approved-contracts',
+        label: 'Approved',
+        path: '/app/approved-contracts',
         permission: 'can_view_approved',
         roles: ['project_manager'],
         badge: true,
         isArchiveSection: false
       },
-      { 
-        id: 'assigned-parent', 
-        label: 'Assigned Agreements', 
-        icon: UserCheck, 
-        path: '#', 
+      {
+        id: 'assigned-parent',
+        label: 'Assigned Agreements',
+        path: '#',
         permission: 'can_view_assigned_agreements',
         roles: ['program_manager', 'director'],
         isAssignedParent: true,
         hasSubmenu: true
       },
-      { 
-        id: 'assigned-to-me', 
-        label: 'Assigned to Me', 
-        icon: null,
-        path: '/app/agreements/assigned', 
+      {
+        id: 'assigned-to-me',
+        label: 'Assigned to Me',
+        path: '/app/agreements/assigned',
         permission: 'can_view_assigned_agreements',
         roles: ['program_manager', 'director'],
         isAssignedSubmenu: true,
         parentId: 'assigned-parent',
-        showIcon: false,
-        badge: true 
+        badge: true
       },
-      { 
-        id: 'assigned-by-me', 
-        label: 'Assigned by Me', 
-        icon: null,
-        path: '/app/agreements/assigned-by-me', 
+      {
+        id: 'assigned-by-me',
+        label: 'Assigned by Me',
+        path: '/app/agreements/assigned-by-me',
         permission: 'can_view_assigned_by_me',
         roles: ['program_manager', 'director'],
         isAssignedSubmenu: true,
         parentId: 'assigned-parent',
-        badge: true,
-        showIcon: false
+        badge: true
       },
-      // { 
-      //   id: 'reports', 
-      //   label: 'Reports', 
-      //   icon: BarChart3,
-      //   path: '/app/reports', 
-      //   permission: 'can_view_reports',
-      //   roles: ['project_manager', 'program_manager', 'director', 'super_admin']
-      // }
     ];
     
     // Filter items based on user role
@@ -664,20 +624,6 @@ const Sidebar = ({ user, onLogout }) => {
     navigate('/login');
   }, [onLogout, navigate]);
 
-  const renderIcon = (item) => {
-    const IconComponent = item.icon;
-    
-    if (item.showIcon === false) {
-      return <div className="sbr-no-icon-placeholder" />;
-    }
-    
-    if (IconComponent && typeof IconComponent === 'function') {
-      return <IconComponent size={item.isDraftSubmenu || item.isAssignedSubmenu ? 18 : 22} />;
-    }
-    
-    return <div className="sbr-no-icon-placeholder" />;
-  };
-
   const hasSubmenuBadge = (submenuItems) => {
     if (!submenuItems) return false;
     return submenuItems.some(item => badgeCounts[item.id] > 0);
@@ -746,9 +692,7 @@ const Sidebar = ({ user, onLogout }) => {
                     onClick={() => handleNavigation(item.path)}
                     title={item.label}
                   >
-                    <span className="sbr-nav-icon">
-                      {renderIcon(item)}
-                    </span>
+                    
                     <span className="sbr-nav-label">{item.label}</span>
                     {badgeCount > 0 && (
                       <span className="sbr-nav-badge">{badgeCount}</span>
@@ -767,9 +711,7 @@ const Sidebar = ({ user, onLogout }) => {
                   onClick={() => toggleMenu('draft')}
                   title={menuItems.draftParent.label}
                 >
-                  <span className="sbr-nav-icon">
-                    {renderIcon(menuItems.draftParent)}
-                  </span>
+                
                   <span className="sbr-nav-label">{menuItems.draftParent.label}</span>
                   {hasSubmenuBadge(menuItems.draftSubmenuItems) && !expandedMenus.draft && (
                     <span className="sbr-green-dot"></span>
@@ -795,9 +737,7 @@ const Sidebar = ({ user, onLogout }) => {
                             onClick={() => handleNavigation(subItem.path)}
                             title={subItem.label}
                           >
-                            <span className="sbr-nav-icon">
-                              {renderIcon(subItem)}
-                            </span>
+                          
                             <span className="sbr-nav-label">{subItem.label}</span>
                             {badgeCount > 0 && (
                               <span className="sbr-nav-badge">{badgeCount}</span>
@@ -820,9 +760,7 @@ const Sidebar = ({ user, onLogout }) => {
                   onClick={() => toggleMenu('assigned')}
                   title={menuItems.assignedParent.label}
                 >
-                  <span className="sbr-nav-icon">
-                    {renderIcon(menuItems.assignedParent)}
-                  </span>
+                 
                   <span className="sbr-nav-label">{menuItems.assignedParent.label}</span>
                   {hasSubmenuBadge(menuItems.assignedSubmenuItems) && !expandedMenus.assigned && (
                     <span className="sbr-green-dot"></span>
@@ -848,9 +786,7 @@ const Sidebar = ({ user, onLogout }) => {
                             onClick={() => handleNavigation(subItem.path)}
                             title={subItem.label}
                           >
-                            <span className="sbr-nav-icon">
-                              {renderIcon(subItem)}
-                            </span>
+                          
                             <span className="sbr-nav-label">{subItem.label}</span>
                             {badgeCount > 0 && (
                               <span className="sbr-nav-badge">{badgeCount}</span>
@@ -878,9 +814,7 @@ const Sidebar = ({ user, onLogout }) => {
                       onClick={() => handleNavigation(item.path)}
                       title={item.label}
                     >
-                      <span className="sbr-nav-icon">
-                        {renderIcon(item)}
-                      </span>
+                     
                       <span className="sbr-nav-label">{item.label}</span>
                       {isActive && <span className="sbr-nav-indicator" />}
                     </button>
@@ -907,9 +841,7 @@ const Sidebar = ({ user, onLogout }) => {
                         onClick={() => handleNavigation(item.path)}
                         title={item.label}
                       >
-                        <span className="sbr-nav-icon">
-                          {renderIcon(item)}
-                        </span>
+                      
                         <span className="sbr-nav-label">{item.label}</span>
                         {isActive && <span className="sbr-nav-indicator" />}
                       </button>
