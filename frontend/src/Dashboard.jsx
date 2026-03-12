@@ -631,7 +631,7 @@ const getTileVariantClass = (variant) => {
           </div>
 
           {/* Grants Content */}
-          <div className="contracts-content">
+          {/* <div className="contracts-content">
             {loading ? (
               <div className="loading-state">
                 <RefreshCw className="spinner" />
@@ -681,7 +681,7 @@ const getTileVariantClass = (variant) => {
                 )}
               </div>
             )}
-          </div>
+          </div> */}
         </div>
 
         {/* Financial & Deadlines Summary */}

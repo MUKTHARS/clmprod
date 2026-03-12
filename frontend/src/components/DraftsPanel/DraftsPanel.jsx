@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   ChevronLeft,
   ChevronRight,
@@ -7,9 +7,14 @@ import {
   UserCheck,
   Clock,
   AlertCircle,
-  UserPlus,
   Settings,
-  Eye
+  Eye,
+  X,
+  DollarSign,
+  CalendarDays,
+  Hash,
+  Building2,
+  User
 } from 'lucide-react';
 import { TbFilePencil, TbUserCheck, TbUserPlus } from 'react-icons/tb';
 import AgreementWorkflow from '../workflow/AgreementWorkflow';
@@ -18,13 +23,13 @@ import './DraftsPanel.css';
 
 const DraftsPanel = ({ user }) => {
   const navigate = useNavigate();
-  const location = useLocation();
   const [isExpanded, setIsExpanded] = useState(true);
   const [myDrafts, setMyDrafts] = useState([]);
   const [assignedToMe, setAssignedToMe] = useState([]);
   const [assignedByMe, setAssignedByMe] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState('myDrafts'); // 'myDrafts', 'assignedToMe', 'assignedByMe'
+  const [activeTab, setActiveTab] = useState('myDrafts');
+  const [selectedDraft, setSelectedDraft] = useState(null);
 
   // Workflow modal state
   const [showWorkflowModal, setShowWorkflowModal] = useState(false);
@@ -38,7 +43,7 @@ const DraftsPanel = ({ user }) => {
     const baseUrl = API_CONFIG.BASE_URL;
 
     try {
-      // Fetch My Drafts — use /api/contracts/ (same as dashboard) for properly formatted fields
+      // Fetch My Drafts — use /api/contracts/ for properly formatted fields
       if (['project_manager', 'program_manager', 'director'].includes(user.role)) {
         const myDraftsResponse = await fetch(`${baseUrl}/api/contracts/`, {
           headers: { 'Authorization': `Bearer ${token}` }
@@ -54,7 +59,7 @@ const DraftsPanel = ({ user }) => {
         }
       }
 
-      // Fetch Assigned to Me (for PM, Program Manager, Director)
+      // Fetch Assigned to Me
       if (['project_manager', 'program_manager', 'director'].includes(user.role)) {
         const assignedToMeResponse = await fetch(`${baseUrl}/api/agreements/assigned-drafts?limit=10`, {
           headers: { 'Authorization': `Bearer ${token}` }
@@ -65,7 +70,7 @@ const DraftsPanel = ({ user }) => {
         }
       }
 
-      // Fetch Assigned by Me (for Program Manager and Director)
+      // Fetch Assigned by Me
       if (['program_manager', 'director'].includes(user.role)) {
         const assignedByMeResponse = await fetch(`${baseUrl}/api/agreements/assigned-by-me?limit=10`, {
           headers: { 'Authorization': `Bearer ${token}` }
@@ -85,7 +90,6 @@ const DraftsPanel = ({ user }) => {
   useEffect(() => {
     fetchDrafts();
 
-    // Refresh on events
     const handleDraftUpdate = () => fetchDrafts();
     window.addEventListener('draft-updated', handleDraftUpdate);
     window.addEventListener('contract-submitted', handleDraftUpdate);
@@ -98,10 +102,13 @@ const DraftsPanel = ({ user }) => {
     };
   }, [fetchDrafts]);
 
-  const handleDraftClick = (draft) => {
-    if (draft.agreement_id || draft.id) {
-      navigate(`/app/contracts/${draft.agreement_id || draft.id}`);
-    }
+  // Clear selection when switching tabs
+  useEffect(() => {
+    setSelectedDraft(null);
+  }, [activeTab]);
+
+  const handleCardClick = (draft) => {
+    setSelectedDraft(prev => prev?.id === draft.id ? null : draft);
   };
 
   const handleOpenWorkflow = async (e, draft) => {
@@ -158,6 +165,123 @@ const DraftsPanel = ({ user }) => {
     }
   };
 
+  const renderCard = (draft, showWorkflowBtn = false) => (
+    <div
+      key={draft.id}
+      className={`draft-item${selectedDraft?.id === draft.id ? ' selected' : ''}`}
+      onClick={() => handleCardClick(draft)}
+    >
+      <div className="draft-item-title">{draft.grant_name || draft.filename || draft.title || 'Untitled Draft'}</div>
+      <div className="draft-item-meta">
+        {getStatusBadge(draft.status)}
+        <span className="draft-date">
+          {formatDate(draft.uploaded_at || draft.updated_at || draft.created_at)}
+        </span>
+      </div>
+      <div className="draft-item-actions">
+        <button
+          className="draft-action-btn draft-action-eye"
+          onClick={(e) => { e.stopPropagation(); navigate(`/app/contracts/${draft.agreement_id || draft.id}`); }}
+          title="View contract details"
+        >
+          <Eye size={13} />
+          <span>View</span>
+        </button>
+        {showWorkflowBtn && (
+          <button
+            className="draft-action-btn draft-action-gear"
+            onClick={(e) => handleOpenWorkflow(e, draft)}
+            title="Manage workflow & assignment"
+          >
+            <Settings size={13} />
+            <span>Assign</span>
+          </button>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderDetailOverlay = () => {
+    if (!selectedDraft) return null;
+    const d = selectedDraft;
+    return (
+      <div className="draft-detail-overlay" onClick={() => setSelectedDraft(null)}>
+        <div className="draft-detail-card" onClick={e => e.stopPropagation()}>
+          <div className="draft-detail-card-header">
+            <div className="draft-detail-title">{d.grant_name || d.filename || d.title || 'Untitled Draft'}</div>
+            <button className="draft-detail-close" onClick={() => setSelectedDraft(null)}><X size={16} /></button>
+          </div>
+          <div className="draft-detail-status-row">
+            {getStatusBadge(d.status)}
+            <span className="draft-detail-date">Uploaded: {formatDate(d.uploaded_at || d.created_at)}</span>
+          </div>
+          <div className="draft-detail-grid">
+            {d.grantor_name && (
+              <div className="draft-detail-cell">
+                <span className="draft-detail-cell-label"><Building2 size={13} /> Grantor</span>
+                <span className="draft-detail-cell-value">{d.grantor_name}</span>
+              </div>
+            )}
+            {d.grantee_name && (
+              <div className="draft-detail-cell">
+                <span className="draft-detail-cell-label"><User size={13} /> Grantee</span>
+                <span className="draft-detail-cell-value">{d.grantee_name}</span>
+              </div>
+            )}
+            {d.total_amount && (
+              <div className="draft-detail-cell">
+                <span className="draft-detail-cell-label"><DollarSign size={13} /> Amount</span>
+                <span className="draft-detail-cell-value draft-detail-amount">
+                  {typeof d.total_amount === 'number'
+                    ? `$${d.total_amount.toLocaleString()}`
+                    : d.total_amount}
+                </span>
+              </div>
+            )}
+            {d.contract_number && (
+              <div className="draft-detail-cell">
+                <span className="draft-detail-cell-label"><Hash size={13} /> Contract #</span>
+                <span className="draft-detail-cell-value">{d.contract_number}</span>
+              </div>
+            )}
+            {d.start_date && (
+              <div className="draft-detail-cell">
+                <span className="draft-detail-cell-label"><CalendarDays size={13} /> Start</span>
+                <span className="draft-detail-cell-value">{formatDate(d.start_date)}</span>
+              </div>
+            )}
+            {d.end_date && (
+              <div className="draft-detail-cell">
+                <span className="draft-detail-cell-label"><CalendarDays size={13} /> End</span>
+                <span className="draft-detail-cell-value">{formatDate(d.end_date)}</span>
+              </div>
+            )}
+          </div>
+          {d.purpose && (
+            <div className="draft-detail-purpose">
+              <span className="draft-detail-cell-label">Purpose</span>
+              <p>{d.purpose}</p>
+            </div>
+          )}
+          <div className="draft-detail-card-footer">
+            <button
+              className="draft-detail-footer-btn draft-detail-btn-assign"
+              onClick={(e) => { handleOpenWorkflow(e, d); }}
+            >
+              <Settings size={14} /> Assign To People
+            </button>
+            <button
+              className="draft-detail-footer-btn draft-detail-btn-view"
+              onClick={() => { setSelectedDraft(null); navigate(`/app/contracts/${d.agreement_id || d.id}`); }}
+            >
+              <Eye size={14} /> Open Full Details
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // Calculate total drafts count for collapsed badge
   const totalDrafts = (myDrafts?.length || 0) + (assignedToMe?.length || 0) + (assignedByMe?.length || 0);
 
@@ -192,20 +316,19 @@ const DraftsPanel = ({ user }) => {
         </button>
 
         {isExpanded ? (
-          // Expanded View
           <div className="draft-panel-content">
             <div className="draft-panel-header">
-  <h3>
-    {user?.role === 'project_manager' ? 'Drafts' : 'Assigned Grants'}
-  </h3>
-  <button
-    className="draft-view-all"
-    onClick={() => navigate('/app/drafts')}
-    title={user?.role === 'project_manager' ? 'View all drafts' : 'View all assigned grants'}
-  >
-    View All
-  </button>
-</div>
+              <h3>
+                {user?.role === 'project_manager' ? 'Drafts' : 'Assigned Grants'}
+              </h3>
+              <button
+                className="draft-view-all"
+                onClick={() => navigate('/app/drafts')}
+                title={user?.role === 'project_manager' ? 'View all drafts' : 'View all assigned grants'}
+              >
+                View All
+              </button>
+            </div>
 
             {/* Tabs Navigation */}
             <div className="draft-tabs">
@@ -255,38 +378,7 @@ const DraftsPanel = ({ user }) => {
                 {loading ? (
                   <div className="draft-loading">Loading drafts...</div>
                 ) : myDrafts.length > 0 ? (
-                  myDrafts.map(draft => (
-                    <div
-                      key={draft.id}
-                      className={`draft-item ${location.pathname.includes(draft.agreement_id || draft.id) ? 'active' : ''}`}
-                    >
-                      <div className="draft-item-title">{draft.grant_name || draft.filename || draft.title || 'Untitled Draft'}</div>
-                      <div className="draft-item-meta">
-                        {getStatusBadge(draft.status)}
-                        <span className="draft-date">
-                          {formatDate(draft.uploaded_at || draft.updated_at || draft.created_at)}
-                        </span>
-                      </div>
-                      <div className="draft-item-actions">
-                        <button
-                          className="draft-action-btn draft-action-eye"
-                          onClick={() => handleDraftClick(draft)}
-                          title="View contract details"
-                        >
-                          <Eye size={13} />
-                          <span>View</span>
-                        </button>
-                        <button
-                          className="draft-action-btn draft-action-gear"
-                          onClick={(e) => handleOpenWorkflow(e, draft)}
-                          title="Manage workflow & assignment"
-                        >
-                          <Settings size={13} />
-                          <span>Workflow</span>
-                        </button>
-                      </div>
-                    </div>
-                  ))
+                  myDrafts.map(draft => renderCard(draft, true))
                 ) : (
                   <div className="draft-empty">No drafts yet</div>
                 )}
@@ -299,30 +391,7 @@ const DraftsPanel = ({ user }) => {
                 {loading ? (
                   <div className="draft-loading">Loading assigned drafts...</div>
                 ) : assignedToMe.length > 0 ? (
-                  assignedToMe.map(draft => (
-                    <div
-                      key={draft.id}
-                      className={`draft-item ${location.pathname.includes(draft.agreement_id || draft.id) ? 'active' : ''}`}
-                    >
-                      <div className="draft-item-title">{draft.grant_name || draft.filename || draft.title || 'Untitled Draft'}</div>
-                      <div className="draft-item-meta">
-                        {getStatusBadge(draft.status)}
-                        <span className="draft-date">
-                          {formatDate(draft.uploaded_at || draft.updated_at || draft.created_at)}
-                        </span>
-                      </div>
-                      <div className="draft-item-actions">
-                        <button
-                          className="draft-action-btn draft-action-eye"
-                          onClick={() => handleDraftClick(draft)}
-                          title="View contract details"
-                        >
-                          <Eye size={13} />
-                          <span>View</span>
-                        </button>
-                      </div>
-                    </div>
-                  ))
+                  assignedToMe.map(draft => renderCard(draft, false))
                 ) : (
                   <div className="draft-empty">No drafts assigned to you</div>
                 )}
@@ -335,30 +404,7 @@ const DraftsPanel = ({ user }) => {
                 {loading ? (
                   <div className="draft-loading">Loading drafts you assigned...</div>
                 ) : assignedByMe.length > 0 ? (
-                  assignedByMe.map(draft => (
-                    <div
-                      key={draft.id}
-                      className={`draft-item ${location.pathname.includes(draft.agreement_id || draft.id) ? 'active' : ''}`}
-                    >
-                      <div className="draft-item-title">{draft.grant_name || draft.filename || draft.title || 'Untitled Draft'}</div>
-                      <div className="draft-item-meta">
-                        {getStatusBadge(draft.status)}
-                        <span className="draft-date">
-                          {formatDate(draft.uploaded_at || draft.updated_at || draft.created_at)}
-                        </span>
-                      </div>
-                      <div className="draft-item-actions">
-                        <button
-                          className="draft-action-btn draft-action-eye"
-                          onClick={() => handleDraftClick(draft)}
-                          title="View contract details"
-                        >
-                          <Eye size={13} />
-                          <span>View</span>
-                        </button>
-                      </div>
-                    </div>
-                  ))
+                  assignedByMe.map(draft => renderCard(draft, false))
                 ) : (
                   <div className="draft-empty">No drafts assigned by you</div>
                 )}
@@ -366,20 +412,22 @@ const DraftsPanel = ({ user }) => {
             )}
           </div>
         ) : (
-          // Collapsed View - Vertical text only
           <div
-  className="draft-vertical-text"
-  onClick={() => setIsExpanded(true)}
-  title={user?.role === 'project_manager' ? 'Expand drafts panel' : 'Expand assigned grants panel'}
->
-  <TbFilePencil size={18} />
-  <span>{user?.role === 'project_manager' ? 'DRAFTS' : 'ASSIGNED'}</span>
-  {totalDrafts > 0 && (
-    <span className="draft-collapsed-badge">{totalDrafts}</span>
-  )}
-</div>
+            className="draft-vertical-text"
+            onClick={() => setIsExpanded(true)}
+            title={user?.role === 'project_manager' ? 'Expand drafts panel' : 'Expand assigned grants panel'}
+          >
+            <TbFilePencil size={18} />
+            <span>{user?.role === 'project_manager' ? 'DRAFTS' : 'ASSIGNED'}</span>
+            {totalDrafts > 0 && (
+              <span className="draft-collapsed-badge">{totalDrafts}</span>
+            )}
+          </div>
         )}
       </div>
+
+      {/* Detail overlay — rendered outside panel, fixed in main content area */}
+      {renderDetailOverlay()}
 
       {/* Workflow Modal */}
       {showWorkflowModal && selectedContractForWorkflow && (
