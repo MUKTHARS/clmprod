@@ -31,15 +31,17 @@ const DraftsPanel = ({ user }) => {
     const baseUrl = API_CONFIG.BASE_URL;
 
     try {
-      // Fetch My Drafts (only for Project Managers)
-      if (user.role === 'project_manager') {
-        const myDraftsResponse = await fetch(`${baseUrl}/api/agreements/drafts`, {
+      // Fetch My Drafts — use /api/contracts/ (same as dashboard) for properly formatted fields
+      if (['project_manager', 'program_manager', 'director'].includes(user.role)) {
+        const myDraftsResponse = await fetch(`${baseUrl}/api/contracts/`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (myDraftsResponse.ok) {
           const data = await myDraftsResponse.json();
-          const filtered = data.filter(draft => 
-            draft.created_by === user.id || draft.userId === user.id
+          const draftStatuses = ['draft', 'under_review', 'reviewed', 'rejected'];
+          const filtered = (Array.isArray(data) ? data : []).filter(draft =>
+            draft.created_by === user.id &&
+            draftStatuses.includes(draft.status)
           );
           setMyDrafts(filtered.slice(0, 10));
         }
@@ -113,11 +115,20 @@ const DraftsPanel = ({ user }) => {
     );
   };
 
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    try {
+      return new Date(dateString).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    } catch (e) {
+      return 'N/A';
+    }
+  };
+
   // Calculate total drafts count for collapsed badge
   const totalDrafts = (myDrafts?.length || 0) + (assignedToMe?.length || 0) + (assignedByMe?.length || 0);
 
   // Check if user has access to each tab
-  const hasMyDraftsAccess = user?.role === 'project_manager';
+  const hasMyDraftsAccess = ['project_manager', 'program_manager', 'director'].includes(user?.role);
   const hasAssignedToMeAccess = ['project_manager', 'program_manager', 'director'].includes(user?.role);
   const hasAssignedByMeAccess = ['program_manager', 'director'].includes(user?.role);
 
@@ -220,9 +231,7 @@ const DraftsPanel = ({ user }) => {
                       <div className="draft-item-meta">
                         {getStatusBadge(draft.status)}
                         <span className="draft-date">
-                          {draft.uploaded_at || draft.updated_at || draft.created_at
-                            ? new Date(draft.uploaded_at || draft.updated_at || draft.created_at).toLocaleDateString()
-                            : 'No date'}
+                          {formatDate(draft.uploaded_at || draft.updated_at || draft.created_at)}
                         </span>
                       </div>
                     </div>
@@ -249,9 +258,7 @@ const DraftsPanel = ({ user }) => {
                       <div className="draft-item-meta">
                         {getStatusBadge(draft.status)}
                         <span className="draft-date">
-                          {draft.uploaded_at || draft.updated_at || draft.created_at
-                            ? new Date(draft.uploaded_at || draft.updated_at || draft.created_at).toLocaleDateString()
-                            : 'No date'}
+                          {formatDate(draft.uploaded_at || draft.updated_at || draft.created_at)}
                         </span>
                       </div>
                     </div>
@@ -278,9 +285,7 @@ const DraftsPanel = ({ user }) => {
                       <div className="draft-item-meta">
                         {getStatusBadge(draft.status)}
                         <span className="draft-date">
-                          {draft.uploaded_at || draft.updated_at || draft.created_at
-                            ? new Date(draft.uploaded_at || draft.updated_at || draft.created_at).toLocaleDateString()
-                            : 'No date'}
+                          {formatDate(draft.uploaded_at || draft.updated_at || draft.created_at)}
                         </span>
                       </div>
                     </div>
