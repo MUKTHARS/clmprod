@@ -1,5 +1,5 @@
-/* Drafts Panel Styles */
-.drafts-panel {
+/* Drafts Panel Styles - All classes prefixed with draft- */
+.draft-panel {
   position: fixed;
   left: 210px; /* Matches expanded sidebar width */
   top: 56px; /* Below topbar */
@@ -16,22 +16,60 @@
 }
 
 /* When sidebar is collapsed */
-.sbr-sidebar-collapsed + .drafts-panel {
+.sbr-sidebar-collapsed + .draft-panel {
   left: 64px; /* Collapsed sidebar width */
 }
 
-/* Drafts panel collapsed state */
-.drafts-panel.collapsed {
+/* Draft panel collapsed state - vertical text only */
+.draft-panel.collapsed {
   width: 40px;
+  background: #ffffff;
+  border-right: 1px solid #e5e7eb;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.drafts-panel.collapsed .drafts-panel-content {
-  opacity: 0;
-  pointer-events: none;
+.draft-panel.collapsed .draft-panel-content,
+.draft-panel.collapsed .draft-section,
+.draft-panel.collapsed .draft-list,
+.draft-panel.collapsed .draft-item,
+.draft-panel.collapsed .draft-horizontal-container {
+  display: none;
 }
 
-/* Toggle button positioning - fixed relative to panel */
-.drafts-panel-toggle {
+/* Vertical text for collapsed state */
+.draft-vertical-text {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-size: 14px;
+  font-weight: 600;
+  color: #6b7280;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 16px 0;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.draft-vertical-text:hover {
+  color: #3b82f6;
+}
+
+.draft-vertical-text svg {
+  margin-bottom: 12px;
+  width: 18px;
+  height: 18px;
+}
+
+/* Toggle button */
+.draft-panel-toggle {
   position: absolute;
   right: -12px;
   top: 50%;
@@ -51,18 +89,14 @@
   transition: all 0.2s;
 }
 
-/* Adjust toggle button position when panel is collapsed */
-.drafts-panel.collapsed .drafts-panel-toggle {
-  right: -12px; /* Keep same position */
-}
-
-.drafts-panel-toggle:hover {
+.draft-panel-toggle:hover {
   background: #f3f4f6;
   color: #3b82f6;
   border-color: #3b82f6;
 }
 
-.drafts-panel-content {
+/* Expanded panel content */
+.draft-panel-content {
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -71,7 +105,7 @@
   transition: opacity 0.2s;
 }
 
-.drafts-panel-header {
+.draft-panel-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -80,7 +114,7 @@
   border-bottom: 1px solid #e5e7eb;
 }
 
-.drafts-panel-header h3 {
+.draft-panel-header h3 {
   font-size: 14px;
   font-weight: 600;
   color: #1f2937;
@@ -89,7 +123,7 @@
   letter-spacing: 0.5px;
 }
 
-.drafts-view-all {
+.draft-view-all {
   font-size: 12px;
   color: #3b82f6;
   background: none;
@@ -100,16 +134,16 @@
   transition: all 0.2s;
 }
 
-.drafts-view-all:hover {
+.draft-view-all:hover {
   background: #eff6ff;
   text-decoration: underline;
 }
 
-.drafts-section {
+.draft-section {
   margin-bottom: 20px;
 }
 
-.drafts-section-header {
+.draft-section-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -119,11 +153,11 @@
   transition: background 0.2s;
 }
 
-.drafts-section-header:hover {
+.draft-section-header:hover {
   background: #f9fafb;
 }
 
-.drafts-section-title {
+.draft-section-title {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -132,11 +166,11 @@
   color: #4b5563;
 }
 
-.drafts-section-title svg {
+.draft-section-title svg {
   color: #6b7280;
 }
 
-.drafts-count {
+.draft-count {
   background: #f3f4f6;
   padding: 2px 6px;
   border-radius: 12px;
@@ -145,28 +179,28 @@
   color: #4b5563;
 }
 
-.drafts-list {
+.draft-list {
   max-height: 300px;
   overflow-y: auto;
   margin-top: 4px;
   padding-left: 24px;
 }
 
-/* Custom scrollbar for drafts list */
-.drafts-list::-webkit-scrollbar {
+/* Custom scrollbar */
+.draft-list::-webkit-scrollbar {
   width: 4px;
 }
 
-.drafts-list::-webkit-scrollbar-track {
+.draft-list::-webkit-scrollbar-track {
   background: #f1f5f9;
 }
 
-.drafts-list::-webkit-scrollbar-thumb {
+.draft-list::-webkit-scrollbar-thumb {
   background: #cbd5e1;
   border-radius: 4px;
 }
 
-.drafts-list::-webkit-scrollbar-thumb:hover {
+.draft-list::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
 
@@ -218,22 +252,22 @@
   color: #4b5563;
 }
 
-.draft-status-badge.status-draft {
+.draft-status-badge.draft-status-draft {
   background: #f3f4f6;
   color: #4b5563;
 }
 
-.draft-status-badge.status-review {
+.draft-status-badge.draft-status-review {
   background: #fef3c7;
   color: #92400e;
 }
 
-.draft-status-badge.status-assigned {
+.draft-status-badge.draft-status-assigned {
   background: #dbeafe;
   color: #1e40af;
 }
 
-.draft-status-badge.status-changes {
+.draft-status-badge.draft-status-changes {
   background: #fee2e2;
   color: #991b1b;
 }
@@ -243,13 +277,34 @@
   color: #9ca3af;
 }
 
-.drafts-loading,
-.drafts-empty {
+.draft-loading,
+.draft-empty {
   padding: 12px 8px;
   text-align: center;
   font-size: 12px;
   color: #9ca3af;
   font-style: italic;
+}
+
+/* Badge for collapsed state - shows count */
+.draft-collapsed-badge {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #3b82f6;
+  color: white;
+  font-size: 10px;
+  font-weight: 600;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  pointer-events: none;
 }
 
 /* ===== MAIN CONTENT ADJUSTMENTS ===== */
@@ -263,53 +318,51 @@
   margin-left: 64px;
 }
 
-/* When drafts panel is expanded (default) */
-.drafts-panel.expanded ~ .main-content {
+/* When draft panel is expanded */
+.draft-panel.expanded ~ .main-content {
   margin-left: 470px; /* 210px + 260px */
 }
 
-/* When drafts panel is collapsed */
-.drafts-panel.collapsed ~ .main-content {
+/* When draft panel is collapsed */
+.draft-panel.collapsed ~ .main-content {
   margin-left: 250px; /* 210px + 40px */
 }
 
-/* When sidebar is collapsed AND drafts panel is expanded */
-.sbr-sidebar-collapsed ~ .drafts-panel.expanded ~ .main-content {
+/* When sidebar is collapsed AND draft panel is expanded */
+.sbr-sidebar-collapsed ~ .draft-panel.expanded ~ .main-content {
   margin-left: 324px; /* 64px + 260px */
 }
 
-/* When sidebar is collapsed AND drafts panel is collapsed */
-.sbr-sidebar-collapsed ~ .drafts-panel.collapsed ~ .main-content {
+/* When sidebar is collapsed AND draft panel is collapsed */
+.sbr-sidebar-collapsed ~ .draft-panel.collapsed ~ .main-content {
   margin-left: 104px; /* 64px + 40px */
 }
 
 /* ===== RESPONSIVE ADJUSTMENTS ===== */
 @media (max-width: 1024px) {
-  .drafts-panel {
+  .draft-panel {
     left: 60px; /* Collapsed sidebar on tablet */
   }
   
-  .drafts-panel.expanded {
+  .draft-panel.expanded {
     width: 240px;
   }
   
-  .drafts-panel.collapsed {
+  .draft-panel.collapsed {
     width: 40px;
   }
   
-  /* When drafts panel is expanded on tablet */
-  .drafts-panel.expanded ~ .main-content {
-    margin-left: 300px !important; /* 60px + 240px */
+  .draft-panel.expanded ~ .main-content {
+    margin-left: 300px !important;
   }
   
-  /* When drafts panel is collapsed on tablet */
-  .drafts-panel.collapsed ~ .main-content {
-    margin-left: 100px !important; /* 60px + 40px */
+  .draft-panel.collapsed ~ .main-content {
+    margin-left: 100px !important;
   }
 }
 
 @media (max-width: 768px) {
-  .drafts-panel {
+  .draft-panel {
     display: none; /* Hide on mobile */
   }
   

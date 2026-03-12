@@ -96,12 +96,12 @@ const DraftsPanel = ({ user }) => {
 
   const getStatusBadge = (status) => {
     const statusMap = {
-      'draft': { label: 'Draft', class: 'status-draft', icon: FileText },
-      'under_review': { label: 'Under Review', class: 'status-review', icon: Clock },
-      'assigned': { label: 'Assigned', class: 'status-assigned', icon: UserCheck },
-      'changes_requested': { label: 'Changes Requested', class: 'status-changes', icon: AlertCircle }
+      'draft': { label: 'Draft', class: 'draft-status-draft', icon: FileText },
+      'under_review': { label: 'Review', class: 'draft-status-review', icon: Clock },
+      'assigned': { label: 'Assigned', class: 'draft-status-assigned', icon: UserCheck },
+      'changes_requested': { label: 'Changes', class: 'draft-status-changes', icon: AlertCircle }
     };
-    const statusInfo = statusMap[status] || { label: status, class: 'status-default', icon: FileText };
+    const statusInfo = statusMap[status] || { label: status, class: 'draft-status-default', icon: FileText };
     const StatusIcon = statusInfo.icon;
     
     return (
@@ -112,56 +112,58 @@ const DraftsPanel = ({ user }) => {
     );
   };
 
+  // Calculate total drafts count for badge
+  const totalDrafts = (myDrafts?.length || 0) + (assignedDrafts?.length || 0);
+
   // Don't render if user doesn't have draft access
   if (!user || !['project_manager', 'program_manager', 'director'].includes(user.role)) {
     return null;
   }
 
   return (
-    <div className={`drafts-panel ${isExpanded ? 'expanded' : 'collapsed'}`}>
-      <button 
-        className="drafts-panel-toggle"
-        onClick={() => setIsExpanded(!isExpanded)}
-        title={isExpanded ? 'Collapse drafts panel' : 'Expand drafts panel'}
-      >
-        {isExpanded ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
-      </button>
+    <>
+      <div className={`draft-panel ${isExpanded ? 'expanded' : 'collapsed'}`}>
+        <button 
+          className="draft-panel-toggle"
+          onClick={() => setIsExpanded(!isExpanded)}
+          title={isExpanded ? 'Collapse drafts panel' : 'Expand drafts panel'}
+        >
+          {isExpanded ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+        </button>
 
-      <div className="drafts-panel-content">
-        <div className="drafts-panel-header">
-          <h3>Drafts</h3>
-          {isExpanded && (
-            <button 
-              className="drafts-view-all"
-              onClick={() => navigate('/app/drafts')}
-              title="View all drafts"
-            >
-              View All
-            </button>
-          )}
-        </div>
+        {isExpanded ? (
+          // Expanded View
+          <div className="draft-panel-content">
+            <div className="draft-panel-header">
+              <h3>Drafts</h3>
+              <button 
+                className="draft-view-all"
+                onClick={() => navigate('/app/drafts')}
+                title="View all drafts"
+              >
+                View All
+              </button>
+            </div>
 
-        {isExpanded && (
-          <>
             {/* My Drafts Section */}
             {user.role === 'project_manager' && (
-              <div className="drafts-section">
+              <div className="draft-section">
                 <div 
-                  className="drafts-section-header"
+                  className="draft-section-header"
                   onClick={() => toggleSection('myDrafts')}
                 >
-                  <div className="drafts-section-title">
+                  <div className="draft-section-title">
                     <TbFilePencil size={16} />
                     <span>My Drafts</span>
-                    <span className="drafts-count">{myDrafts.length}</span>
+                    <span className="draft-count">{myDrafts.length}</span>
                   </div>
                   {expandedSections.myDrafts ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                 </div>
 
                 {expandedSections.myDrafts && (
-                  <div className="drafts-list">
+                  <div className="draft-list">
                     {loading ? (
-                      <div className="drafts-loading">Loading...</div>
+                      <div className="draft-loading">Loading...</div>
                     ) : myDrafts.length > 0 ? (
                       myDrafts.map(draft => (
                         <div
@@ -179,7 +181,7 @@ const DraftsPanel = ({ user }) => {
                         </div>
                       ))
                     ) : (
-                      <div className="drafts-empty">No drafts yet</div>
+                      <div className="draft-empty">No drafts yet</div>
                     )}
                   </div>
                 )}
@@ -188,23 +190,23 @@ const DraftsPanel = ({ user }) => {
 
             {/* Assigned to Me Section */}
             {['project_manager', 'program_manager', 'director'].includes(user.role) && (
-              <div className="drafts-section">
+              <div className="draft-section">
                 <div 
-                  className="drafts-section-header"
+                  className="draft-section-header"
                   onClick={() => toggleSection('assigned')}
                 >
-                  <div className="drafts-section-title">
+                  <div className="draft-section-title">
                     <TbUserCheck size={16} />
                     <span>Assigned to Me</span>
-                    <span className="drafts-count">{assignedDrafts.length}</span>
+                    <span className="draft-count">{assignedDrafts.length}</span>
                   </div>
                   {expandedSections.assigned ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                 </div>
 
                 {expandedSections.assigned && (
-                  <div className="drafts-list">
+                  <div className="draft-list">
                     {loading ? (
-                      <div className="drafts-loading">Loading...</div>
+                      <div className="draft-loading">Loading...</div>
                     ) : assignedDrafts.length > 0 ? (
                       assignedDrafts.map(draft => (
                         <div
@@ -222,16 +224,29 @@ const DraftsPanel = ({ user }) => {
                         </div>
                       ))
                     ) : (
-                      <div className="drafts-empty">No assigned drafts</div>
+                      <div className="draft-empty">No assigned drafts</div>
                     )}
                   </div>
                 )}
               </div>
             )}
-          </>
+          </div>
+        ) : (
+          // Collapsed View - Vertical text only
+          <div 
+            className="draft-vertical-text"
+            onClick={() => setIsExpanded(true)}
+            title="Expand drafts panel"
+          >
+            <TbFilePencil size={18} />
+            <span>DRAFTS</span>
+            {totalDrafts > 0 && (
+              <span className="draft-collapsed-badge">{totalDrafts}</span>
+            )}
+          </div>
         )}
       </div>
-    </div>
+    </>
   );
 };
 
