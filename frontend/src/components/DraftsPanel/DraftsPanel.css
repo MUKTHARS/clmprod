@@ -136,25 +136,28 @@
   align-items: center;
   justify-content: space-between;
   margin-bottom: 16px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid #e5e7eb;
+  padding: 12px 12px;  /* Adjust padding */
+  border-bottom: 1px solid #334155;  /* Change to darker border */
+  background: #292f39;  /* Add dark background */
+  border-radius: 6px;  /* Optional: add slight rounding */
 }
 
 .draft-panel-header h3 {
   font-family: 'Inter', sans-serif;
   font-size: 13px;
   font-weight: 700;
-  color: #111827;
+  color: #ffffff;  /* Change text to white */
   margin: 0;
   text-transform: uppercase;
   letter-spacing: 0.8px;
+  /* Remove the background and padding that was added earlier */
 }
 
 .draft-view-all {
   font-family: 'Inter', sans-serif;
   font-size: 12px;
   font-weight: 500;
-  color: #2563eb;
+  color: #94a3b8;  /* Lighter color for better contrast on dark bg */
   background: none;
   border: none;
   cursor: pointer;
@@ -164,7 +167,8 @@
 }
 
 .draft-view-all:hover {
-  background: #eff6ff;
+  background: #334155;  /* Darker hover background */
+  color: #ffffff;  /* White text on hover */
   text-decoration: underline;
 }
 
@@ -271,29 +275,29 @@
   border-radius: 6px;
   cursor: default;
   transition: all 0.2s;
-  border-left: 3px solid transparent;
+  /* border-left: 3px solid transparent; */
   background: #f8faff;
 }
 
 .draft-item:nth-child(odd) {
   background: #f0f7ff;
-  border-left-color: #bfdbfe;
+  /* border-left-color: #bfdbfe; */
 }
 
 .draft-item:nth-child(even) {
   background: #f5f3ff;
-  border-left-color: #ddd6fe;
+  /* border-left-color: #ddd6fe; */
 }
 
 .draft-item:hover {
   background: #f3f4f6;
-  border-left-color: #94a3b8;
+  /* border-left-color: #94a3b8; */
   transform: translateX(2px);
 }
 
 .draft-item.active {
   background: #eff6ff;
-  border-left-color: #3b82f6;
+  /* border-left-color: #3b82f6; */
 }
 
 .draft-item-title {
@@ -310,18 +314,18 @@
 
 .draft-item-actions {
   display: flex;
-  gap: 6px;
+  gap: 4px;
   margin-top: 8px;
 }
 
 .draft-action-btn {
-  flex: 1;
-  display: flex;
+  flex: 0 1 auto;  
+  display: inline-flex; 
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  padding: 5px 6px;
-  border-radius: 6px;
+  gap: 3px;  
+  padding: 4px 8px;  
+  border-radius: 4px; 
   font-family: 'Inter', sans-serif;
   font-size: 11px;
   font-weight: 600;
@@ -332,32 +336,41 @@
 }
 
 .draft-action-eye {
-  background: #f0f9ff;
-  color: #0369a1;
-  border-color: #bae6fd;
+  background: #2b71e1;  /* Dark blue-gray */
+  color: #ffffff;
+  border-color: #1e293b;
 }
 
 .draft-action-eye:hover {
-  background: #0369a1;
-  color: #ffffff;
-  border-color: #0369a1;
+  background: #3b9895;  /* Even darker on hover */
+  border-color: #17284f;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
+/* Update assign button (gear icon) */
 .draft-action-gear {
-  background: #f5f3ff;
-  color: #6d28d9;
-  border-color: #ddd6fe;
+  background: #363355;  /* Slightly lighter dark blue-gray */
+  color: #ffffff;
+  border-color: #334155;
 }
 
 .draft-action-gear:hover {
-  background: #6d28d9;
-  color: #ffffff;
-  border-color: #6d28d9;
+  background: #3b9895;  /* Darker on hover */
+  border-color: #1e293b;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
+/* Keep the gear rotation on hover */
 .draft-action-gear:hover svg {
   transform: rotate(30deg);
   transition: transform 0.2s;
+}
+
+/* Optional: Add a subtle transition for smoothness */
+.draft-action-btn {
+  transition: all 0.2s ease;
 }
 
 .draft-item-meta {
@@ -741,7 +754,7 @@
 /* ===== SELECTED CARD ===== */
 .draft-item.selected {
   background: #e0e7ff !important;
-  border-left-color: #4f46e5 !important;
+  /* border-left-color: #4f46e5 !important; */
   box-shadow: 0 0 0 2px #c7d2fe;
 }
 

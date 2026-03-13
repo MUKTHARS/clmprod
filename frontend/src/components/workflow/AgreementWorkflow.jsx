@@ -184,7 +184,6 @@ useEffect(() => {
     fetchAvailableUsers();
   }
 }, [contract, showWorkflow]);
-
   const fetchAvailableUsers = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -245,20 +244,20 @@ useEffect(() => {
   };
 
   const handleUserSelection = (role, userId) => {
-    const key = role === 'project_manager' ? 'pm_users' : 
+    const key = role === 'project_manager' ? 'pm_users' :
                 role === 'program_manager' ? 'pgm_users' : 'director_users';
-    
+    const numericId = Number(userId);
     setSelectedUsers(prev => {
       const currentUsers = prev[key] || [];
-      if (currentUsers.includes(userId)) {
+      if (currentUsers.includes(numericId)) {
         return {
           ...prev,
-          [key]: currentUsers.filter(id => id !== userId)
+          [key]: currentUsers.filter(id => id !== numericId)
         };
       } else {
         return {
           ...prev,
-          [key]: [...currentUsers, userId]
+          [key]: [...currentUsers, numericId]
         };
       }
     });
@@ -428,7 +427,7 @@ const handleReviewWithAutoSave = async () => {
     if (saveResponse.ok) {
       const saveResult = await saveResponse.json();
       console.log('Draft saved successfully:', saveResult);
-      
+
       // After successful save, fetch the updated contract data
       const updatedContractResponse = await fetch(
         `${API_CONFIG.BASE_URL}/api/agreements/drafts/${contract.id}`,
@@ -443,10 +442,10 @@ const handleReviewWithAutoSave = async () => {
       if (updatedContractResponse.ok) {
         const updatedContractData = await updatedContractResponse.json();
         console.log('Updated contract data:', updatedContractData);
-        
+
         // Set the contract data for ProjectManagerActions
         setContractData(updatedContractData.contract || updatedContractData);
-        
+
         // Then open the ProjectManagerActions popup
         setShowPMActions(true);
       } else {
@@ -455,9 +454,19 @@ const handleReviewWithAutoSave = async () => {
         setShowPMActions(true);
       }
     } else {
-      const error = await saveResponse.json();
-      console.error('Auto-save failed:', error);
-      showPopup('Save Failed', 'Failed to save draft before review. Please try again.', 'error');
+      // If save returned 404 or 403 (contract is not in draft state, or user lacks permission),
+      // skip the save and proceed directly with the existing contract data.
+      // This happens when the contract is already under_review/reviewed or opened by PGM/Director.
+      const saveStatus = saveResponse.status;
+      if (saveStatus === 404 || saveStatus === 403) {
+        console.log(`Save skipped (status ${saveStatus}): proceeding with existing contract data`);
+        setContractData(contract);
+        setShowPMActions(true);
+      } else {
+        const error = await saveResponse.json();
+        console.error('Auto-save failed:', error);
+        showPopup('Save Failed', 'Failed to save draft before review. Please try again.', 'error');
+      }
     }
   } catch (error) {
     console.error('Error in auto-save:', error);

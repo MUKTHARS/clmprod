@@ -230,16 +230,22 @@ const DraftsPanel = ({ user }) => {
             <span className="draft-detail-date">Uploaded: {formatDate(d.uploaded_at || d.created_at)}</span>
           </div>
           <div className="draft-detail-grid">
-            {d.grantor_name && (
+            {(d.grantor || d.grantor_name) && (
               <div className="draft-detail-cell">
                 <span className="draft-detail-cell-label"><Building2 size={13} /> Grantor</span>
-                <span className="draft-detail-cell-value">{d.grantor_name}</span>
+                <span className="draft-detail-cell-value">{d.grantor || d.grantor_name}</span>
               </div>
             )}
-            {d.grantee_name && (
+            {d.grant_id && (
+              <div className="draft-detail-cell">
+                <span className="draft-detail-cell-label"><Hash size={13} /> Grantor ID</span>
+                <span className="draft-detail-cell-value">{d.grant_id}</span>
+              </div>
+            )}
+            {(d.grantee || d.grantee_name) && (
               <div className="draft-detail-cell">
                 <span className="draft-detail-cell-label"><User size={13} /> Grantee</span>
-                <span className="draft-detail-cell-value">{d.grantee_name}</span>
+                <span className="draft-detail-cell-value">{d.grantee || d.grantee_name}</span>
               </div>
             )}
             {d.total_amount && (
