@@ -80,13 +80,12 @@ async def get_draft_details(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only Project Managers can view draft agreements"
         )
-    
+
     contract = db.query(Contract).filter(
         Contract.id == contract_id,
-        Contract.created_by == current_user.id,
-        Contract.status == "draft"
+        Contract.created_by == current_user.id
     ).first()
-    
+
     if not contract:
         raise HTTPException(status_code=404, detail="Draft agreement not found")
     

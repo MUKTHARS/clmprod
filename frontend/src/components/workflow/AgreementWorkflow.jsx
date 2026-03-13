@@ -153,24 +153,24 @@ useEffect(() => {
       special_conditions: contract.special_conditions || ''
     });
 
-    // Initialize selected users from contract
-    // Make sure to handle both arrays and parse from JSON if needed
-    const pmUsers = contract.assigned_pm_users || 
-                   (contract.comprehensive_data?.assigned_users?.pm_users) || 
-                   [];
-    const pgmUsers = contract.assigned_pgm_users || 
-                    (contract.comprehensive_data?.assigned_users?.pgm_users) || 
-                    [];
-    const directorUsers = contract.assigned_director_users || 
-                         (contract.comprehensive_data?.assigned_users?.director_users) || 
-                         [];
+    // Normalize to plain array of numeric IDs — handles both [5] and [{id:5,name:"..."}]
+    const toIds = (arr) => {
+      let val = arr;
+      if (typeof val === 'string') { try { val = JSON.parse(val); } catch { val = []; } }
+      if (!Array.isArray(val)) return [];
+      return val.map(u => Number(typeof u === 'object' && u !== null ? u.id : u)).filter(n => !isNaN(n) && n > 0);
+    };
+
+    const pmUsers = toIds(contract.assigned_pm_users || contract.comprehensive_data?.assigned_users?.pm_users);
+    const pgmUsers = toIds(contract.assigned_pgm_users || contract.comprehensive_data?.assigned_users?.pgm_users);
+    const directorUsers = toIds(contract.assigned_director_users || contract.comprehensive_data?.assigned_users?.director_users);
 
     console.log('Setting selected users:', { pmUsers, pgmUsers, directorUsers });
-    
+
     setSelectedUsers({
-      pm_users: Array.isArray(pmUsers) ? pmUsers : [],
-      pgm_users: Array.isArray(pgmUsers) ? pgmUsers : [],
-      director_users: Array.isArray(directorUsers) ? directorUsers : []
+      pm_users: pmUsers,
+      pgm_users: pgmUsers,
+      director_users: directorUsers
     });
 
     // Load additional documents from multiple possible sources
