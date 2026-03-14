@@ -371,7 +371,7 @@ const DraftsPanel = ({ user }) => {
                   onClick={() => setActiveTab('assignedToMe')}
                 >
                   <TbUserCheck size={14} />
-                  <span>To Me</span>
+                  <span>{user?.role === 'project_manager' ? 'Assigned to Me' : 'To Me'}</span>
                   {assignedToMe.length > 0 && (
                     <span className="draft-tab-count">{assignedToMe.length}</span>
                   )}

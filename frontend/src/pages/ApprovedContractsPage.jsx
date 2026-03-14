@@ -31,7 +31,7 @@ function ApprovedContractsPage({ user }) {
   const [approvedContracts, setApprovedContracts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeView, setActiveView] = useState('list');
+  const [activeView, setActiveView] = useState('grid');
   const [selectedContract, setSelectedContract] = useState(null);
   const [showPublishModal, setShowPublishModal] = useState(false);
   const [publishNotes, setPublishNotes] = useState('');
@@ -327,7 +327,7 @@ function ApprovedContractsPage({ user }) {
 
         <div className="acp-card-content">
           <div className="acp-contract-icon">
-            <FileText size={24} />
+            {/* <FileText size={24} /> */}
           </div>
           <h3 className="acp-contract-name">
             {contract.grant_name || contract.filename || 'Unnamed Contract'}
@@ -336,9 +336,31 @@ function ApprovedContractsPage({ user }) {
             ID: {contract.id || 'N/A'}
           </p>
 
+          <div className="acp-contract-details">
+            <div className="acp-detail-item">
+              <DollarSign size={14} />
+              <span>{formatCurrency(contract.total_amount)}</span>
+            </div>
+            <div className="acp-detail-item">
+              <Building size={14} />
+              <span>{contract.grantor || 'No grantor'}</span>
+            </div>
+            <div className="acp-detail-item">
+              <Calendar size={14} />
+              <span>{formatDate(contract.uploaded_at)}</span>
+            </div>
+          </div>
+          
+
+          {contract.purpose && (
+            <div className="acp-contract-purpose">
+              <p>{contract.purpose.length > 100 ? contract.purpose.substring(0, 100) + '...' : contract.purpose}</p>
+            </div>
+          )}
+          
           <div className="acp-approval-info-section">
             <div className="acp-approval-header">
-              <Award size={14} />
+             
               <span>Director Approval:</span>
             </div>
             <div className="acp-approval-details">
@@ -356,27 +378,6 @@ function ApprovedContractsPage({ user }) {
               </div>
             )}
           </div>
-
-          <div className="acp-contract-details">
-            <div className="acp-detail-item">
-              <DollarSign size={14} />
-              <span>{formatCurrency(contract.total_amount)}</span>
-            </div>
-            <div className="acp-detail-item">
-              <Building size={14} />
-              <span>{contract.grantor || 'No grantor'}</span>
-            </div>
-            <div className="acp-detail-item">
-              <Calendar size={14} />
-              <span>{formatDate(contract.uploaded_at)}</span>
-            </div>
-          </div>
-
-          {contract.purpose && (
-            <div className="acp-contract-purpose">
-              <p>{contract.purpose.length > 100 ? contract.purpose.substring(0, 100) + '...' : contract.purpose}</p>
-            </div>
-          )}
         </div>
 
         <div className="acp-card-footer">
@@ -419,19 +420,20 @@ function ApprovedContractsPage({ user }) {
 
         <div className="acp-controls-right">
           <div className="acp-view-toggle">
-            <button 
-              className={`acp-view-btn ${activeView === 'list' ? 'acp-active' : ''}`}
-              onClick={() => setActiveView('list')}
-              title="List View"
-            >
-              <List size={16} />
-            </button>
+
             <button 
               className={`acp-view-btn ${activeView === 'grid' ? 'acp-active' : ''}`}
               onClick={() => setActiveView('grid')}
               title="Grid View"
             >
               <Grid size={16} />
+            </button>
+                        <button 
+              className={`acp-view-btn ${activeView === 'list' ? 'acp-active' : ''}`}
+              onClick={() => setActiveView('list')}
+              title="List View"
+            >
+              <List size={16} />
             </button>
           </div>
         </div>
@@ -453,11 +455,7 @@ function ApprovedContractsPage({ user }) {
           </div>
         ) : (
           <>
-            <div className="acp-results-header">
-              <span className="acp-results-count">
-                Showing {filteredContracts.length} approved contract(s)
-              </span>
-            </div>
+           
 
             {activeView === 'list' ? (
               <div className="acp-contracts-table-container">
@@ -524,7 +522,7 @@ function ApprovedContractsPage({ user }) {
                 </div>
               </div>
 
-              <div className="acp-publish-notes-section">
+              {/* <div className="acp-publish-notes-section">
                 <label htmlFor="publish-notes">
                   <FileText size={14} />
                   Publish Notes (Optional)
@@ -536,7 +534,7 @@ function ApprovedContractsPage({ user }) {
                   placeholder="Add any notes about this final publication..."
                   rows={4}
                 />
-              </div>
+              </div> */}
             </div>
 
             <div className="acp-modal-footer">
@@ -563,8 +561,8 @@ function ApprovedContractsPage({ user }) {
                   </>
                 ) : (
                   <>
-                    <Check size={16} />
-                    Finalize & Publish Contract
+                    
+                    Confirm Publish
                   </>
                 )}
               </button>

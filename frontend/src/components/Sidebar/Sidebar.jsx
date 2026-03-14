@@ -484,15 +484,15 @@ const Sidebar = ({ user, onLogout }) => {
         badge: true,
         isArchiveSection: false
       },
-      {
-        id: 'assigned-parent',
-        label: 'Assigned Agreements',
-        path: '#',
-        permission: 'can_view_assigned_agreements',
-        roles: ['program_manager', 'director'],
-        isAssignedParent: true,
-        hasSubmenu: true
-      },
+      // {
+      //   id: 'assigned-parent',
+      //   label: 'Assigned Agreements',
+      //   path: '#',
+      //   permission: 'can_view_assigned_agreements',
+      //   roles: ['program_manager', 'director'],
+      //   isAssignedParent: true,
+      //   hasSubmenu: true
+      // },
       {
         id: 'assigned-to-me',
         label: 'Assigned to Me',

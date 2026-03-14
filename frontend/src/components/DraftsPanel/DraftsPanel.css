@@ -270,12 +270,11 @@
 }
 
 .draft-item {
-  padding: 10px;
-  margin: 4px 0;
+  padding: 12px 14px;
+  margin: 6px 0;
   border-radius: 6px;
   cursor: default;
   transition: all 0.2s;
-  /* border-left: 3px solid transparent; */
   background: #f8faff;
 }
 
@@ -305,11 +304,11 @@
   font-size: 13px;
   font-weight: 600;
   color: #111827;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.4;
   letter-spacing: -0.1px;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .draft-item-actions {
