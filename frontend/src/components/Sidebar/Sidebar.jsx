@@ -895,7 +895,8 @@ const Sidebar = ({ user, onLogout }) => {
         </nav>
 
         <div className="sbr-footer">
-          <div 
+          {/* Expanded: full user profile card */}
+          <div
             className="sbr-user-profile"
             onClick={() => setShowUserMenu(!showUserMenu)}
           >
@@ -928,7 +929,7 @@ const Sidebar = ({ user, onLogout }) => {
                   </button>
                 </div>
                 <div className="sbr-dropdown-divider"></div>
-                <button 
+                <button
                   className="sbr-dropdown-item sbr-logout-item"
                   onClick={handleLogout}
                 >
@@ -938,7 +939,23 @@ const Sidebar = ({ user, onLogout }) => {
               </div>
             )}
           </div>
-          
+
+          {/* Collapsed: icon-only actions */}
+          <div className="sbr-collapsed-actions">
+            <button className="sbr-collapsed-icon-btn" title="Profile">
+              <User size={18} />
+            </button>
+            <button className="sbr-collapsed-icon-btn" title="Settings">
+              <Settings size={18} />
+            </button>
+            <button className="sbr-collapsed-icon-btn sbr-collapsed-logout" title="Log out" onClick={handleLogout}>
+              <LogOut size={18} />
+            </button>
+            <div className="sbr-collapsed-avatar" title={user?.full_name || user?.username || 'Guest'}>
+              {user?.full_name ? user.full_name.charAt(0).toUpperCase() : 'G'}
+            </div>
+          </div>
+
           <div className="sbr-version"></div>
         </div>
       </aside>

@@ -498,6 +498,63 @@ body:has(.sbr-sidebar-collapsed) .main-content {
   }
 }
 
+/* Collapsed footer icon actions */
+.sbr-collapsed-actions {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 0;
+}
+
+.sbr-sidebar-collapsed .sbr-collapsed-actions {
+  display: flex;
+}
+
+.sbr-sidebar-collapsed .sbr-user-profile {
+  display: none;
+}
+
+.sbr-collapsed-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 700;
+  font-size: 1rem;
+  margin-top: 6px;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.35);
+  cursor: default;
+}
+
+.sbr-collapsed-icon-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: #9ca3af;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.sbr-collapsed-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+.sbr-collapsed-logout:hover {
+  background: rgba(248, 113, 113, 0.15);
+  color: #f87171;
+}
+
 /* Version text */
 .sbr-version {
   text-align: center;
