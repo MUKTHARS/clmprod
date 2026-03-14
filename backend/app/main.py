@@ -2641,11 +2641,27 @@ async def get_program_manager_reviews_for_pm(
     if not contract:
         raise HTTPException(status_code=404, detail="Contract not found")
     
-    # Check if user is the contract creator
-    if contract.created_by != current_user.id and current_user.role != "director":
+    # Check if user is the contract creator, director, or an assigned PGM
+    is_assigned_pgm = False
+    if current_user.role == "program_manager" and contract.assigned_pgm_users:
+        try:
+            import json as _json
+            pgm_list = contract.assigned_pgm_users if isinstance(contract.assigned_pgm_users, list) else _json.loads(contract.assigned_pgm_users)
+            is_assigned_pgm = current_user.id in pgm_list
+        except Exception:
+            pass
+        if not is_assigned_pgm:
+            # Also allow any PGM who left a review comment on this contract
+            pgm_commented = db.query(ReviewComment).filter(
+                ReviewComment.contract_id == contract_id,
+                ReviewComment.user_id == current_user.id
+            ).first()
+            is_assigned_pgm = pgm_commented is not None
+
+    if contract.created_by != current_user.id and current_user.role != "director" and not is_assigned_pgm:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only the contract creator or director can view program manager reviews"
+            detail="Only the contract creator, assigned program manager, or director can view these reviews"
         )
     
     # Get all review comments for this contract
@@ -2688,10 +2704,13 @@ async def get_program_manager_reviews_for_pm(
         "modify_recommendations": len([c for c in review_comments if c.recommendation == "modify"])
     }
     
+    director_decision = contract.comprehensive_data.get("director_final_approval", {}) if contract.comprehensive_data else {}
+
     return {
         "contract_id": contract_id,
         "contract_status": contract.status,
         "review_summary": review_summary,
+        "director_decision": director_decision,
         "statistics": stats,
         "comments": formatted_comments,
         "change_requests": contract.comprehensive_data.get("change_requests", []) if contract.comprehensive_data else []
@@ -4353,8 +4372,26 @@ async def submit_contract_review(
             "change_requests": review_data.change_requests or []
         }
         
+        from sqlalchemy.orm.attributes import flag_modified
         contract.comprehensive_data["program_manager_review"] = review_summary
-        
+        flag_modified(contract, "comprehensive_data")
+
+        # Save PGM review summary as a ReviewComment so all sides can see it
+        print(f"[PGM_REVIEW] Attempting to save review_summary to review_comments table")
+        print(f"[PGM_REVIEW] contract_id={contract_id}, user_id={current_user.id}")
+        print(f"[PGM_REVIEW] review_summary='{review_data.review_summary}'")
+        print(f"[PGM_REVIEW] recommendation='{review_data.overall_recommendation}'")
+        pgm_summary_comment = ReviewComment(
+            contract_id=contract_id,
+            user_id=current_user.id,
+            comment_type="program_manager_review",
+            comment=review_data.review_summary or f"Review submitted with recommendation: {review_data.overall_recommendation}",
+            recommendation=review_data.overall_recommendation,
+            status="open"
+        )
+        db.add(pgm_summary_comment)
+        print(f"[PGM_REVIEW] db.add() called for pgm_summary_comment")
+
         # Add individual comments if provided
         if review_data.comments:
             for comment in review_data.comments:
@@ -4395,7 +4432,9 @@ async def submit_contract_review(
         # print(f"DEBUG: Review summary added: {len(review_summary_text)} characters")
         
         # Force commit and refresh
+        print(f"[PGM_REVIEW] About to call db.commit()")
         db.commit()
+        print(f"[PGM_REVIEW] db.commit() succeeded — review_comment should be in DB now")
         db.refresh(contract)
 
         # Notify PM when PGM requests modification or rejects
@@ -4494,7 +4533,9 @@ async def submit_contract_review(
         
     except Exception as e:
         db.rollback()
-        print(f"ERROR: Failed to submit review for contract {contract_id}: {str(e)}")
+        print(f"[PGM_REVIEW] ERROR: db.rollback() triggered — review_comment NOT saved")
+        print(f"[PGM_REVIEW] Exception type: {type(e).__name__}")
+        print(f"[PGM_REVIEW] Exception message: {str(e)}")
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to submit review: {str(e)}")
@@ -5166,7 +5207,18 @@ async def director_final_approval(
             contract.comprehensive_data = {}
         
         contract.comprehensive_data["director_final_approval"] = director_approval
-        
+
+        # Save director's decision/comments as a ReviewComment so all sides can see it
+        director_review_comment = ReviewComment(
+            contract_id=contract_id,
+            user_id=current_user.id,
+            comment_type="review",
+            comment=comments or f"Director {decision}d this contract.",
+            recommendation=decision,
+            status="closed"
+        )
+        db.add(director_review_comment)
+
         # If contract is locked, add lock information
         if lock_contract:
             contract.comprehensive_data["locked_by"] = current_user.id

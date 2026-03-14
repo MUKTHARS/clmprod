@@ -272,6 +272,51 @@ function ViewProgramManagerReviews() {
         </div>
       )}
 
+      {/* Director Decision */}
+      {reviews.director_decision && Object.keys(reviews.director_decision).length > 0 && (
+        <div className="review-summary-section">
+          <div className="section-header">
+            <h2>
+              <Shield size={20} />
+              Director Final Decision
+            </h2>
+          </div>
+          <div className="summary-card">
+            <div className="summary-header">
+              <div className="summary-info">
+                <h3>Decision</h3>
+                <div className={`recommendation-badge ${reviews.director_decision.final_decision}`}>
+                  {reviews.director_decision.final_decision === 'approve'
+                    ? <CheckCircle size={16} className="text-green-600" />
+                    : <XCircle size={16} className="text-red-600" />}
+                  <span style={{ textTransform: 'capitalize' }}>{reviews.director_decision.final_decision}</span>
+                </div>
+              </div>
+              <div className="summary-meta">
+                <span className="meta-item">
+                  <User size={14} />
+                  {reviews.director_decision.approved_by_name || 'Unknown Director'}
+                </span>
+                <span className="meta-item">
+                  <Calendar size={14} />
+                  {formatDate(reviews.director_decision.approved_at)}
+                </span>
+              </div>
+            </div>
+            <div className="summary-content">
+              <h4>Director Comments</h4>
+              <p>{reviews.director_decision.approval_comments || 'No comments provided'}</p>
+            </div>
+            <div className="summary-content">
+              <h4>Additional Details</h4>
+              <p>Risk Accepted: {reviews.director_decision.risk_accepted ? 'Yes' : 'No'}</p>
+              <p>Business Sign-off: {reviews.director_decision.business_sign_off ? 'Yes' : 'No'}</p>
+              {reviews.director_decision.contract_locked && <p>Contract has been locked.</p>}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Review Comments */}
       <div className="review-comments-section">
         <div className="section-header">
