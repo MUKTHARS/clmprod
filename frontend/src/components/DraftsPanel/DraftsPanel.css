@@ -7,9 +7,9 @@
   top: 38px; /* Below topbar */
   bottom: 0;
   width: 260px;
-  background: #ffffff;
-  border-right: 1px solid #e5e7eb;
-  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.05);
+  background: #f8fafc;
+  border-right: 1px solid #e2e8f0;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.08);
   z-index: 900;
   transition: left 0.25s ease, width 0.25s ease;
   display: flex;
@@ -25,9 +25,9 @@
 /* Draft panel collapsed state - vertical text only */
 .draft-panel.collapsed {
   width: 40px;
-  background: #c8cbd8;
-  border-right: 1px solid #e5e7eb;
-  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.05);
+  background: #e2e8f0;
+  border-right: 1px solid #cbd5e1;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.08);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -48,13 +48,13 @@
   display: none;
 }
 
-/* Vertical text for collapsed state - darker text */
+/* Vertical text for collapsed state */
 .draft-vertical-text {
   writing-mode: vertical-rl;
   transform: rotate(180deg);
   font-size: 14px;
   font-weight: 700;
-  color: #111827 !important;
+  color: #374151 !important;
   letter-spacing: 2px;
   text-transform: uppercase;
   white-space: nowrap;
@@ -72,11 +72,11 @@
   margin-bottom: 12px;
   width: 18px;
   height: 18px;
-  color: #1f2937;
+  color: #374151;
 }
 
 .draft-vertical-text:hover {
-  color: #2563eb !important;
+  color: #1e3a5f !important;
 }
 
 /* Toggle button - make it bigger and fully visible */
@@ -136,28 +136,27 @@
   align-items: center;
   justify-content: space-between;
   margin-bottom: 16px;
-  padding: 12px 12px;  /* Adjust padding */
-  border-bottom: 1px solid #334155;  /* Change to darker border */
-  background: #292f39;  /* Add dark background */
-  border-radius: 6px;  /* Optional: add slight rounding */
+  padding: 12px 12px;
+  border-bottom: 1px solid #2a3a52;
+  background: #1e3a5f;
+  border-radius: 6px;
 }
 
 .draft-panel-header h3 {
   font-family: 'Inter', sans-serif;
   font-size: 13px;
   font-weight: 700;
-  color: #ffffff;  /* Change text to white */
+  color: #e2e8f0;
   margin: 0;
   text-transform: uppercase;
   letter-spacing: 0.8px;
-  /* Remove the background and padding that was added earlier */
 }
 
 .draft-view-all {
   font-family: 'Inter', sans-serif;
   font-size: 12px;
   font-weight: 500;
-  color: #94a3b8;  /* Lighter color for better contrast on dark bg */
+  color: #93c5fd;
   background: none;
   border: none;
   cursor: pointer;
@@ -167,9 +166,9 @@
 }
 
 .draft-view-all:hover {
-  background: #334155;  /* Darker hover background */
-  color: #ffffff;  /* White text on hover */
-  text-decoration: underline;
+  background: rgba(255,255,255,0.1);
+  color: #ffffff;
+  text-decoration: none;
 }
 
 /* Tabs Styling */
@@ -177,7 +176,7 @@
   display: flex;
   gap: 8px;
   margin-bottom: 16px;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid #e2e8f0;
   padding-bottom: 8px;
 }
 
@@ -194,20 +193,20 @@
   font-family: 'Inter', sans-serif;
   font-size: 12px;
   font-weight: 500;
-  color: #6b7280;
+  color: #4b5563;
   cursor: pointer;
   transition: all 0.2s;
   position: relative;
 }
 
 .draft-tab:hover {
-  background: #f3f4f6;
-  color: #4b5563;
+  background: #e2e8f0;
+  color: #1e293b;
 }
 
 .draft-tab.active {
-  background: #e6f0ff;
-  color: #2563eb;
+  background: #1e3a5f;
+  color: #e2e8f0;
   font-weight: 600;
 }
 
@@ -218,7 +217,7 @@
   left: 0;
   right: 0;
   height: 2px;
-  background: #2563eb;
+  background: #3b82f6;
   border-radius: 2px 2px 0 0;
 }
 
@@ -228,7 +227,7 @@
 }
 
 .draft-tab-count {
-  background: #e5e7eb;
+  background: #e2e8f0;
   color: #374151;
   font-family: 'Inter', sans-serif;
   font-size: 11px;
@@ -240,7 +239,7 @@
 }
 
 .draft-tab.active .draft-tab-count {
-  background: #2563eb;
+  background: #3b82f6;
   color: white;
 }
 
@@ -266,7 +265,7 @@
 }
 
 .draft-tab-content::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: #3b82f6;
 }
 
 .draft-item {
@@ -275,35 +274,31 @@
   border-radius: 6px;
   cursor: default;
   transition: all 0.2s;
-  background: #f8faff;
+  background: #1e3a5f;
 }
 
 .draft-item:nth-child(odd) {
-  background: #f0f7ff;
-  /* border-left-color: #bfdbfe; */
+  background: #1e3a5f;
 }
 
 .draft-item:nth-child(even) {
-  background: #f5f3ff;
-  /* border-left-color: #ddd6fe; */
+  background: #3b2a6e;
 }
 
 .draft-item:hover {
-  background: #f3f4f6;
-  /* border-left-color: #94a3b8; */
+  background: #2a4f7c;
   transform: translateX(2px);
 }
 
 .draft-item.active {
-  background: #eff6ff;
-  /* border-left-color: #3b82f6; */
+  background: #1e3a5f;
 }
 
 .draft-item-title {
   font-family: 'Inter', sans-serif;
   font-size: 13px;
   font-weight: 600;
-  color: #111827;
+  color: #f1f5f9;
   white-space: normal;
   word-break: break-word;
   line-height: 1.4;
@@ -388,35 +383,35 @@
   font-family: 'Inter', sans-serif;
   font-size: 11px;
   font-weight: 600;
-  background: #f3f4f6;
-  color: #374151;
+  background: #334155;
+  color: #cbd5e1;
 }
 
 .draft-status-badge.draft-status-draft {
-  background: #f3f4f6;
-  color: #4b5563;
+  background: #334155;
+  color: #cbd5e1;
 }
 
 .draft-status-badge.draft-status-review {
-  background: #fef3c7;
-  color: #92400e;
+  background: #78350f;
+  color: #fde68a;
 }
 
 .draft-status-badge.draft-status-assigned {
-  background: #dbeafe;
-  color: #1e40af;
+  background: #1e3a5f;
+  color: #93c5fd;
 }
 
 .draft-status-badge.draft-status-changes {
-  background: #fee2e2;
-  color: #991b1b;
+  background: #7f1d1d;
+  color: #fca5a5;
 }
 
 .draft-date {
   font-family: 'Inter', sans-serif;
   font-size: 11px;
   font-weight: 500;
-  color: #6b7280;
+  color: #94a3b8;
 }
 
 .draft-loading,
@@ -426,9 +421,9 @@
   font-family: 'Inter', sans-serif;
   font-size: 13px;
   font-weight: 500;
-  color: #9ca3af;
+  color: #6b7280;
   font-style: italic;
-  background: #f9fafb;
+  background: #f1f5f9;
   border-radius: 6px;
 }
 
@@ -538,7 +533,7 @@
   display: flex;
   gap: 4px;
   margin-bottom: 16px;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid #e2e8f0;
   padding-bottom: 8px;
   flex-wrap: wrap;
 }
@@ -557,7 +552,7 @@
   font-family: 'Inter', sans-serif;
   font-size: 12px;
   font-weight: 500;
-  color: #6b7280;
+  color: #4b5563;
   cursor: pointer;
   transition: all 0.2s;
   position: relative;
@@ -565,13 +560,13 @@
 }
 
 .draft-tab:hover {
-  background: #f3f4f6;
-  color: #4b5563;
+  background: #e2e8f0;
+  color: #1e293b;
 }
 
 .draft-tab.active {
-  background: #e6f0ff;
-  color: #2563eb;
+  background: #1e3a5f;
+  color: #e2e8f0;
   font-weight: 600;
 }
 
@@ -582,7 +577,7 @@
   left: 0;
   right: 0;
   height: 2px;
-  background: #2563eb;
+  background: #3b82f6;
   border-radius: 2px 2px 0 0;
 }
 
@@ -598,7 +593,7 @@
 }
 
 .draft-tab-count {
-  background: #e5e7eb;
+  background: #e2e8f0;
   color: #374151;
   font-family: 'Inter', sans-serif;
   font-size: 11px;
@@ -614,7 +609,7 @@
 }
 
 .draft-tab.active .draft-tab-count {
-  background: #2563eb;
+  background: #3b82f6;
   color: white;
 }
 
@@ -752,9 +747,8 @@
 
 /* ===== SELECTED CARD ===== */
 .draft-item.selected {
-  background: #e0e7ff !important;
-  /* border-left-color: #4f46e5 !important; */
-  box-shadow: 0 0 0 2px #c7d2fe;
+  background: #1e3a5f !important;
+  box-shadow: 0 0 0 2px #3b82f6;
 }
 
 /* ===== DETAIL OVERLAY — fixed in main content area ===== */
