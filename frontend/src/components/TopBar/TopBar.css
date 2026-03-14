@@ -7,7 +7,7 @@
   left: 0;
   right: 0;
   z-index: 1100;
-  background: #4c4ceb;
+  background: #292982;
   border-bottom: 1px solid #2a3142;
   padding: 0 1rem;
   height: 28px;
@@ -65,6 +65,8 @@
 .tb-topbar-right {
   display: flex;
   align-items: center;
+  gap: 0.5rem;
+  padding-right: 0.5rem;
 }
 
 .tb-actions-container {
@@ -77,23 +79,25 @@
 .tb-ai-assistant-btn {
   display: flex;
   align-items: center;
-  gap: 0.375rem; /* Reduced from 0.5rem */
-  padding: 0 0.5rem;
-  background: rgba(255, 255, 255, 0.15);
+  gap: 0.25rem;
+  padding: 0 0.375rem;
+  background: linear-gradient(135deg, #8b5cf6, #ec4899, #f97316);
   color: white;
-  border: 1px solid rgba(255, 255, 255, 0.25);
+  border: none;
   border-radius: 4px;
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
   white-space: nowrap;
-  height: 20px;
+  height: 18px;
+  box-shadow: 0 0 8px rgba(139, 92, 246, 0.4);
 }
 
 .tb-ai-assistant-btn:hover {
-  background: rgba(255, 255, 255, 0.25);
+  background: linear-gradient(135deg, #7c3aed, #db2777, #ea580c);
   transform: translateY(-1px);
+  box-shadow: 0 0 12px rgba(139, 92, 246, 0.6);
 }
 
 .tb-ai-icon {
@@ -102,7 +106,7 @@
 }
 
 .tb-ai-icon svg {
-  width: 18px; /* Slightly smaller */
+  width: 18px;
   height: 18px;
 }
 
