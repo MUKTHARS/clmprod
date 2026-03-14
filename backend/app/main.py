@@ -6499,10 +6499,10 @@ async def get_assigned_drafts(
             # Project Managers see only draft and under_review contracts
             status_filter = ["draft", "under_review", "reviewed", "rejected"]
         elif current_user.role == "program_manager":
-            # Program Managers see draft, under_review, and reviewed contracts
-            status_filter = ["draft", "under_review", "reviewed"]
+            # Program Managers see all statuses including approved and rejected
+            status_filter = ["draft", "under_review", "reviewed", "approved", "rejected"]
         else:  # director
-            # Directors see ALL statuses except approved/rejected (finalized)
+            # Directors see ALL statuses
             status_filter = ["draft", "under_review", "reviewed", "approved", "rejected"]
         
         all_contracts = db.query(models.Contract).filter(
@@ -6845,10 +6845,8 @@ async def get_agreements_assigned_by_me(
     try:
         # print(f"DEBUG: Fetching agreements assigned by user {current_user.id} ({current_user.username})")
         
-        # Get ALL draft contracts
-        all_drafts = db.query(models.Contract).filter(
-            models.Contract.status == "draft"
-        ).all()
+        # Get ALL contracts regardless of status
+        all_drafts = db.query(models.Contract).all()
         
         # print(f"DEBUG: Found {len(all_drafts)} total draft contracts")
         

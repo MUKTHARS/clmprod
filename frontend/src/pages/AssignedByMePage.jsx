@@ -255,7 +255,7 @@ function AssignedByMePage({ user }) {
         </td>
         <td>
           <div className="abm-status-cell">
-            <span className="abm-status-text abm-draft">Draft</span>
+            <span className={`abm-status-text abm-${agreement.status || 'draft'}`} style={{ textTransform: 'capitalize' }}>{agreement.status || 'Draft'}</span>
             <div className="abm-assignment-role">
               <UserCheckIcon size={12} />
               <span className="abm-role-text">
@@ -286,7 +286,7 @@ function AssignedByMePage({ user }) {
       <div key={agreement.id || index} className="abm-agreement-card">
         <div className="abm-card-header">
           <div className="abm-agreement-status">
-            <span className="abm-status-badge abm-draft">Draft</span>
+            <span className={`abm-status-badge abm-${agreement.status || 'draft'}`} style={{ textTransform: 'capitalize' }}>{agreement.status || 'Draft'}</span>
             <span className="abm-status-badge abm-assigned">Assigned by You</span>
           </div>
           <div className="abm-card-actions">
