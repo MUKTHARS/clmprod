@@ -668,7 +668,7 @@ function ContractsListPage({ contracts: propContracts = [], user, refreshContrac
               <div className="clp-empty-state">
                 <FileText size={48} />
                 <h3>No contracts found</h3>
-                <p>{searchTerm ? 'Try adjusting your search' : 'Upload your first contract to get started'}</p>
+                <p>{searchTerm ? 'Try adjusting your search' : ''}</p>
                 {!searchTerm && (
                   <button 
                     className="clp-btn-upload-main"
