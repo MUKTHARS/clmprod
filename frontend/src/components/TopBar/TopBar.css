@@ -142,8 +142,8 @@
 }
 
 .tb-alert-icon svg {
-  width: 18px;
-  height: 18px;
+  width: 25px;
+  height: 25px;
 }
 
 .tb-alert-badge {
@@ -152,10 +152,10 @@
   right: -3px;
   background-color: #ef4444;
   color: white;
-  font-size: 0.5rem;
+  font-size: 0.7rem;
   font-weight: 600;
-  width: 10px;
-  height: 10px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
   display: flex;
   align-items: center;
