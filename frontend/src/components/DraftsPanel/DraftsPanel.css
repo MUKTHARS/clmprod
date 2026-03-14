@@ -4,7 +4,7 @@
 .draft-panel {
   position: fixed;
   left: 210px; /* Matches expanded sidebar width */
-  top: 56px; /* Below topbar */
+  top: 38px; /* Below topbar */
   bottom: 0;
   width: 260px;
   background: #ffffff;

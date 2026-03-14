@@ -603,7 +603,7 @@ const getTileVariantClass = (variant) => {
         </div>
 
         {/* Recent Grants Section */}
-        <div className="recent-contracts">
+        {/* <div className="recent-contracts">
           <div className="section-controlz">
             <div className="controls-right">
               <div className="view-toggle">
@@ -630,8 +630,8 @@ const getTileVariantClass = (variant) => {
             </div>
           </div>
 
-          {/* Grants Content */}
-          {/* <div className="contracts-content">
+      
+          <div className="contracts-content">
             {loading ? (
               <div className="loading-state">
                 <RefreshCw className="spinner" />
@@ -681,8 +681,8 @@ const getTileVariantClass = (variant) => {
                 )}
               </div>
             )}
-          </div> */}
-        </div>
+          </div>
+        </div> */}
 
         {/* Financial & Deadlines Summary */}
         <div className="summary-container">
