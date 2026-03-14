@@ -174,7 +174,7 @@ function ApprovedContractsPage({ user }) {
   };
 
   const handleViewContract = (contractId) => {
-    navigate(`/contracts/${contractId}`);
+    navigate(`/app/contracts/${contractId}`);
   };
 
   const filteredContracts = approvedContracts.filter(contract => {

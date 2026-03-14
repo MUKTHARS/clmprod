@@ -5207,17 +5207,8 @@ async def director_final_approval(
             contract.comprehensive_data = {}
         
         contract.comprehensive_data["director_final_approval"] = director_approval
-
-        # Save director's decision/comments as a ReviewComment so all sides can see it
-        director_review_comment = ReviewComment(
-            contract_id=contract_id,
-            user_id=current_user.id,
-            comment_type="review",
-            comment=comments or f"Director {decision}d this contract.",
-            recommendation=decision,
-            status="closed"
-        )
-        db.add(director_review_comment)
+        from sqlalchemy.orm.attributes import flag_modified
+        flag_modified(contract, "comprehensive_data")
 
         # If contract is locked, add lock information
         if lock_contract:
@@ -5264,7 +5255,18 @@ async def director_final_approval(
         # ✅ CRITICAL FIX: Send notifications ONLY to assigned Program Managers
         # Get the Program Manager(s) who reviewed this contract
         from app.auth_models import ReviewComment, UserNotification
-        
+
+        # Save director's decision/comments as a ReviewComment so all sides can see it
+        director_review_comment = ReviewComment(
+            contract_id=contract_id,
+            user_id=current_user.id,
+            comment_type="director_review",
+            comment=comments or f"Director {decision}d this contract.",
+            recommendation=decision,
+            status="closed"
+        )
+        db.add(director_review_comment)
+
         # Find all Program Managers who commented on this contract
         program_manager_reviews = db.query(ReviewComment).filter(
             ReviewComment.contract_id == contract_id,
