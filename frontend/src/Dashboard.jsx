@@ -687,15 +687,32 @@ const getTileVariantClass = (variant) => {
         {/* Financial & Deadlines Summary */}
         <div className="summary-container">
           <div className="summary-card">
-            <div className="summary-header">
-              <h3 className="summary-title-large">Financial Summary</h3>
-            </div>
+            {(() => {
+              const totalEvents = normalizedContracts.reduce((sum, c) => sum + (c.reporting_events_total || 0), 0);
+              const approvedEvents = normalizedContracts.reduce((sum, c) => sum + (c.reporting_events_fully_approved || 0), 0);
+              const overallPct = totalEvents > 0 ? Math.round((approvedEvents / totalEvents) * 100) : 0;
+              return (
+                <div className="summary-header">
+                  <h3 className="summary-title-large">Financial Summary</h3>
+                  <div className="summary-header-stats">
+                    <div className="summary-stat-item">
+                      <span className="summary-stat-label">Total Value</span>
+                      <span className="summary-stat-value">{formatCurrency(stats.totalAmount)}</span>
+                    </div>
+                    <div className="summary-stat-item">
+                      <span className="summary-stat-label">Overall Progress</span>
+                      <span className="summary-stat-value">{overallPct}%</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
             <div className="financial-summary">
               {normalizedContracts.slice(0, 3).map((contract) => {
                 const progressPercentage = calculateProgress(contract);
-                
+
                 if (!contract.id) return null;
-                
+
                 return (
                   <div key={contract.id} className="contract-financial-item">
                     <div className="contract-financial-header">
@@ -706,7 +723,7 @@ const getTileVariantClass = (variant) => {
                         {getContractDisplayId(contract)}
                       </div>
                     </div>
-                    
+
                     <div className="contract-financial-details">
                       <div className="financial-item">
                         <span className="item-label">Total Value</span>
@@ -717,12 +734,12 @@ const getTileVariantClass = (variant) => {
                         <span className="item-value received">{contract.reporting_events_fully_approved || 0} / {contract.reporting_events_total || 0}</span>
                       </div>
                     </div>
-                    
+
                     <div className="progress-container contract-progress">
                       <div className="progress-bar">
-                        <div 
+                        <div
                           className="progress-fill"
-                          style={{ 
+                          style={{
                             width: `${progressPercentage}%`,
                             backgroundColor: getProgressColor(progressPercentage)
                           }}
@@ -735,34 +752,6 @@ const getTileVariantClass = (variant) => {
                   </div>
                 );
               })}
-              
-              <div className="overall-progress">
-                <div className="financial-item">
-                  <span className="item-label">Total Value (All)</span>
-                  <span className="item-value total">{formatCurrency(stats.totalAmount)}</span>
-                </div>
-                {(() => {
-                  const totalEvents = normalizedContracts.reduce((sum, c) => sum + (c.reporting_events_total || 0), 0);
-                  const approvedEvents = normalizedContracts.reduce((sum, c) => sum + (c.reporting_events_fully_approved || 0), 0);
-                  const overallPct = totalEvents > 0 ? Math.round((approvedEvents / totalEvents) * 100) : 0;
-                  return (
-                    <div className="progress-container">
-                      <div className="progress-bar">
-                        <div
-                          className="progress-fill"
-                          style={{
-                            width: `${overallPct}%`,
-                            backgroundColor: getProgressColor(overallPct)
-                          }}
-                        ></div>
-                      </div>
-                      <div className="progress-text">
-                        <span>Overall Progress: {overallPct}%</span>
-                      </div>
-                    </div>
-                  );
-                })()}
-              </div>
             </div>
           </div>
 
