@@ -263,49 +263,54 @@ function getElementRect(selector) {
 
 function computeCardPosition(spotlightRect, placement, cardWidth = 376) {
   // No element found — always center the card
-  if (!spotlightRect) return { style: null, arrowClass: '' };
+  if (!spotlightRect) return { style: null, arrowClass: '', arrowOffset: null };
 
-  const gap = 18;
+  const gap = 20;
   const vw = window.innerWidth;
   const vh = window.innerHeight;
 
   let style = null;
   let arrowClass = '';
+  let arrowOffset = null;
+
+  // Helper: vertically align arrow to center of spotlight relative to card top
+  const calcArrowOffset = (cardTop) => {
+    const spotCenter = spotlightRect.top + spotlightRect.height / 2;
+    return Math.max(14, Math.min(spotCenter - cardTop - 7, 200));
+  };
 
   if (placement === 'right') {
     const left = spotlightRect.left + spotlightRect.width + gap;
     const top = Math.min(Math.max(spotlightRect.top, 16), vh - 340);
+    arrowOffset = calcArrowOffset(top);
     if (left + cardWidth < vw - 16) {
       style = { position: 'fixed', top, left };
       arrowClass = 'arrow-left';
     } else {
-      // flip to left of the spotlight
       const flippedLeft = spotlightRect.left - cardWidth - gap;
       style = { position: 'fixed', top, left: Math.max(flippedLeft, 16) };
       arrowClass = 'arrow-right';
     }
   } else if (placement === 'left') {
     const top = Math.min(Math.max(spotlightRect.top, 16), vh - 340);
-    const left = Math.max(spotlightRect.left - cardWidth - gap, 16);
+    // extra gap so the card clears the spotlight outline (3px outline + 3px offset + padding)
+    const left = Math.max(spotlightRect.left - cardWidth - gap - 10, 16);
+    arrowOffset = calcArrowOffset(top);
     style = { position: 'fixed', top, left };
     arrowClass = 'arrow-right';
   } else if (placement === 'bottom') {
-    style = {
-      position: 'fixed',
-      top: spotlightRect.top + spotlightRect.height + gap,
-      left: Math.min(Math.max(spotlightRect.left, 16), vw - cardWidth - 16),
-    };
+    const top = spotlightRect.top + spotlightRect.height + gap;
+    const left = Math.min(Math.max(spotlightRect.left, 16), vw - cardWidth - 16);
+    style = { position: 'fixed', top, left };
     arrowClass = 'arrow-top';
   } else if (placement === 'top') {
-    style = {
-      position: 'fixed',
-      top: Math.max(spotlightRect.top - gap - 300, 16),
-      left: Math.min(Math.max(spotlightRect.left, 16), vw - cardWidth - 16),
-    };
+    const top = Math.max(spotlightRect.top - gap - 300, 16);
+    const left = Math.min(Math.max(spotlightRect.left, 16), vw - cardWidth - 16);
+    style = { position: 'fixed', top, left };
     arrowClass = 'arrow-bottom';
   }
 
-  return { style, arrowClass };
+  return { style, arrowClass, arrowOffset };
 }
 
 // ─── Role label mapping ───────────────────────────────────────────────────────
@@ -389,7 +394,7 @@ export default function TourGuide({ user }) {
   if (!visible) return null;
 
   const hasSpotlight = !!spotlightRect && !!currentStep?.target;
-  const { style: cardStyle, arrowClass } = computeCardPosition(
+  const { style: cardStyle, arrowClass, arrowOffset } = computeCardPosition(
     hasSpotlight ? spotlightRect : null,
     currentStep?.placement
   );
@@ -398,13 +403,21 @@ export default function TourGuide({ user }) {
 
   return (
     <div className="tour-overlay" role="dialog" aria-modal="true" aria-label="Product tour">
-      {/* Backdrop — clicking it skips the tour */}
-      <div className="tour-backdrop" onClick={dismiss} />
+      {/*
+        Only show the flat backdrop when there is NO spotlight.
+        When a spotlight IS active its box-shadow already darkens everything
+        outside it — adding the backdrop on top doubles the darkness and
+        makes the highlighted element look transparent/washed-out.
+      */}
+      {!hasSpotlight && (
+        <div className="tour-backdrop" onClick={dismiss} />
+      )}
 
-      {/* Spotlight cutout */}
+      {/* Spotlight cutout — its box-shadow IS the overlay when active */}
       {hasSpotlight && (
         <div
           className="tour-spotlight"
+          onClick={dismiss}
           style={{
             top: spotlightRect.top,
             left: spotlightRect.left,
@@ -420,9 +433,12 @@ export default function TourGuide({ user }) {
         style={isCentered ? undefined : cardStyle}
         key={stepIndex}
       >
-        {/* Arrow for non-centered cards */}
+        {/* Arrow for non-centered cards — vertically aligned to spotlight center */}
         {hasSpotlight && arrowClass && (
-          <div className={`tour-card-arrow ${arrowClass}`} />
+          <div
+            className={`tour-card-arrow ${arrowClass}`}
+            style={arrowOffset != null ? { top: arrowOffset } : undefined}
+          />
         )}
 
         {/* Icon banner for centered steps (welcome, done, or element not found) */}

@@ -69,12 +69,12 @@
 
 .tour-card-arrow.arrow-left {
   left: -7px;
-  top: 24px;
+  top: 24px; /* overridden by inline arrowOffset when spotlight is active */
 }
 
 .tour-card-arrow.arrow-right {
   right: -7px;
-  top: 24px;
+  top: 24px; /* overridden by inline arrowOffset when spotlight is active */
 }
 
 .tour-card-arrow.arrow-top {
