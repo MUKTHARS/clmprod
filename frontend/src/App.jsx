@@ -29,6 +29,7 @@ import PlatformRouter from "./pages/PlatformRouter";
 import PlatformLogin from "./components/Auth/PlatformLogin";
 import TenantLogin from "./components/Auth/TenantLogin";
 import SharePointIntegration from './sharepoint/SharePointIntegration';
+import TourGuide from './components/TourGuide/TourGuide';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -100,6 +101,7 @@ function App() {
 function TenantRouter({ user, onLogout }) {
   return (
     <>
+      <TourGuide user={user} />
       <Sidebar user={user} onLogout={onLogout} />
       <DraftsPanel user={user} />
       <div className="main-content">
